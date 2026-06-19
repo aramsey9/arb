@@ -48,6 +48,7 @@ button.scan{background:#00ff88;color:#000;border:none;border-radius:8px;padding:
 .mktag.spreads{background:rgba(255,107,53,.2);color:#ff6b35}
 .mktag.totals{background:rgba(59,130,246,.2);color:#60a5fa}
 .mktag.props{background:rgba(236,72,153,.2);color:#f472b6}
+.mktag.gameprops{background:rgba(168,85,247,.2);color:#c084fc}
 .mktag.alt{background:rgba(16,185,129,.2);color:#34d399}
 .mktag.mid{background:rgba(245,158,11,.2);color:#f59e0b}
 .prog{background:#1a1a26;border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:12px;color:#666;font-family:monospace}
@@ -80,7 +81,8 @@ button.scan{background:#00ff88;color:#000;border:none;border-radius:8px;padding:
   <div class="mb on" data-m="totals">🔢 Totals</div>
   <div class="mb on" data-m="alternate_spreads">📈 Alt Spreads</div>
   <div class="mb on" data-m="alternate_totals">📉 Alt Totals</div>
-  <div class="mb on" data-m="props">🎯 Props</div>
+  <div class="mb on" data-m="props">🎯 Player Props</div>
+  <div class="mb on" data-m="gameprops">🏟️ Game Props</div>
 </div>
 <button class="scan" onclick="startScan()">🔍 Scan Now</button>
 <div id="prog" style="display:none" class="prog">
@@ -98,6 +100,7 @@ button.scan{background:#00ff88;color:#000;border:none;border-radius:8px;padding:
 <script>
 var timer=null,autoOn=false,scanCount=0;
 var BOOKS='fanduel,draftkings,betmgm,williamhill_us,betrivers,fanatics,espnbet,hardrockbet';
+
 var PROP_MARKETS={
   baseball_mlb:['batter_hits','batter_home_runs','batter_rbis','batter_runs_scored','batter_strikeouts','batter_total_bases','pitcher_strikeouts','pitcher_hits_allowed','pitcher_walks'],
   basketball_nba:['player_points','player_rebounds','player_assists','player_threes','player_blocks','player_steals'],
@@ -105,6 +108,22 @@ var PROP_MARKETS={
   icehockey_nhl:['player_goals','player_assists','player_shots_on_goal'],
   soccer_usa_mls:[],tennis_atp_french_open:[],mma_mixed_martial_arts:[]
 };
+var GAME_PROP_MARKETS={
+  baseball_mlb:['h2h_1st_5_innings','spreads_1st_5_innings','totals_1st_5_innings','h2h_1st_3_innings','totals_1st_3_innings'],
+  basketball_nba:['h2h_h1','spreads_h1','totals_h1','h2h_q1','spreads_q1','totals_q1','team_totals'],
+  americanfootball_nfl:['h2h_h1','spreads_h1','totals_h1','h2h_q1','spreads_q1','totals_q1','team_totals'],
+  icehockey_nhl:['h2h_p1','spreads_p1','totals_p1','team_totals'],
+  soccer_usa_mls:['h2h_h1','totals_h1'],tennis_atp_french_open:[],mma_mixed_martial_arts:[]
+};
+var GP_LABEL={
+  h2h_1st_5_innings:'1st 5 Inn ML',spreads_1st_5_innings:'1st 5 Inn Spread',totals_1st_5_innings:'1st 5 Inn Total',
+  h2h_1st_3_innings:'1st 3 Inn ML',totals_1st_3_innings:'1st 3 Inn Total',
+  h2h_h1:'1st Half ML',spreads_h1:'1st Half Spread',totals_h1:'1st Half Total',
+  h2h_q1:'1st Qtr ML',spreads_q1:'1st Qtr Spread',totals_q1:'1st Qtr Total',
+  h2h_p1:'1st Period ML',spreads_p1:'1st Period Spread',totals_p1:'1st Period Total',
+  team_totals:'Team Total'
+};
+
 document.getElementById('sports').addEventListener('click',function(e){var b=e.target.closest('.sb');if(b)b.classList.toggle('on')});
 document.getElementById('markets').addEventListener('click',function(e){var b=e.target.closest('.mb');if(b)b.classList.toggle('on')});
 function getSports(){return Array.from(document.querySelectorAll('.sb.on')).map(b=>b.dataset.s)}
@@ -116,15 +135,19 @@ function setStatus(live,text){document.getElementById('dot').className='tdot'+(l
 function setProgress(pct,text){document.getElementById('progText').textContent=text;document.getElementById('progFill').style.width=pct+'%'}
 function playAlert(){try{var a=new AudioContext(),o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.frequency.value=660;g.gain.setValueAtTime(.3,a.currentTime);g.gain.exponentialRampToValueAtTime(.001,a.currentTime+.5);o.start();o.stop(a.currentTime+.5)}catch(e){}}
 function isTrueArb(o1,o2,minPct){var p1=oP(o1),p2=oP(o2),tot=p1+p2;return tot<1.0&&(1-tot)*100>=minPct}
-function processH2H(oc,gl,sp2,bank,min,allArbs){
+
+function processH2H(oc,gl,sp2,bank,min,allArbs,label,tag){
+  label=label||'Moneyline';tag=tag||'h2h';
   var bt={};oc.forEach(function(o){if(!bt[o.name])bt[o.name]=[];bt[o.name].push({book:o.book,odds:o.price})});
   var tn=Object.keys(bt);if(tn.length<2)return;
   var b1=bt[tn[0]].reduce((a,b)=>a.odds>b.odds?a:b),b2=bt[tn[1]].reduce((a,b)=>a.odds>b.odds?a:b);
   if(b1.book===b2.book||!isTrueArb(b1.odds,b2.odds,min))return;
   var p1=oP(b1.odds),p2=oP(b2.odds),tot=p1+p2,s1=bank*(p1/tot),s2=bank*(p2/tot),pr=Math.min(s1*oD(b1.odds),s2*oD(b2.odds))-bank;
-  allArbs.push({game:gl,sport:sp2,market:'h2h',label:'Moneyline',middle:false,edge:(1-tot)*100,roi:(pr/bank)*100,profit:pr,side1:{name:tn[0],book:b1.book,odds:b1.odds,stake:s1},side2:{name:tn[1],book:b2.book,odds:b2.odds,stake:s2},middleNote:''});
+  allArbs.push({game:gl,sport:sp2,market:tag,label:label,middle:false,edge:(1-tot)*100,roi:(pr/bank)*100,profit:pr,side1:{name:tn[0],book:b1.book,odds:b1.odds,stake:s1},side2:{name:tn[1],book:b2.book,odds:b2.odds,stake:s2},middleNote:''});
 }
-function processSpreads(oc,gl,sp2,bank,min,allArbs,label){
+
+function processSpreads(oc,gl,sp2,bank,min,allArbs,label,tag){
+  tag=tag||'spreads';
   var teams={};oc.forEach(function(o){if(!teams[o.name])teams[o.name]=true});
   var tn=Object.keys(teams);if(tn.length<2)return;
   var t1l=oc.filter(o=>o.name===tn[0]),t2l=oc.filter(o=>o.name===tn[1]);
@@ -136,11 +159,13 @@ function processSpreads(oc,gl,sp2,bank,min,allArbs,label){
     var p1=oP(a.odds),p2=oP(b.odds),tot=p1+p2,s1=bank*(p1/tot),s2=bank*(p2/tot),pr=Math.min(s1*oD(a.odds),s2*oD(b.odds))-bank;
     var mf=(a.point>0&&b.point<0&&a.point>Math.abs(b.point))||(b.point>0&&a.point<0&&b.point>Math.abs(a.point));
     var mn=mf?'🎯 MIDDLE: win both if margin between '+Math.min(Math.abs(a.point),Math.abs(b.point))+' and '+Math.max(Math.abs(a.point),Math.abs(b.point)):'';
-    if(!best||pr>best.profit)best={game:gl,sport:sp2,market:label.includes('Alt')?'alt':'spreads',label:label,middle:mf,edge:(1-tot)*100,roi:(pr/bank)*100,profit:pr,side1:{name:tn[0]+' '+fmt(a.point),book:a.book,odds:a.odds,stake:s1},side2:{name:tn[1]+' '+fmt(b.point),book:b.book,odds:b.odds,stake:s2},middleNote:mn};
+    if(!best||pr>best.profit)best={game:gl,sport:sp2,market:tag,label:label,middle:mf,edge:(1-tot)*100,roi:(pr/bank)*100,profit:pr,side1:{name:tn[0]+' '+fmt(a.point),book:a.book,odds:a.odds,stake:s1},side2:{name:tn[1]+' '+fmt(b.point),book:b.book,odds:b.odds,stake:s2},middleNote:mn};
   })});
   if(best)allArbs.push(best);
 }
-function processTotals(oc,gl,sp2,bank,min,allArbs,label){
+
+function processTotals(oc,gl,sp2,bank,min,allArbs,label,tag){
+  tag=tag||'totals';
   var ov=oc.filter(o=>o.name==='Over'),un=oc.filter(o=>o.name==='Under');
   if(!ov.length||!un.length)return;
   var best=null;
@@ -149,10 +174,11 @@ function processTotals(oc,gl,sp2,bank,min,allArbs,label){
     if(!isTrueArb(a.odds,b.odds,min))return;
     var p1=oP(a.odds),p2=oP(b.odds),tot=p1+p2,s1=bank*(p1/tot),s2=bank*(p2/tot),pr=Math.min(s1*oD(a.odds),s2*oD(b.odds))-bank;
     var mf=b.point>a.point,mn=mf?'🎯 MIDDLE: win both if total lands between '+a.point+' and '+b.point:'';
-    if(!best||pr>best.profit)best={game:gl,sport:sp2,market:label.includes('Alt')?'alt':'totals',label:label,middle:mf,edge:(1-tot)*100,roi:(pr/bank)*100,profit:pr,side1:{name:'Over '+a.point,book:a.book,odds:a.odds,stake:s1},side2:{name:'Under '+b.point,book:b.book,odds:b.odds,stake:s2},middleNote:mn};
+    if(!best||pr>best.profit)best={game:gl,sport:sp2,market:tag,label:label,middle:mf,edge:(1-tot)*100,roi:(pr/bank)*100,profit:pr,side1:{name:'Over '+a.point,book:a.book,odds:a.odds,stake:s1},side2:{name:'Under '+b.point,book:b.book,odds:b.odds,stake:s2},middleNote:mn};
   })});
   if(best)allArbs.push(best);
 }
+
 function processProps(bookmakers,gl,sp2,bank,min,allArbs){
   var byProp={};
   bookmakers.forEach(function(book){
@@ -172,10 +198,28 @@ function processProps(bookmakers,gl,sp2,bank,min,allArbs){
     var bo=pm.over.reduce((a,b)=>a.odds>b.odds?a:b),bu=pm.under.reduce((a,b)=>a.odds>b.odds?a:b);
     if(bo.book===bu.book||!isTrueArb(bo.odds,bu.odds,min))return;
     var p1=oP(bo.odds),p2=oP(bu.odds),tot=p1+p2,s1=bank*(p1/tot),s2=bank*(p2/tot),pr=Math.min(s1*oD(bo.odds),s2*oD(bu.odds))-bank;
-    var lbl=pm.market.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+    var lbl=pm.market.replace(/_/g,' ').replace(/\b\w/g,function(c){return c.toUpperCase()});
     allArbs.push({game:gl+' — '+pm.desc,sport:sp2,market:'props',label:lbl,middle:false,edge:(1-tot)*100,roi:(pr/bank)*100,profit:pr,side1:{name:'Over '+pm.point,book:bo.book,odds:bo.odds,stake:s1},side2:{name:'Under '+pm.point,book:bu.book,odds:bu.odds,stake:s2},middleNote:''});
   });
 }
+
+function processGameProps(bookmakers,gl,sp2,bank,min,allArbs,gpKeys){
+  var md={};gpKeys.forEach(function(m){md[m]=[]});
+  bookmakers.forEach(function(book){
+    (book.markets||[]).forEach(function(mkt){
+      if(!md[mkt.key])return;
+      (mkt.outcomes||[]).forEach(function(out){md[mkt.key].push({name:out.name,price:out.price,point:out.point,book:book.title})});
+    });
+  });
+  gpKeys.forEach(function(mkt){
+    var oc=md[mkt];if(!oc||oc.length<2)return;
+    var label=GP_LABEL[mkt]||mkt;
+    if(mkt.indexOf('h2h')===0)processH2H(oc,gl,sp2,bank,min,allArbs,label,'gameprops');
+    else if(mkt.indexOf('spreads')===0)processSpreads(oc,gl,sp2,bank,min,allArbs,label,'gameprops');
+    else if(mkt.indexOf('totals')===0||mkt==='team_totals')processTotals(oc,gl,sp2,bank,min,allArbs,label,'gameprops');
+  });
+}
+
 async function scanAll(){
   var key=document.getElementById('key').value.trim();
   var bank=parseFloat(document.getElementById('bank').value)||1000;
@@ -183,18 +227,23 @@ async function scanAll(){
   var sports=getSports(),markets=getMarkets();
   if(!key){document.getElementById('out').innerHTML='<div class="err">Paste your API key first.</div>';return}
   if(!sports.length||!markets.length){document.getElementById('out').innerHTML='<div class="err">Select at least one sport and market.</div>';return}
-  var doProps=markets.includes('props');
-  var doAltS=markets.includes('alternate_spreads');
-  var doAltT=markets.includes('alternate_totals');
-  var coreMkts=markets.filter(m=>!['props','alternate_spreads','alternate_totals'].includes(m));
+
+  var doProps=markets.indexOf('props')>-1;
+  var doGameProps=markets.indexOf('gameprops')>-1;
+  var doAltS=markets.indexOf('alternate_spreads')>-1;
+  var doAltT=markets.indexOf('alternate_totals')>-1;
+  var coreMkts=markets.filter(function(m){return ['props','gameprops','alternate_spreads','alternate_totals'].indexOf(m)===-1});
+
   setStatus(true,'scanning...');scanCount++;
   document.getElementById('prog').style.display='block';
   setProgress(0,'Fetching game odds...');
+
   var allArbs=[],totalGames=0,allGames=[];
+
   if(coreMkts.length){
     await Promise.all(sports.map(function(sp){
       return fetch('https://api.the-odds-api.com/v4/sports/'+sp+'/odds/?apiKey='+key+'&regions=us&markets='+coreMkts.join(',')+'&oddsFormat=american&bookmakers='+BOOKS)
-      .then(r=>r.json()).then(function(games){
+      .then(function(r){return r.json()}).then(function(games){
         if(!Array.isArray(games))return;
         games.forEach(function(g){g._sport=sp});
         allGames=allGames.concat(games);totalGames+=games.length;
@@ -209,47 +258,61 @@ async function scanAll(){
             else if(mkt==='totals')processTotals(oc,gl,sp2,bank,min,allArbs,'Total');
           });
         });
-      }).catch(()=>{});
+      }).catch(function(){});
+    }));
+  } else {
+    await Promise.all(sports.map(function(sp){
+      return fetch('https://api.the-odds-api.com/v4/sports/'+sp+'/odds/?apiKey='+key+'&regions=us&markets=h2h&oddsFormat=american&bookmakers='+BOOKS)
+      .then(function(r){return r.json()}).then(function(games){
+        if(!Array.isArray(games))return;
+        games.forEach(function(g){g._sport=sp});
+        allGames=allGames.concat(games);totalGames+=games.length;
+      }).catch(function(){});
     }));
   }
-  setProgress(25,'Processing alt lines & props...');
-  if((doProps||doAltS||doAltT)&&allGames.length){
+
+  setProgress(25,'Processing alt lines, props & game props...');
+
+  if((doProps||doGameProps||doAltS||doAltT)&&allGames.length){
     var altMkts=[];
     if(doAltS)altMkts.push('alternate_spreads');
     if(doAltT)altMkts.push('alternate_totals');
-    var done=0,total=allGames.length,batch=8;
+    var done=0,total=allGames.length,batch=6;
     for(var i=0;i<allGames.length;i+=batch){
       var chunk=allGames.slice(i,i+batch);
       await Promise.all(chunk.map(function(game){
         var gl=game.away_team+' @ '+game.home_team,sp2=game.sport_title,sp=game._sport;
         var propKeys=doProps?(PROP_MARKETS[sp]||[]):[];
-        var mkts=altMkts.concat(propKeys);
+        var gpKeys=doGameProps?(GAME_PROP_MARKETS[sp]||[]):[];
+        var mkts=altMkts.concat(propKeys).concat(gpKeys);
         if(!mkts.length)return Promise.resolve();
         return fetch('https://api.the-odds-api.com/v4/sports/'+sp+'/events/'+game.id+'/odds?apiKey='+key+'&regions=us&markets='+mkts.join(',')+'&oddsFormat=american&bookmakers='+BOOKS)
-        .then(r=>r.json()).then(function(data){
+        .then(function(r){return r.json()}).then(function(data){
           if(!data||!data.bookmakers)return;
-          var md={};mkts.forEach(function(m){md[m]=[]});
+          var md={};altMkts.forEach(function(m){md[m]=[]});
           data.bookmakers.forEach(function(book){(book.markets||[]).forEach(function(mkt){if(!md[mkt.key])return;(mkt.outcomes||[]).forEach(function(out){md[mkt.key].push({name:out.name,price:out.price,point:out.point,book:book.title})})})});
-          if(doAltS&&md['alternate_spreads']&&md['alternate_spreads'].length)processSpreads(md['alternate_spreads'],gl,sp2,bank,min,allArbs,'Alt Spreads');
-          if(doAltT&&md['alternate_totals']&&md['alternate_totals'].length)processTotals(md['alternate_totals'],gl,sp2,bank,min,allArbs,'Alt Totals');
+          if(doAltS&&md['alternate_spreads']&&md['alternate_spreads'].length)processSpreads(md['alternate_spreads'],gl,sp2,bank,min,allArbs,'Alt Spreads','alt');
+          if(doAltT&&md['alternate_totals']&&md['alternate_totals'].length)processTotals(md['alternate_totals'],gl,sp2,bank,min,allArbs,'Alt Totals','alt');
           if(doProps)processProps(data.bookmakers,gl,sp2,bank,min,allArbs);
-        }).catch(()=>{});
+          if(doGameProps&&gpKeys.length)processGameProps(data.bookmakers,gl,sp2,bank,min,allArbs,gpKeys);
+        }).catch(function(){});
       }));
       done+=chunk.length;
-      setProgress(25+Math.round((done/total)*70),'Alt lines & props: '+done+'/'+total+' games...');
+      setProgress(25+Math.round((done/total)*70),'Scanning: '+done+'/'+total+' games...');
     }
   }
-  allArbs.sort((a,b)=>b.edge-a.edge);
+
+  allArbs.sort(function(a,b){return b.edge-a.edge});
   if(allArbs.length)playAlert();
   document.getElementById('prog').style.display='none';
+
   var now=new Date().toLocaleTimeString();
-  var tc={h2h:'h2h',spreads:'spreads',totals:'totals',alt:'alt',props:'props'};
   var h='';
   if(allArbs.length)h+='<div class="alert-bar">🔔 '+allArbs.length+' arb'+(allArbs.length>1?'s':'')+' found at '+now+'</div>';
   h+='<div class="stats">Scan #'+scanCount+' &bull; '+totalGames+' games &bull; '+allArbs.length+' arbs &bull; '+now+'</div>';
   if(!allArbs.length){h+='<div class="msg">No arbs above '+min+'% right now.<br><br>Keep scanning — try lowering Min % to 0.2.</div>'}
   else{allArbs.forEach(function(x){
-    h+='<div class="card'+(x.middle?' middle':x.edge>2?' hot':'')+'"><div class="ctop"><div style="flex:1;min-width:0"><div class="gmeta">'+x.sport+'</div><span class="mktag '+(tc[x.market]||'h2h')+'">'+x.label+'</span>';
+    h+='<div class="card'+(x.middle?' middle':x.edge>2?' hot':'')+'"><div class="ctop"><div style="flex:1;min-width:0"><div class="gmeta">'+x.sport+'</div><span class="mktag '+x.market+'">'+x.label+'</span>';
     if(x.middle)h+='<span class="mktag mid">🎯 Middle</span>';
     h+='<div class="gtitle">'+x.game+'</div></div><div style="text-align:right;flex-shrink:0"><div class="roi">+'+x.roi.toFixed(2)+'%</div><div class="psub">$'+x.profit.toFixed(2)+' profit</div></div></div><div class="sides">';
     [x.side1,x.side2].forEach(function(s){h+='<div class="side"><div class="book">'+s.book+'</div><div class="team">'+s.name+'</div><div class="odds">'+fmt(s.odds)+'</div><div class="stake">Bet $'+s.stake.toFixed(2)+'</div></div>'});
@@ -258,6 +321,7 @@ async function scanAll(){
   document.getElementById('out').innerHTML=h;
   setStatus(autoOn,'#'+scanCount+' at '+now+(autoOn?' — next in 60s':''));
 }
+
 function startScan(){scanAll()}
 function toggleAuto(){
   autoOn=!autoOn;var btn=document.getElementById('autoBtn');
