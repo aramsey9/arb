@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ArbEdge</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0a0f;color:#e8e8f0;font-family:sans-serif;padding:16px 16px 80px}
+h1{color:#00ff88;font-size:22px;margin-bottom:4px}
+.sub{color:#666;font-size:12px;margin-bottom:16px}
+input{background:#1a1a26;border:1px solid #2a2a3d;color:#e8e8f0;border-radius:8px;padding:12px;font-size:14px;width:100%;margin-bottom:10px;font-family:monospace}
+.row{display:flex;gap:8px;margin-bottom:10px}
+.row input{margin-bottom:0}
+button.scan{background:#00ff88;color:#000;border:none;border-radius:8px;padding:14px;font-size:15px;font-weight:bold;cursor:pointer;width:100%;margin-bottom:12px}
+.sports{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.sb{background:#1a1a26;color:#eee;border:1px solid #2a2a3d;border-radius:8px;padding:8px 12px;font-size:13px;cursor:pointer}
+.sb.on{background:#00ff88;color:#000;border-color:#00ff88}
+.stats{color:#666;font-size:12px;margin-bottom:12px}
+.card{background:#12121a;border:1px solid #2a2a3d;border-radius:12px;margin-bottom:12px;overflow:hidden}
+.card.hot{border-color:#00ff88;box-shadow:0 0 16px rgba(0,255,136,.1)}
+.ctop{padding:12px 14px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.gtitle{font-size:14px;font-weight:600}
+.gsport{color:#666;font-size:10px;text-transform:uppercase;margin-bottom:3px}
+.roi{color:#00ff88;font-size:20px;font-weight:bold;white-space:nowrap}
+.psub{color:#666;font-size:11px;text-align:right}
+.sides{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:#2a2a3d;border-top:1px solid #2a2a3d}
+.side{background:#1a1a26;padding:10px 12px}
+.book{color:#7c3aed;font-size:10px;font-weight:bold;text-transform:uppercase;margin-bottom:2px}
+.team{color:#e8e8f0;font-size:12px;margin-bottom:3px}
+.odds{font-size:15px;font-weight:bold;font-family:monospace}
+.stake{color:#00ff88;font-size:11px;font-family:monospace;margin-top:2px}
+.msg{color:#666;text-align:center;padding:40px 16px;background:#12121a;border-radius:12px;line-height:1.8}
+.err{color:#ff4757;background:rgba(255,71,87,.1);border:1px solid rgba(255,71,87,.3);border-radius:8px;padding:12px;margin-bottom:12px;font-size:13px}
+.alert-bar{background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.3);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#00ff88}
+.ticker{position:fixed;bottom:0;left:0;right:0;background:#12121a;border-top:1px solid #2a2a3d;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.ticker-info{font-size:12px;color:#666;font-family:monospace}
+.ticker-dot{width:8px;height:8px;border-radius:50%;background:#666;display:inline-block;margin-right:6px}
+.ticker-dot.live{background:#00ff88;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+button.stop{background:#1a1a26;color:#ff4757;border:1px solid #ff4757;border-radius:8px;padding:8px 14px;font-size:12px;cursor:pointer}
+button.go{background:#00ff88;color:#000;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:bold;cursor:pointer}
+</style>
+</head>
+<body>
+<h1>ArbEdge</h1>
+<div class="sub">Live sports arbitrage scanner</div>
+<input type="text" id="key" placeholder="Paste Odds API key..." />
+<div class="row">
+  <input type="number" id="bank" value="1000" placeholder="Bankroll $" />
+  <input type="number" id="mine" value="0.5" placeholder="Min %" step="0.1" />
+</div>
+<div class="sports" id="sports">
+  <div class="sb on" data-s="baseball_mlb">⚾ MLB</div>
+  <div class="sb on" data-s="basketball_nba">🏀 NBA</div>
+  <div class="sb on" data-s="americanfootball_nfl">🏈 NFL</div>
+  <div class="sb on" data-s="icehockey_nhl">🏒 NHL</div>
+  <div class="sb on" data-s="soccer_usa_mls">⚽ MLS</div>
+  <div class="sb on" data-s="tennis_atp_french_open">🎾 Tennis</div>
+  <div class="sb on" data-s="mma_mixed_martial_arts">🥊 MMA</div>
+</div>
+<button class="scan" onclick="startScan()">🔍 Scan Now</button>
+<div id="out"></div>
+<div class="ticker">
+  <div class="ticker-info"><span class="ticker-dot" id="dot"></span><span id="tickerText">idle</span></div>
+  <div style="display:flex;gap:8px">
+    <button class="go" id="autoBtn" onclick="toggleAuto()">⏱ Auto</button>
+    <button class="stop" onclick="document.getElementById('out').innerHTML=''">Clear</button>
+  </div>
+</div>
+<script>
+var timer=null,autoOn=false,scanCount=0;
+document.getElementById('sports').addEventListener('click',function(e){var b=e.target.closest('.sb');if(b)b.classList.toggle('on')});
+function selectedSports(){return Array.from(document.querySelectorAll('.sb.on')).map(b=>b.dataset.s)}
+function oP(o){return o>0?100/(o+100):Math.abs(o)/(Math.abs(o)+100)}
+function oD(o){return o>0?o/100+1:100/Math.abs(o)+1}
+function fmt(o){return o>0?'+'+o:''+o}
+function setStatus(live,text){document.getElementById('dot').className='ticker-dot'+(live?' live':'');document.getElementById('tickerText').textContent=text}
+function playAlert(){try{var a=new AudioContext(),o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.frequency.value=880;g.gain.setValueAtTime(.3,a.currentTime);g.gain.exponentialRampToValueAtTime(.001,a.currentTime+.4);o.start();o.stop(a.currentTime+.4)}catch(e){}}
+async function scanAll(){
+  var key=document.getElementById('key').value.trim();
+  var bank=parseFloat(document.getElementById('bank').value)||1000;
+  var min=parseFloat(document.getElementById('mine').value)||0.5;
+  var sports=selectedSports();
+  if(!key){document.getElementById('out').innerHTML='<div class="err">Paste your API key first.</div>';return}
+  setStatus(true,'scanning '+sports.length+' sports...');
+  scanCount++;
+  var allArbs=[],totalGames=0;
+  await Promise.all(sports.map(function(sp){
+    return fetch('https://api.the-odds-api.com/v4/sports/'+sp+'/odds/?apiKey='+key+'&regions=us&markets=h2h&oddsFormat=american')
+    .then(r=>r.json()).then(function(games){
+      if(!Array.isArray(games))return;
+      totalGames+=games.length;
+      games.forEach(function(m){
+        var sides={};sides[m.home_team]=[];sides[m.away_team]=[];
+        (m.bookmakers||[]).forEach(function(b){var k=(b.markets||[]).find(x=>x.key==='h2h');if(!k)return;(k.outcomes||[]).forEach(function(o){if(sides[o.name]!==undefined)sides[o.name].push({b:b.title,o:o.price})})});
+        var H=sides[m.home_team],A=sides[m.away_team];
+        if(!H.length||!A.length)return;
+        var bh=H.reduce((a,b)=>a.o>b.o?a:b),ba=A.reduce((a,b)=>a.o>b.o?a:b);
+        if(bh.b===ba.b)return;
+        var p1=oP(bh.o),p2=oP(ba.o),t=p1+p2;if(t>=1)return;
+        var s1=bank*(p1/t),s2=bank*(p2/t),pr=Math.min(s1*oD(bh.o),s2*oD(ba.o))-bank,edge=(1-t)*100;
+        if(edge>=min)allArbs.push({g:m.away_team+' @ '+m.home_team,sp:m.sport_title,roi:(pr/bank)*100,pr:pr,edge:edge,h:{t:m.home_team,b:bh.b,o:bh.o,s:s1},a:{t:m.away_team,b:ba.b,o:ba.o,s:s2}});
+      });
+    }).catch(()=>{});
+  }));
+  allArbs.sort((a,b)=>b.edge-a.edge);
+  if(allArbs.length)playAlert();
+  var now=new Date().toLocaleTimeString();
+  var h='';
+  if(allArbs.length)h+='<div class="alert-bar">🔔 '+allArbs.length+' arb'+(allArbs.length>1?'s':'')+' found at '+now+'</div>';
+  h+='<div class="stats">Scan #'+scanCount+' &bull; '+totalGames+' games &bull; '+allArbs.length+' arbs &bull; '+now+'</div>';
+  if(!allArbs.length){h+='<div class="msg">No arbs above '+min+'% right now.<br>Keep scanning — lines change constantly.</div>'}
+  else{allArbs.forEach(function(x){h+='<div class="card'+(x.edge>2?' hot':'')+'"><div class="ctop"><div><div class="gsport">'+x.sp+'</div><div class="gtitle">'+x.g+'</div></div><div style="text-align:right"><div class="roi">+'+x.roi.toFixed(2)+'%</div><div class="psub">$'+x.pr.toFixed(2)+' profit</div></div></div><div class="sides">';[x.h,x.a].forEach(function(s){h+='<div class="side"><div class="book">'+s.b+'</div><div class="team">'+s.t+'</div><div class="odds">'+fmt(s.o)+'</div><div class="stake">Bet $'+s.s.toFixed(2)+'</div></div>'});h+='</div></div>'})}
+  document.getElementById('out').innerHTML=h;
+  setStatus(autoOn,'last scan: '+now+(autoOn?' — next in 60s':''));
+}
+function startScan(){scanAll()}
+function toggleAuto(){
+  autoOn=!autoOn;
+  var btn=document.getElementById('autoBtn');
+  if(autoOn){btn.textContent='⏹ Stop';btn.style.background='#ff4757';btn.style.color='#fff';scanAll();timer=setInterval(scanAll,60000)}
+  else{btn.textContent='⏱ Auto';btn.style.background='#00ff88';btn.style.color='#000';clearInterval(timer);setStatus(false,'auto stopped')}
+}
+</script>
+</body>
+</html>
