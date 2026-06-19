@@ -49,7 +49,7 @@ button.scan{background:#00ff88;color:#000;border:none;border-radius:8px;padding:
 </head>
 <body>
 <h1>ArbEdge</h1>
-<div class="sub">Live arbitrage scanner — all markets</div>
+<div class="sub">FanDuel · DraftKings · BetMGM · Caesars · BetRivers · Fanatics · ESPN Bet · Hard Rock</div>
 <input type="text" id="key" placeholder="Paste Odds API key..." />
 <div class="row">
   <input type="number" id="bank" value="1000" placeholder="Bankroll $" />
@@ -82,6 +82,7 @@ button.scan{background:#00ff88;color:#000;border:none;border-radius:8px;padding:
 </div>
 <script>
 var timer=null,autoOn=false,scanCount=0;
+var BOOKS='fanduel,draftkings,betmgm,williamhill_us,betrivers,fanatics,espnbet,hardrockbet';
 document.getElementById('sports').addEventListener('click',function(e){var b=e.target.closest('.sb');if(b)b.classList.toggle('on')});
 document.getElementById('markets').addEventListener('click',function(e){var b=e.target.closest('.mb');if(b)b.classList.toggle('on')});
 function getSports(){return Array.from(document.querySelectorAll('.sb.on')).map(b=>b.dataset.s)}
@@ -103,7 +104,7 @@ async function scanAll(){
   var allArbs=[],totalGames=0;
   var mktStr=markets.join(',');
   await Promise.all(sports.map(function(sp){
-    return fetch('https://api.the-odds-api.com/v4/sports/'+sp+'/odds/?apiKey='+key+'&regions=us&markets='+mktStr+'&oddsFormat=american')
+    return fetch('https://api.the-odds-api.com/v4/sports/'+sp+'/odds/?apiKey='+key+'&regions=us&markets='+mktStr+'&oddsFormat=american&bookmakers='+BOOKS)
     .then(r=>r.json()).then(function(games){
       if(!Array.isArray(games))return;
       totalGames+=games.length;
