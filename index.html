@@ -96,7 +96,7 @@ function fmt(o){return o>0?'+'+o:''+o}
 function setStatus(live,text){document.getElementById('dot').className='tdot'+(live?' live':'');document.getElementById('ttext').textContent=text}
 function playAlert(){try{var a=new AudioContext(),o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.frequency.value=660;g.gain.setValueAtTime(.3,a.currentTime);g.gain.exponentialRampToValueAtTime(.001,a.currentTime+.5);o.start();o.stop(a.currentTime+.5)}catch(e){}}
 function isTrueArb(o1,o2,minPct){var p1=oP(o1),p2=oP(o2),tot=p1+p2;return tot<1.0&&(1-tot)*100>=minPct}
-function isMiddle(p1,p2){if(p1==null||p2==null)return false;return(p1>0&&p2<0&&p1>Math.abs(p2))||(p2>0&&p1<0&&p2>Math.abs(p1))}
+
 async function scanAll(){
   var key=document.getElementById('key').value.trim();
   var bank=parseFloat(document.getElementById('bank').value)||1000;
@@ -121,33 +121,89 @@ async function scanAll(){
             (mkt.outcomes||[]).forEach(function(out){md[mkt.key].push({name:out.name,price:out.price,point:out.point,book:book.title})});
           });
         });
+
         markets.forEach(function(mkt){
           var oc=md[mkt];if(!oc||oc.length<2)return;
+
           if(mkt==='h2h'){
+            // Moneyline: best price per team, different books
             var bt={};oc.forEach(function(o){if(!bt[o.name])bt[o.name]=[];bt[o.name].push({book:o.book,odds:o.price})});
             var tn=Object.keys(bt);if(tn.length<2)return;
             var b1=bt[tn[0]].reduce((a,b)=>a.odds>b.odds?a:b),b2=bt[tn[1]].reduce((a,b)=>a.odds>b.odds?a:b);
             if(b1.book===b2.book||!isTrueArb(b1.odds,b2.odds,min))return;
             var p1=oP(b1.odds),p2=oP(b2.odds),tot=p1+p2,s1=bank*(p1/tot),s2=bank*(p2/tot),pr=Math.min(s1*oD(b1.odds),s2*oD(b2.odds))-bank;
             allArbs.push({game:gl,sport:sp2,market:'h2h',middle:false,edge:(1-tot)*100,roi:(pr/bank)*100,profit:pr,side1:{name:tn[0],book:b1.book,odds:b1.odds,stake:s1},side2:{name:tn[1],book:b2.book,odds:b2.odds,stake:s2},middleNote:''});
+
           } else if(mkt==='spreads'){
-            var bt={};oc.forEach(function(o){if(!bt[o.name])bt[o.name]=[];bt[o.name].push({book:o.book,odds:o.price,point:o.point})});
-            var tn=Object.keys(bt);if(tn.length<2)return;
-            var b1=bt[tn[0]].reduce((a,b)=>a.odds>b.odds?a:b),b2=bt[tn[1]].reduce((a,b)=>a.odds>b.odds?a:b);
-            if(b1.book===b2.book||!isTrueArb(b1.odds,b2.odds,min))return;
-            var mid=isMiddle(b1.point,b2.point);
-            var p1=oP(b1.odds),p2=oP(b2.odds),tot=p1+p2,s1=bank*(p1/tot),s2=bank*(p2/tot),pr=Math.min(s1*oD(b1.odds),s2*oD(b2.odds))-bank;
-            var mn=mid?'🎯 MIDDLE: win both if margin lands between '+Math.min(Math.abs(b1.point),Math.abs(b2.point))+' and '+Math.max(Math.abs(b1.point),Math.abs(b2.point)):'';
-            allArbs.push({game:gl,sport:sp2,market:'spreads',middle:mid,edge:(1-tot)*100,roi:(pr/bank)*100,profit:pr,side1:{name:tn[0]+' '+fmt(b1.point),book:b1.book,odds:b1.odds,stake:s1},side2:{name:tn[1]+' '+fmt(b2.point),book:b2.book,odds:b2.odds,stake:s2},middleNote:mn});
+            // KEY FIX: group by team+point so we compare specific line combos
+            // A valid spread arb needs: TeamA at pointX on BookA vs TeamB at pointY on BookB
+            // where pointX and pointY have OPPOSITE signs (one negative, one positive)
+            // or are a middle (both positive with gap, meaning overlap window)
+            var byTeamPoint={};
+            oc.forEach(function(o){
+              var k=o.name+'::'+o.point;
+              if(!byTeamPoint[k])byTeamPoint[k]=[];
+              byTeamPoint[k].push({book:o.book,odds:o.price,team:o.name,point:o.point});
+            });
+            // Get unique teams
+            var teams={};
+            oc.forEach(function(o){if(!teams[o.name])teams[o.name]=true});
+            var teamNames=Object.keys(teams);
+            if(teamNames.length<2)return;
+            var t1=teamNames[0],t2=teamNames[1];
+            // Get all lines for each team
+            var t1lines=oc.filter(o=>o.name===t1);
+            var t2lines=oc.filter(o=>o.name===t2);
+            // Try all combinations of t1 line vs t2 line
+            var best=null;
+            t1lines.forEach(function(a){
+              t2lines.forEach(function(b){
+                if(a.book===b.book)return;
+                // Valid if signs are opposite OR it's a middle (both favor different teams with gap)
+                var oppSigns=(a.point<0&&b.point>0)||(a.point>0&&b.point<0);
+                var isMid=(a.point>0&&b.point>0&&a.point!==b.point)||(a.point<0&&b.point<0&&a.point!==b.point);
+                // For same-sign: only valid if there's a meaningful gap creating a middle window
+                // For opposite signs: always structurally valid
+                if(!oppSigns&&!isMid)return;
+                if(!isTrueArb(a.odds,b.odds,min))return;
+                var p1=oP(a.odds),p2=oP(b.odds),tot=p1+p2,s1=bank*(p1/tot),s2=bank*(p2/tot),pr=Math.min(s1*oD(a.odds),s2*oD(b.odds))-bank;
+                if(!best||pr>best.profit){
+                  var midFlag=false,mn='';
+                  if(a.point>0&&b.point<0&&a.point>Math.abs(b.point)){midFlag=true;mn='🎯 MIDDLE: win both if margin between '+Math.abs(b.point)+' and '+a.point}
+                  if(b.point>0&&a.point<0&&b.point>Math.abs(a.point)){midFlag=true;mn='🎯 MIDDLE: win both if margin between '+Math.abs(a.point)+' and '+b.point}
+                  best={game:gl,sport:sp2,market:'spreads',middle:midFlag,edge:(1-tot)*100,roi:(pr/bank)*100,profit:pr,
+                    side1:{name:t1+' '+fmt(a.point),book:a.book,odds:a.odds,stake:s1},
+                    side2:{name:t2+' '+fmt(b.point),book:b.book,odds:b.odds,stake:s2},
+                    middleNote:mn};
+                }
+              });
+            });
+            if(best)allArbs.push(best);
+
           } else if(mkt==='totals'){
-            var ov=oc.filter(o=>o.name==='Over'),un=oc.filter(o=>o.name==='Under');
-            if(!ov.length||!un.length)return;
-            var bo=ov.reduce((a,b)=>a.odds>b.odds?a:b),bu=un.reduce((a,b)=>a.odds>b.odds?a:b);
-            if(bo.book===bu.book||!isTrueArb(bo.odds,bu.odds,min))return;
-            var totMid=bu.point>bo.point;
-            var mn=totMid?'🎯 MIDDLE: win both if total lands between '+bo.point+' and '+bu.point:'';
-            var p1=oP(bo.odds),p2=oP(bu.odds),tot=p1+p2,s1=bank*(p1/tot),s2=bank*(p2/tot),pr=Math.min(s1*oD(bo.odds),s2*oD(bu.odds))-bank;
-            allArbs.push({game:gl,sport:sp2,market:'totals',middle:totMid,edge:(1-tot)*100,roi:(pr/bank)*100,profit:pr,side1:{name:'Over '+bo.point,book:bo.book,odds:bo.odds,stake:s1},side2:{name:'Under '+bu.point,book:bu.book,odds:bu.odds,stake:s2},middleNote:mn});
+            // Over and Under must be compared at same line, or middle if Over line < Under line
+            var overs=oc.filter(o=>o.name==='Over');
+            var unders=oc.filter(o=>o.name==='Under');
+            if(!overs.length||!unders.length)return;
+            var best=null;
+            overs.forEach(function(ov){
+              unders.forEach(function(un){
+                if(ov.book===un.book)return;
+                // Valid: same line, or Over line LESS than Under line (middle window)
+                if(ov.point>un.point)return; // Over 8.5 vs Under 7.5 is impossible to win both
+                if(!isTrueArb(ov.odds,un.odds,min))return;
+                var p1=oP(ov.odds),p2=oP(un.odds),tot=p1+p2,s1=bank*(p1/tot),s2=bank*(p2/tot),pr=Math.min(s1*oD(ov.odds),s2*oD(un.odds))-bank;
+                if(!best||pr>best.profit){
+                  var midFlag=un.point>ov.point;
+                  var mn=midFlag?'🎯 MIDDLE: win both if total lands between '+ov.point+' and '+un.point:'';
+                  best={game:gl,sport:sp2,market:'totals',middle:midFlag,edge:(1-tot)*100,roi:(pr/bank)*100,profit:pr,
+                    side1:{name:'Over '+ov.point,book:ov.book,odds:ov.odds,stake:s1},
+                    side2:{name:'Under '+un.point,book:un.book,odds:un.odds,stake:s2},
+                    middleNote:mn};
+                }
+              });
+            });
+            if(best)allArbs.push(best);
           }
         });
       });
