@@ -1,5 +1,171 @@
-{
-  "returncode" : 0,
-  "stdout" : "<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n<title>ArbEdge<\/title>\n<style>\n*{box-sizing:border-box;margin:0;padding:0}\nbody{background:#0a0a0f;color:#e8e8f0;font-family:sans-serif;padding:16px 16px 80px}\nh1{color:#00ff88;font-size:22px;margin-bottom:4px}\n.sub{color:#666;font-size:12px;margin-bottom:16px}\ninput{background:#1a1a26;border:1px solid #2a2a3d;color:#e8e8f0;border-radius:8px;padding:12px;font-size:14px;width:100%;margin-bottom:10px;font-family:monospace}\n.row{display:flex;gap:8px;margin-bottom:10px}\n.row input{margin-bottom:0}\nbutton.scan{background:#00ff88;color:#000;border:none;border-radius:8px;padding:14px;font-size:15px;font-weight:bold;cursor:pointer;width:100%;margin-bottom:12px}\n.sports{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}\n.markets{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}\n.sb,.mb{background:#1a1a26;color:#eee;border:1px solid #2a2a3d;border-radius:8px;padding:8px 12px;font-size:12px;cursor:pointer;user-select:none}\n.sb.on,.mb.on{background:#00ff88;color:#000;border-color:#00ff88}\n.slabel{color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}\n.stats{color:#666;font-size:12px;margin-bottom:12px}\n.card{background:#12121a;border:1px solid #2a2a3d;border-radius:12px;margin-bottom:12px;overflow:hidden}\n.card.hot{border-color:#00ff88;box-shadow:0 0 16px rgba(0,255,136,.1)}\n.ctop{padding:12px 14px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px}\n.gtitle{font-size:14px;font-weight:600;line-height:1.3}\n.gmeta{color:#666;font-size:10px;text-transform:uppercase;margin-bottom:3px}\n.roi{color:#00ff88;font-size:20px;font-weight:bold;white-space:nowrap}\n.psub{color:#666;font-size:11px;text-align:right}\n.sides{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:#2a2a3d;border-top:1px solid #2a2a3d}\n.side{background:#1a1a26;padding:10px 12px}\n.book{color:#7c3aed;font-size:10px;font-weight:bold;text-transform:uppercase;margin-bottom:2px}\n.team{color:#e8e8f0;font-size:12px;margin-bottom:3px;line-height:1.3}\n.odds{font-size:15px;font-weight:bold;font-family:monospace}\n.stake{color:#00ff88;font-size:11px;font-family:monospace;margin-top:2px}\n.msg{color:#666;text-align:center;padding:40px 16px;background:#12121a;border-radius:12px;line-height:1.8}\n.err{color:#ff4757;background:rgba(255,71,87,.1);border:1px solid rgba(255,71,87,.3);border-radius:8px;padding:12px;margin-bottom:12px;font-size:13px}\n.alert-bar{background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.3);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#00ff88}\n.ticker{position:fixed;bottom:0;left:0;right:0;background:#12121a;border-top:1px solid #2a2a3d;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px}\n.ticker-info{font-size:12px;color:#666;font-family:monospace;flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}\n.tdot{width:8px;height:8px;border-radius:50%;background:#666;display:inline-block;margin-right:6px;flex-shrink:0}\n.tdot.live{background:#00ff88;animation:pulse 2s infinite}\n@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}\n.tbtn{border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:bold;cursor:pointer}\n.mktag{display:inline-block;font-size:9px;font-weight:bold;text-transform:uppercase;letter-spacing:.6px;padding:2px 6px;border-radius:4px;margin-bottom:4px}\n.mktag.h2h{background:rgba(124,58,237,.2);color:#a78bfa}\n.mktag.spread{background:rgba(255,107,53,.2);color:#ff6b35}\n.mktag.total{background:rgba(59,130,246,.2);color:#60a5fa}\n.mktag.prop{background:rgba(236,72,153,.2);color:#f472b6}\n<\/style>\n<\/head>\n<body>\n<h1>ArbEdge<\/h1>\n<div class=\"sub\">Live arbitrage scanner — all markets<\/div>\n\n<input type=\"text\" id=\"key\" placeholder=\"Paste Odds API key...\" \/>\n<div class=\"row\">\n  <input type=\"number\" id=\"bank\" value=\"1000\" placeholder=\"Bankroll $\" \/>\n  <input type=\"number\" id=\"mine\" value=\"0.3\" placeholder=\"Min %\" step=\"0.1\" \/>\n<\/div>\n\n<div class=\"slabel\">Sports<\/div>\n<div class=\"sports\" id=\"sports\">\n  <div class=\"sb on\" data-s=\"baseball_mlb\">⚾ MLB<\/div>\n  <div class=\"sb on\" data-s=\"basketball_nba\">🏀 NBA<\/div>\n  <div class=\"sb on\" data-s=\"americanfootball_nfl\">🏈 NFL<\/div>\n  <div class=\"sb on\" data-s=\"icehockey_nhl\">🏒 NHL<\/div>\n  <div class=\"sb on\" data-s=\"soccer_usa_mls\">⚽ MLS<\/div>\n  <div class=\"sb on\" data-s=\"tennis_atp_french_open\">🎾 Tennis<\/div>\n  <div class=\"sb on\" data-s=\"mma_mixed_martial_arts\">🥊 MMA<\/div>\n<\/div>\n\n<div class=\"slabel\">Markets<\/div>\n<div class=\"markets\" id=\"markets\">\n  <div class=\"mb on\" data-m=\"h2h\">💰 Moneyline<\/div>\n  <div class=\"mb on\" data-m=\"spreads\">📊 Spreads<\/div>\n  <div class=\"mb on\" data-m=\"totals\">🔢 Totals<\/div>\n<\/div>\n\n<button class=\"scan\" onclick=\"startScan()\">🔍 Scan Now<\/button>\n<div id=\"out\"><\/div>\n\n<div class=\"ticker\">\n  <div class=\"ticker-info\"><span class=\"tdot\" id=\"dot\"><\/span><span id=\"ttext\">idle<\/span><\/div>\n  <div style=\"display:flex;gap:8px;flex-shrink:0\">\n    <button class=\"tbtn\" id=\"autoBtn\" onclick=\"toggleAuto()\" style=\"background:#00ff88;color:#000\">⏱ Auto<\/button>\n    <button class=\"tbtn\" onclick=\"document.getElementById('out').innerHTML=''\" style=\"background:#1a1a26;color:#ff4757;border:1px solid #ff4757\">Clear<\/button>\n  <\/div>\n<\/div>\n\n<script>\nvar timer=null,autoOn=false,scanCount=0;\n\ndocument.getElementById('sports').addEventListener('click',function(e){var b=e.target.closest('.sb');if(b)b.classList.toggle('on')});\ndocument.getElementById('markets').addEventListener('click',function(e){var b=e.target.closest('.mb');if(b)b.classList.toggle('on')});\n\nfunction getSports(){return Array.from(document.querySelectorAll('.sb.on')).map(b=>b.dataset.s)}\nfunction getMarkets(){return Array.from(document.querySelectorAll('.mb.on')).map(b=>b.dataset.m)}\nfunction oP(o){return o>0?100\/(o+100):Math.abs(o)\/(Math.abs(o)+100)}\nfunction oD(o){return o>0?o\/100+1:100\/Math.abs(o)+1}\nfunction fmt(o){return o>0?'+'+o:''+o}\nfunction setStatus(live,text){document.getElementById('dot').className='tdot'+(live?' live':'');document.getElementById('ttext').textContent=text}\n\nfunction playAlert(){\n  try{var a=new AudioContext(),o=a.createOscillator(),g=a.createGain();\n  o.connect(g);g.connect(a.destination);\n  o.frequency.value=660;g.gain.setValueAtTime(.3,a.currentTime);\n  g.gain.exponentialRampToValueAtTime(.001,a.currentTime+.5);\n  o.start();o.stop(a.currentTime+.5)}catch(e){}\n}\n\n\/\/ Check if two odds represent a true arb (not just vig on same line)\nfunction isTrueArb(o1,o2,minPct){\n  var p1=oP(o1),p2=oP(o2),tot=p1+p2;\n  return tot<1.0 && (1-tot)*100>=minPct;\n}\n\nfunction processMarket(outcomes,bank,min,label,marketType){\n  \/\/ For h2h and spreads: find best price for each outcome name\n  \/\/ For totals: find best Over and best Under\n  var arbs=[];\n  if(!outcomes||outcomes.length<2)return arbs;\n\n  \/\/ Group by outcome name across all books\n  var byName={};\n  outcomes.forEach(function(o){\n    var n=o.name;\n    if(!byName[n])byName[n]=[];\n    byName[n].push({book:o.book,odds:o.price,point:o.point});\n  });\n\n  var names=Object.keys(byName);\n  if(names.length<2)return arbs;\n\n  \/\/ For each pair of opposing sides, find best odds\n  for(var i=0;i<names.length;i++){\n    for(var j=i+1;j<names.length;j++){\n      var side1=byName[names[i]],side2=byName[names[j]];\n      var best1=side1.reduce((a,b)=>a.odds>b.odds?a:b);\n      var best2=side2.reduce((a,b)=>a.odds>b.odds?a:b);\n      if(best1.book===best2.book)continue;\n      if(!isTrueArb(best1.odds,best2.odds,min))continue;\n      var p1=oP(best1.odds),p2=oP(best2.odds),tot=p1+p2;\n      var s1=bank*(p1\/tot),s2=bank*(p2\/tot);\n      var profit=Math.min(s1*oD(best1.odds),s2*oD(best2.odds))-bank;\n      arbs.push({\n        label:label,market:marketType,\n        edge:(1-tot)*100,roi:(profit\/bank)*100,profit:profit,\n        side1:{name:names[i],book:best1.book,odds:best1.odds,point:best1.point,stake:s1},\n        side2:{name:names[j],book:best2.book,odds:best2.odds,point:best2.point,stake:s2}\n      });\n    }\n  }\n  return arbs;\n}\n\nasync function scanAll(){\n  var key=document.getElementById('key').value.trim();\n  var bank=parseFloat(document.getElementById('bank').value)||1000;\n  var min=parseFloat(document.getElementById('mine').value)||0.3;\n  var sports=getSports();\n  var markets=getMarkets();\n  if(!key){document.getElementById('out').innerHTML='<div class=\"err\">Paste your API key first.<\/div>';return}\n  if(!sports.length||!markets.length){document.getElementById('out').innerHTML='<div class=\"err\">Select at least one sport and one market.<\/div>';return}\n\n  setStatus(true,'scanning...');\n  scanCount++;\n\n  var allArbs=[],totalGames=0;\n  var mktStr=markets.join(',');\n\n  var promises=sports.map(function(sp){\n    return fetch('https:\/\/api.the-odds-api.com\/v4\/sports\/'+sp+'\/odds\/?apiKey='+key+'&regions=us&markets='+mktStr+'&oddsFormat=american')\n    .then(r=>r.json())\n    .then(function(games){\n      if(!Array.isArray(games))return;\n      totalGames+=games.length;\n      games.forEach(function(game){\n        var gameLabel=game.away_team+' @ '+game.home_team;\n        var sport=game.sport_title;\n\n        \/\/ Collect all outcomes per market across all books\n        var marketData={};\n        markets.forEach(function(m){marketData[m]=[]});\n\n        (game.bookmakers||[]).forEach(function(book){\n          (book.markets||[]).forEach(function(mkt){\n            if(!marketData[mkt.key])return;\n            (mkt.outcomes||[]).forEach(function(out){\n              marketData[mkt.key].push({name:out.name,price:out.price,point:out.point,book:book.title});\n            });\n          });\n        });\n\n        \/\/ Process each market\n        markets.forEach(function(mkt){\n          var outcomes=marketData[mkt];\n          if(!outcomes||outcomes.length<2)return;\n\n          if(mkt==='h2h'){\n            \/\/ Group by team name\n            var byTeam={};\n            outcomes.forEach(function(o){if(!byTeam[o.name])byTeam[o.name]=[];byTeam[o.name].push({book:o.book,odds:o.price})});\n            var teams=Object.keys(byTeam);\n            if(teams.length<2)return;\n            var b1=byTeam[teams[0]].reduce((a,b)=>a.odds>b.odds?a:b);\n            var b2=byTeam[teams[1]].reduce((a,b)=>a.odds>b.odds?a:b);\n            if(b1.book===b2.book)return;\n            if(!isTrueArb(b1.odds,b2.odds,min))return;\n            var p1=oP(b1.odds),p2=oP(b2.odds),tot=p1+p2;\n            var s1=bank*(p1\/tot),s2=bank*(p2\/tot);\n            var profit=Math.min(s1*oD(b1.odds),s2*oD(b2.odds))-bank;\n            allArbs.push({game:gameLabel,sport:sport,market:'h2h',edge:(1-tot)*100,roi:(profit\/bank)*100,profit:profit,\n              side1:{name:teams[0],book:b1.book,odds:b1.odds,stake:s1},\n              side2:{name:teams[1],book:b2.book,odds:b2.odds,stake:s2}});\n\n          } else if(mkt==='spreads'){\n            \/\/ Group by team+point combo, find arb between opposing spreads\n            var byTeam={};\n            outcomes.forEach(function(o){\n              var key=o.name+'|'+o.point;\n              if(!byTeam[key])byTeam[key]=[];\n              byTeam[key].push({book:o.book,odds:o.price,point:o.point});\n            });\n            \/\/ Find best odds for each team at any spread\n            var teams={};\n            outcomes.forEach(function(o){\n              if(!teams[o.name])teams[o.name]=[];\n              teams[o.name].push({book:o.book,odds:o.price,point:o.point});\n            });\n            var tnames=Object.keys(teams);\n            if(tnames.length<2)return;\n            var b1=teams[tnames[0]].reduce((a,b)=>a.odds>b.odds?a:b);\n            var b2=teams[tnames[1]].reduce((a,b)=>a.odds>b.odds?a:b);\n            if(b1.book===b2.book)return;\n            if(!isTrueArb(b1.odds,b2.odds,min))return;\n            var p1=oP(b1.odds),p2=oP(b2.odds),tot=p1+p2;\n            var s1=bank*(p1\/tot),s2=bank*(p2\/tot);\n            var profit=Math.min(s1*oD(b1.odds),s2*oD(b2.odds))-bank;\n            allArbs.push({game:gameLabel,sport:sport,market:'spreads',edge:(1-tot)*100,roi:(profit\/bank)*100,profit:profit,\n              side1:{name:tnames[0]+(b1.point!=null?' '+fmt(b1.point):''),book:b1.book,odds:b1.odds,stake:s1},\n              side2:{name:tnames[1]+(b2.point!=null?' '+fmt(b2.point):''),book:b2.book,odds:b2.odds,stake:s2}});\n\n          } else if(mkt==='totals'){\n            var overs=outcomes.filter(o=>o.name==='Over');\n            var unders=outcomes.filter(o=>o.name==='Under');\n            if(!overs.length||!unders.length)return;\n            var bo=overs.reduce((a,b)=>a.odds>b.odds?a:b);\n            var bu=unders.reduce((a,b)=>a.odds>b.odds?a:b);\n            if(bo.book===bu.book)return;\n            if(!isTrueArb(bo.odds,bu.odds,min))return;\n            var p1=oP(bo.odds),p2=oP(bu.odds),tot=p1+p2;\n            var s1=bank*(p1\/tot),s2=bank*(p2\/tot);\n            var profit=Math.min(s1*oD(bo.odds),s2*oD(bu.odds))-bank;\n            allArbs.push({game:gameLabel,sport:sport,market:'totals',edge:(1-tot)*100,roi:(profit\/bank)*100,profit:profit,\n              side1:{name:'Over'+(bo.point!=null?' '+bo.point:''),book:bo.book,odds:bo.odds,stake:s1},\n              side2:{name:'Under'+(bu.point!=null?' '+bu.point:''),book:bu.book,odds:bu.odds,stake:s2}});\n          }\n        });\n      });\n    }).catch(()=>{});\n  });\n\n  await Promise.all(promises);\n  allArbs.sort((a,b)=>b.edge-a.edge);\n\n  if(allArbs.length)playAlert();\n\n  var now=new Date().toLocaleTimeString();\n  var mktLabels={'h2h':'Moneyline','spreads':'Spread','totals':'Total'};\n  var h='';\n  if(allArbs.length)h+='<div class=\"alert-bar\">🔔 '+allArbs.length+' arb'+(allArbs.length>1?'s':'')+' found at '+now+'<\/div>';\n  h+='<div class=\"stats\">Scan #'+scanCount+' &bull; '+totalGames+' games &bull; '+allArbs.length+' arbs &bull; '+now+'<\/div>';\n\n  if(!allArbs.length){\n    h+='<div class=\"msg\">No arbs above '+min+'% right now.<br><br>Lines change constantly — keep scanning.<br>Try lowering Min % to 0.2 to see more.<\/div>';\n  } else {\n    allArbs.forEach(function(x){\n      var tag=x.market;\n      h+='<div class=\"card'+(x.edge>2?' hot':'')+'\"><div class=\"ctop\"><div style=\"flex:1;min-width:0\"><div class=\"gmeta\">'+x.sport+'<\/div>';\n      h+='<span class=\"mktag '+tag+'\">'+mktLabels[tag]+'<\/span>';\n      h+='<div class=\"gtitle\">'+x.game+'<\/div><\/div>';\n      h+='<div style=\"text-align:right;flex-shrink:0\"><div class=\"roi\">+'+x.roi.toFixed(2)+'%<\/div><div class=\"psub\">$'+x.profit.toFixed(2)+' profit<\/div><\/div><\/div>';\n      h+='<div class=\"sides\">';\n      [x.side1,x.side2].forEach(function(s){\n        h+='<div class=\"side\"><div class=\"book\">'+s.book+'<\/div><div class=\"team\">'+s.name+'<\/div><div class=\"odds\">'+fmt(s.odds)+'<\/div><div class=\"stake\">Bet $'+s.stake.toFixed(2)+'<\/div><\/div>';\n      });\n      h+='<\/div><\/div>';\n    });\n  }\n  document.getElementById('out').innerHTML=h;\n  setStatus(autoOn,'#'+scanCount+' at '+now+(autoOn?' — next in 60s':''));\n}\n\nfunction startScan(){scanAll()}\n\nfunction toggleAuto(){\n  autoOn=!autoOn;\n  var btn=document.getElementById('autoBtn');\n  if(autoOn){\n    btn.textContent='⏹ Stop';btn.style.background='#ff4757';btn.style.color='#fff';\n    scanAll();timer=setInterval(scanAll,60000);\n  } else {\n    btn.textContent='⏱ Auto';btn.style.background='#00ff88';btn.style.color='#000';\n    clearInterval(timer);setStatus(false,'auto stopped');\n  }\n}\n<\/script>\n<\/body>\n<\/html>\n",
-  "stderr" : ""
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ArbEdge</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0a0f;color:#e8e8f0;font-family:sans-serif;padding:16px 16px 80px}
+h1{color:#00ff88;font-size:22px;margin-bottom:4px}
+.sub{color:#666;font-size:12px;margin-bottom:16px}
+input{background:#1a1a26;border:1px solid #2a2a3d;color:#e8e8f0;border-radius:8px;padding:12px;font-size:14px;width:100%;margin-bottom:10px;font-family:monospace}
+.row{display:flex;gap:8px;margin-bottom:10px}
+.row input{margin-bottom:0}
+button.scan{background:#00ff88;color:#000;border:none;border-radius:8px;padding:14px;font-size:15px;font-weight:bold;cursor:pointer;width:100%;margin-bottom:12px}
+.sports{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.markets{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.sb,.mb{background:#1a1a26;color:#eee;border:1px solid #2a2a3d;border-radius:8px;padding:8px 12px;font-size:12px;cursor:pointer;user-select:none}
+.sb.on,.mb.on{background:#00ff88;color:#000;border-color:#00ff88}
+.slabel{color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
+.stats{color:#666;font-size:12px;margin-bottom:12px}
+.card{background:#12121a;border:1px solid #2a2a3d;border-radius:12px;margin-bottom:12px;overflow:hidden}
+.card.hot{border-color:#00ff88;box-shadow:0 0 16px rgba(0,255,136,.1)}
+.ctop{padding:12px 14px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.gtitle{font-size:14px;font-weight:600;line-height:1.3}
+.gmeta{color:#666;font-size:10px;text-transform:uppercase;margin-bottom:3px}
+.roi{color:#00ff88;font-size:20px;font-weight:bold;white-space:nowrap}
+.psub{color:#666;font-size:11px;text-align:right}
+.sides{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:#2a2a3d;border-top:1px solid #2a2a3d}
+.side{background:#1a1a26;padding:10px 12px}
+.book{color:#7c3aed;font-size:10px;font-weight:bold;text-transform:uppercase;margin-bottom:2px}
+.team{color:#e8e8f0;font-size:12px;margin-bottom:3px;line-height:1.3}
+.odds{font-size:15px;font-weight:bold;font-family:monospace}
+.stake{color:#00ff88;font-size:11px;font-family:monospace;margin-top:2px}
+.msg{color:#666;text-align:center;padding:40px 16px;background:#12121a;border-radius:12px;line-height:1.8}
+.err{color:#ff4757;background:rgba(255,71,87,.1);border:1px solid rgba(255,71,87,.3);border-radius:8px;padding:12px;margin-bottom:12px;font-size:13px}
+.alert-bar{background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.3);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#00ff88}
+.ticker{position:fixed;bottom:0;left:0;right:0;background:#12121a;border-top:1px solid #2a2a3d;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.ticker-info{font-size:12px;color:#666;font-family:monospace;flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.tdot{width:8px;height:8px;border-radius:50%;background:#666;display:inline-block;margin-right:6px;flex-shrink:0}
+.tdot.live{background:#00ff88;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.tbtn{border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:bold;cursor:pointer}
+.mktag{display:inline-block;font-size:9px;font-weight:bold;text-transform:uppercase;letter-spacing:.6px;padding:2px 6px;border-radius:4px;margin-bottom:4px}
+.mktag.h2h{background:rgba(124,58,237,.2);color:#a78bfa}
+.mktag.spreads{background:rgba(255,107,53,.2);color:#ff6b35}
+.mktag.totals{background:rgba(59,130,246,.2);color:#60a5fa}
+</style>
+</head>
+<body>
+<h1>ArbEdge</h1>
+<div class="sub">Live arbitrage scanner — all markets</div>
+<input type="text" id="key" placeholder="Paste Odds API key..." />
+<div class="row">
+  <input type="number" id="bank" value="1000" placeholder="Bankroll $" />
+  <input type="number" id="mine" value="0.3" placeholder="Min %" step="0.1" />
+</div>
+<div class="slabel">Sports</div>
+<div class="sports" id="sports">
+  <div class="sb on" data-s="baseball_mlb">⚾ MLB</div>
+  <div class="sb on" data-s="basketball_nba">🏀 NBA</div>
+  <div class="sb on" data-s="americanfootball_nfl">🏈 NFL</div>
+  <div class="sb on" data-s="icehockey_nhl">🏒 NHL</div>
+  <div class="sb on" data-s="soccer_usa_mls">⚽ MLS</div>
+  <div class="sb on" data-s="tennis_atp_french_open">🎾 Tennis</div>
+  <div class="sb on" data-s="mma_mixed_martial_arts">🥊 MMA</div>
+</div>
+<div class="slabel">Markets</div>
+<div class="markets" id="markets">
+  <div class="mb on" data-m="h2h">💰 Moneyline</div>
+  <div class="mb on" data-m="spreads">📊 Spreads</div>
+  <div class="mb on" data-m="totals">🔢 Totals</div>
+</div>
+<button class="scan" onclick="startScan()">🔍 Scan Now</button>
+<div id="out"></div>
+<div class="ticker">
+  <div class="ticker-info"><span class="tdot" id="dot"></span><span id="ttext">idle</span></div>
+  <div style="display:flex;gap:8px;flex-shrink:0">
+    <button class="tbtn" id="autoBtn" onclick="toggleAuto()" style="background:#00ff88;color:#000">⏱ Auto</button>
+    <button class="tbtn" onclick="document.getElementById('out').innerHTML=''" style="background:#1a1a26;color:#ff4757;border:1px solid #ff4757">Clear</button>
+  </div>
+</div>
+<script>
+var timer=null,autoOn=false,scanCount=0;
+document.getElementById('sports').addEventListener('click',function(e){var b=e.target.closest('.sb');if(b)b.classList.toggle('on')});
+document.getElementById('markets').addEventListener('click',function(e){var b=e.target.closest('.mb');if(b)b.classList.toggle('on')});
+function getSports(){return Array.from(document.querySelectorAll('.sb.on')).map(b=>b.dataset.s)}
+function getMarkets(){return Array.from(document.querySelectorAll('.mb.on')).map(b=>b.dataset.m)}
+function oP(o){return o>0?100/(o+100):Math.abs(o)/(Math.abs(o)+100)}
+function oD(o){return o>0?o/100+1:100/Math.abs(o)+1}
+function fmt(o){return o>0?'+'+o:''+o}
+function setStatus(live,text){document.getElementById('dot').className='tdot'+(live?' live':'');document.getElementById('ttext').textContent=text}
+function playAlert(){try{var a=new AudioContext(),o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.frequency.value=660;g.gain.setValueAtTime(.3,a.currentTime);g.gain.exponentialRampToValueAtTime(.001,a.currentTime+.5);o.start();o.stop(a.currentTime+.5)}catch(e){}}
+function isTrueArb(o1,o2,minPct){var p1=oP(o1),p2=oP(o2),tot=p1+p2;return tot<1.0&&(1-tot)*100>=minPct}
+async function scanAll(){
+  var key=document.getElementById('key').value.trim();
+  var bank=parseFloat(document.getElementById('bank').value)||1000;
+  var min=parseFloat(document.getElementById('mine').value)||0.3;
+  var sports=getSports(),markets=getMarkets();
+  if(!key){document.getElementById('out').innerHTML='<div class="err">Paste your API key first.</div>';return}
+  if(!sports.length||!markets.length){document.getElementById('out').innerHTML='<div class="err">Select at least one sport and market.</div>';return}
+  setStatus(true,'scanning...');scanCount++;
+  var allArbs=[],totalGames=0;
+  var mktStr=markets.join(',');
+  await Promise.all(sports.map(function(sp){
+    return fetch('https://api.the-odds-api.com/v4/sports/'+sp+'/odds/?apiKey='+key+'&regions=us&markets='+mktStr+'&oddsFormat=american')
+    .then(r=>r.json()).then(function(games){
+      if(!Array.isArray(games))return;
+      totalGames+=games.length;
+      games.forEach(function(game){
+        var gl=game.away_team+' @ '+game.home_team,sp2=game.sport_title;
+        var md={};markets.forEach(function(m){md[m]=[]});
+        (game.bookmakers||[]).forEach(function(book){
+          (book.markets||[]).forEach(function(mkt){
+            if(!md[mkt.key])return;
+            (mkt.outcomes||[]).forEach(function(out){md[mkt.key].push({name:out.name,price:out.price,point:out.point,book:book.title})});
+          });
+        });
+        markets.forEach(function(mkt){
+          var oc=md[mkt];if(!oc||oc.length<2)return;
+          if(mkt==='h2h'){
+            var bt={};oc.forEach(function(o){if(!bt[o.name])bt[o.name]=[];bt[o.name].push({book:o.book,odds:o.price})});
+            var tn=Object.keys(bt);if(tn.length<2)return;
+            var b1=bt[tn[0]].reduce((a,b)=>a.odds>b.odds?a:b),b2=bt[tn[1]].reduce((a,b)=>a.odds>b.odds?a:b);
+            if(b1.book===b2.book||!isTrueArb(b1.odds,b2.odds,min))return;
+            var p1=oP(b1.odds),p2=oP(b2.odds),tot=p1+p2,s1=bank*(p1/tot),s2=bank*(p2/tot),pr=Math.min(s1*oD(b1.odds),s2*oD(b2.odds))-bank;
+            allArbs.push({game:gl,sport:sp2,market:'h2h',edge:(1-tot)*100,roi:(pr/bank)*100,profit:pr,side1:{name:tn[0],book:b1.book,odds:b1.odds,stake:s1},side2:{name:tn[1],book:b2.book,odds:b2.odds,stake:s2}});
+          } else if(mkt==='spreads'){
+            var bt={};oc.forEach(function(o){if(!bt[o.name])bt[o.name]=[];bt[o.name].push({book:o.book,odds:o.price,point:o.point})});
+            var tn=Object.keys(bt);if(tn.length<2)return;
+            var b1=bt[tn[0]].reduce((a,b)=>a.odds>b.odds?a:b),b2=bt[tn[1]].reduce((a,b)=>a.odds>b.odds?a:b);
+            if(b1.book===b2.book||!isTrueArb(b1.odds,b2.odds,min))return;
+            var p1=oP(b1.odds),p2=oP(b2.odds),tot=p1+p2,s1=bank*(p1/tot),s2=bank*(p2/tot),pr=Math.min(s1*oD(b1.odds),s2*oD(b2.odds))-bank;
+            allArbs.push({game:gl,sport:sp2,market:'spreads',edge:(1-tot)*100,roi:(pr/bank)*100,profit:pr,side1:{name:tn[0]+(b1.point!=null?' '+fmt(b1.point):''),book:b1.book,odds:b1.odds,stake:s1},side2:{name:tn[1]+(b2.point!=null?' '+fmt(b2.point):''),book:b2.book,odds:b2.odds,stake:s2}});
+          } else if(mkt==='totals'){
+            var ov=oc.filter(o=>o.name==='Over'),un=oc.filter(o=>o.name==='Under');
+            if(!ov.length||!un.length)return;
+            var bo=ov.reduce((a,b)=>a.odds>b.odds?a:b),bu=un.reduce((a,b)=>a.odds>b.odds?a:b);
+            if(bo.book===bu.book||!isTrueArb(bo.odds,bu.odds,min))return;
+            var p1=oP(bo.odds),p2=oP(bu.odds),tot=p1+p2,s1=bank*(p1/tot),s2=bank*(p2/tot),pr=Math.min(s1*oD(bo.odds),s2*oD(bu.odds))-bank;
+            allArbs.push({game:gl,sport:sp2,market:'totals',edge:(1-tot)*100,roi:(pr/bank)*100,profit:pr,side1:{name:'Over'+(bo.point!=null?' '+bo.point:''),book:bo.book,odds:bo.odds,stake:s1},side2:{name:'Under'+(bu.point!=null?' '+bu.point:''),book:bu.book,odds:bu.odds,stake:s2}});
+          }
+        });
+      });
+    }).catch(()=>{});
+  }));
+  allArbs.sort((a,b)=>b.edge-a.edge);
+  if(allArbs.length)playAlert();
+  var now=new Date().toLocaleTimeString();
+  var ml={'h2h':'Moneyline','spreads':'Spread','totals':'Total'};
+  var h='';
+  if(allArbs.length)h+='<div class="alert-bar">🔔 '+allArbs.length+' arb'+(allArbs.length>1?'s':'')+' found at '+now+'</div>';
+  h+='<div class="stats">Scan #'+scanCount+' &bull; '+totalGames+' games &bull; '+allArbs.length+' arbs &bull; '+now+'</div>';
+  if(!allArbs.length){h+='<div class="msg">No arbs above '+min+'% right now.<br><br>Lines change constantly — keep scanning.<br>Try lowering Min % to 0.2 to see more.</div>'}
+  else{allArbs.forEach(function(x){
+    h+='<div class="card'+(x.edge>2?' hot':'')+'"><div class="ctop"><div style="flex:1;min-width:0"><div class="gmeta">'+x.sport+'</div><span class="mktag '+x.market+'">'+ml[x.market]+'</span><div class="gtitle">'+x.game+'</div></div><div style="text-align:right;flex-shrink:0"><div class="roi">+'+x.roi.toFixed(2)+'%</div><div class="psub">$'+x.profit.toFixed(2)+' profit</div></div></div><div class="sides">';
+    [x.side1,x.side2].forEach(function(s){h+='<div class="side"><div class="book">'+s.book+'</div><div class="team">'+s.name+'</div><div class="odds">'+fmt(s.odds)+'</div><div class="stake">Bet $'+s.stake.toFixed(2)+'</div></div>'});
+    h+='</div></div>';
+  })}
+  document.getElementById('out').innerHTML=h;
+  setStatus(autoOn,'#'+scanCount+' at '+now+(autoOn?' — next in 60s':''));
 }
+function startScan(){scanAll()}
+function toggleAuto(){
+  autoOn=!autoOn;var btn=document.getElementById('autoBtn');
+  if(autoOn){btn.textContent='⏹ Stop';btn.style.background='#ff4757';btn.style.color='#fff';scanAll();timer=setInterval(scanAll,60000)}
+  else{btn.textContent='⏱ Auto';btn.style.background='#00ff88';btn.style.color='#000';clearInterval(timer);setStatus(false,'auto stopped')}
+}
+</script>
+</body>
+</html>
