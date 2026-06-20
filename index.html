@@ -14,14 +14,17 @@ input{background:#1a1a26;border:1px solid #2a2a3d;color:#e8e8f0;border-radius:8p
 .row input{margin-bottom:0}
 button.scan{background:#00ff88;color:#000;border:none;border-radius:8px;padding:14px;font-size:15px;font-weight:bold;cursor:pointer;width:100%;margin-bottom:12px}
 .sports{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
-.markets{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
-.sb,.mb{background:#1a1a26;color:#eee;border:1px solid #2a2a3d;border-radius:8px;padding:8px 12px;font-size:12px;cursor:pointer;user-select:none}
+.markets{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.sb,.mb,.fb{background:#1a1a26;color:#eee;border:1px solid #2a2a3d;border-radius:8px;padding:8px 12px;font-size:12px;cursor:pointer;user-select:none}
 .sb.on,.mb.on{background:#00ff88;color:#000;border-color:#00ff88}
+.fb.on{background:#7c3aed;color:#fff;border-color:#7c3aed}
 .slabel{color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
 .stats{color:#666;font-size:12px;margin-bottom:12px}
 .card{background:#12121a;border:1px solid #2a2a3d;border-radius:12px;margin-bottom:12px;overflow:hidden}
 .card.hot{border-color:#00ff88;box-shadow:0 0 16px rgba(0,255,136,.1)}
 .card.middle{border-color:#f59e0b;box-shadow:0 0 16px rgba(245,158,11,.15)}
+.card.live{border-color:#ff4757}
 .ctop{padding:12px 14px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
 .gtitle{font-size:14px;font-weight:600;line-height:1.3}
 .gmeta{color:#666;font-size:10px;text-transform:uppercase;margin-bottom:3px}
@@ -50,7 +53,9 @@ button.scan{background:#00ff88;color:#000;border:none;border-radius:8px;padding:
 .mktag.props{background:rgba(236,72,153,.2);color:#f472b6}
 .mktag.gameprops{background:rgba(168,85,247,.2);color:#c084fc}
 .mktag.alt{background:rgba(16,185,129,.2);color:#34d399}
+.mktag.golf{background:rgba(34,197,94,.2);color:#4ade80}
 .mktag.mid{background:rgba(245,158,11,.2);color:#f59e0b}
+.mktag.live{background:rgba(255,71,87,.2);color:#ff6b6b}
 .prog{background:#1a1a26;border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:12px;color:#666;font-family:monospace}
 .prog-bar{height:4px;background:#2a2a3d;border-radius:2px;margin-top:8px;overflow:hidden}
 .prog-fill{height:100%;background:#00ff88;border-radius:2px;transition:width .3s}
@@ -73,6 +78,7 @@ button.scan{background:#00ff88;color:#000;border:none;border-radius:8px;padding:
   <div class="sb on" data-s="soccer_usa_mls">⚽ MLS</div>
   <div class="sb on" data-s="tennis_atp_french_open">🎾 Tennis</div>
   <div class="sb on" data-s="mma_mixed_martial_arts">🥊 MMA</div>
+  <div class="sb on" data-s="golf">⛳ Golf</div>
 </div>
 <div class="slabel">Markets</div>
 <div class="markets" id="markets">
@@ -83,6 +89,12 @@ button.scan{background:#00ff88;color:#000;border:none;border-radius:8px;padding:
   <div class="mb on" data-m="alternate_totals">📉 Alt Totals</div>
   <div class="mb on" data-m="props">🎯 Player Props</div>
   <div class="mb on" data-m="gameprops">🏟️ Game Props</div>
+</div>
+<div class="slabel">Game Status</div>
+<div class="filters" id="filters">
+  <div class="fb on" data-f="all">🌐 All Games</div>
+  <div class="fb" data-f="live">🔴 Live Only</div>
+  <div class="fb" data-f="upcoming">📅 Upcoming Only</div>
 </div>
 <button class="scan" onclick="startScan()">🔍 Scan Now</button>
 <div id="prog" style="display:none" class="prog">
@@ -126,8 +138,15 @@ var GP_LABEL={
 
 document.getElementById('sports').addEventListener('click',function(e){var b=e.target.closest('.sb');if(b)b.classList.toggle('on')});
 document.getElementById('markets').addEventListener('click',function(e){var b=e.target.closest('.mb');if(b)b.classList.toggle('on')});
+document.getElementById('filters').addEventListener('click',function(e){
+  var b=e.target.closest('.fb');if(!b)return;
+  document.querySelectorAll('.fb').forEach(function(x){x.classList.remove('on')});
+  b.classList.add('on');
+});
+
 function getSports(){return Array.from(document.querySelectorAll('.sb.on')).map(b=>b.dataset.s)}
 function getMarkets(){return Array.from(document.querySelectorAll('.mb.on')).map(b=>b.dataset.m)}
+function getFilter(){var el=document.querySelector('.fb.on');return el?el.dataset.f:'all'}
 function oP(o){return o>0?100/(o+100):Math.abs(o)/(Math.abs(o)+100)}
 function oD(o){return o>0?o/100+1:100/Math.abs(o)+1}
 function fmt(o){return o>0?'+'+o:''+o}
@@ -136,17 +155,29 @@ function setProgress(pct,text){document.getElementById('progText').textContent=t
 function playAlert(){try{var a=new AudioContext(),o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.frequency.value=660;g.gain.setValueAtTime(.3,a.currentTime);g.gain.exponentialRampToValueAtTime(.001,a.currentTime+.5);o.start();o.stop(a.currentTime+.5)}catch(e){}}
 function isTrueArb(o1,o2,minPct){var p1=oP(o1),p2=oP(o2),tot=p1+p2;return tot<1.0&&(1-tot)*100>=minPct}
 
-function processH2H(oc,gl,sp2,bank,min,allArbs,label,tag){
+function isLive(commenceTime){
+  return new Date(commenceTime).getTime()<=Date.now();
+}
+
+function passesFilter(game,filterMode){
+  if(filterMode==='all')return true;
+  var live=isLive(game.commence_time);
+  if(filterMode==='live')return live;
+  if(filterMode==='upcoming')return !live;
+  return true;
+}
+
+function processH2H(oc,gl,sp2,bank,min,allArbs,label,tag,liveFlag){
   label=label||'Moneyline';tag=tag||'h2h';
   var bt={};oc.forEach(function(o){if(!bt[o.name])bt[o.name]=[];bt[o.name].push({book:o.book,odds:o.price})});
   var tn=Object.keys(bt);if(tn.length<2)return;
   var b1=bt[tn[0]].reduce((a,b)=>a.odds>b.odds?a:b),b2=bt[tn[1]].reduce((a,b)=>a.odds>b.odds?a:b);
   if(b1.book===b2.book||!isTrueArb(b1.odds,b2.odds,min))return;
   var p1=oP(b1.odds),p2=oP(b2.odds),tot=p1+p2,s1=bank*(p1/tot),s2=bank*(p2/tot),pr=Math.min(s1*oD(b1.odds),s2*oD(b2.odds))-bank;
-  allArbs.push({game:gl,sport:sp2,market:tag,label:label,middle:false,edge:(1-tot)*100,roi:(pr/bank)*100,profit:pr,side1:{name:tn[0],book:b1.book,odds:b1.odds,stake:s1},side2:{name:tn[1],book:b2.book,odds:b2.odds,stake:s2},middleNote:''});
+  allArbs.push({game:gl,sport:sp2,market:tag,label:label,middle:false,live:!!liveFlag,edge:(1-tot)*100,roi:(pr/bank)*100,profit:pr,side1:{name:tn[0],book:b1.book,odds:b1.odds,stake:s1},side2:{name:tn[1],book:b2.book,odds:b2.odds,stake:s2},middleNote:''});
 }
 
-function processSpreads(oc,gl,sp2,bank,min,allArbs,label,tag){
+function processSpreads(oc,gl,sp2,bank,min,allArbs,label,tag,liveFlag){
   tag=tag||'spreads';
   var teams={};oc.forEach(function(o){if(!teams[o.name])teams[o.name]=true});
   var tn=Object.keys(teams);if(tn.length<2)return;
@@ -159,12 +190,12 @@ function processSpreads(oc,gl,sp2,bank,min,allArbs,label,tag){
     var p1=oP(a.odds),p2=oP(b.odds),tot=p1+p2,s1=bank*(p1/tot),s2=bank*(p2/tot),pr=Math.min(s1*oD(a.odds),s2*oD(b.odds))-bank;
     var mf=(a.point>0&&b.point<0&&a.point>Math.abs(b.point))||(b.point>0&&a.point<0&&b.point>Math.abs(a.point));
     var mn=mf?'🎯 MIDDLE: win both if margin between '+Math.min(Math.abs(a.point),Math.abs(b.point))+' and '+Math.max(Math.abs(a.point),Math.abs(b.point)):'';
-    if(!best||pr>best.profit)best={game:gl,sport:sp2,market:tag,label:label,middle:mf,edge:(1-tot)*100,roi:(pr/bank)*100,profit:pr,side1:{name:tn[0]+' '+fmt(a.point),book:a.book,odds:a.odds,stake:s1},side2:{name:tn[1]+' '+fmt(b.point),book:b.book,odds:b.odds,stake:s2},middleNote:mn};
+    if(!best||pr>best.profit)best={game:gl,sport:sp2,market:tag,label:label,middle:mf,live:!!liveFlag,edge:(1-tot)*100,roi:(pr/bank)*100,profit:pr,side1:{name:tn[0]+' '+fmt(a.point),book:a.book,odds:a.odds,stake:s1},side2:{name:tn[1]+' '+fmt(b.point),book:b.book,odds:b.odds,stake:s2},middleNote:mn};
   })});
   if(best)allArbs.push(best);
 }
 
-function processTotals(oc,gl,sp2,bank,min,allArbs,label,tag){
+function processTotals(oc,gl,sp2,bank,min,allArbs,label,tag,liveFlag){
   tag=tag||'totals';
   var ov=oc.filter(o=>o.name==='Over'),un=oc.filter(o=>o.name==='Under');
   if(!ov.length||!un.length)return;
@@ -174,12 +205,12 @@ function processTotals(oc,gl,sp2,bank,min,allArbs,label,tag){
     if(!isTrueArb(a.odds,b.odds,min))return;
     var p1=oP(a.odds),p2=oP(b.odds),tot=p1+p2,s1=bank*(p1/tot),s2=bank*(p2/tot),pr=Math.min(s1*oD(a.odds),s2*oD(b.odds))-bank;
     var mf=b.point>a.point,mn=mf?'🎯 MIDDLE: win both if total lands between '+a.point+' and '+b.point:'';
-    if(!best||pr>best.profit)best={game:gl,sport:sp2,market:tag,label:label,middle:mf,edge:(1-tot)*100,roi:(pr/bank)*100,profit:pr,side1:{name:'Over '+a.point,book:a.book,odds:a.odds,stake:s1},side2:{name:'Under '+b.point,book:b.book,odds:b.odds,stake:s2},middleNote:mn};
+    if(!best||pr>best.profit)best={game:gl,sport:sp2,market:tag,label:label,middle:mf,live:!!liveFlag,edge:(1-tot)*100,roi:(pr/bank)*100,profit:pr,side1:{name:'Over '+a.point,book:a.book,odds:a.odds,stake:s1},side2:{name:'Under '+b.point,book:b.book,odds:b.odds,stake:s2},middleNote:mn};
   })});
   if(best)allArbs.push(best);
 }
 
-function processProps(bookmakers,gl,sp2,bank,min,allArbs){
+function processProps(bookmakers,gl,sp2,bank,min,allArbs,liveFlag){
   var byProp={};
   bookmakers.forEach(function(book){
     (book.markets||[]).forEach(function(mkt){
@@ -199,11 +230,11 @@ function processProps(bookmakers,gl,sp2,bank,min,allArbs){
     if(bo.book===bu.book||!isTrueArb(bo.odds,bu.odds,min))return;
     var p1=oP(bo.odds),p2=oP(bu.odds),tot=p1+p2,s1=bank*(p1/tot),s2=bank*(p2/tot),pr=Math.min(s1*oD(bo.odds),s2*oD(bu.odds))-bank;
     var lbl=pm.market.replace(/_/g,' ').replace(/\b\w/g,function(c){return c.toUpperCase()});
-    allArbs.push({game:gl+' — '+pm.desc,sport:sp2,market:'props',label:lbl,middle:false,edge:(1-tot)*100,roi:(pr/bank)*100,profit:pr,side1:{name:'Over '+pm.point,book:bo.book,odds:bo.odds,stake:s1},side2:{name:'Under '+pm.point,book:bu.book,odds:bu.odds,stake:s2},middleNote:''});
+    allArbs.push({game:gl+' — '+pm.desc,sport:sp2,market:'props',label:lbl,middle:false,live:!!liveFlag,edge:(1-tot)*100,roi:(pr/bank)*100,profit:pr,side1:{name:'Over '+pm.point,book:bo.book,odds:bo.odds,stake:s1},side2:{name:'Under '+pm.point,book:bu.book,odds:bu.odds,stake:s2},middleNote:''});
   });
 }
 
-function processGameProps(bookmakers,gl,sp2,bank,min,allArbs,gpKeys){
+function processGameProps(bookmakers,gl,sp2,bank,min,allArbs,gpKeys,liveFlag){
   var md={};gpKeys.forEach(function(m){md[m]=[]});
   bookmakers.forEach(function(book){
     (book.markets||[]).forEach(function(mkt){
@@ -214,10 +245,43 @@ function processGameProps(bookmakers,gl,sp2,bank,min,allArbs,gpKeys){
   gpKeys.forEach(function(mkt){
     var oc=md[mkt];if(!oc||oc.length<2)return;
     var label=GP_LABEL[mkt]||mkt;
-    if(mkt.indexOf('h2h')===0)processH2H(oc,gl,sp2,bank,min,allArbs,label,'gameprops');
-    else if(mkt.indexOf('spreads')===0)processSpreads(oc,gl,sp2,bank,min,allArbs,label,'gameprops');
-    else if(mkt.indexOf('totals')===0||mkt==='team_totals')processTotals(oc,gl,sp2,bank,min,allArbs,label,'gameprops');
+    if(mkt.indexOf('h2h')===0)processH2H(oc,gl,sp2,bank,min,allArbs,label,'gameprops',liveFlag);
+    else if(mkt.indexOf('spreads')===0)processSpreads(oc,gl,sp2,bank,min,allArbs,label,'gameprops',liveFlag);
+    else if(mkt.indexOf('totals')===0||mkt==='team_totals')processTotals(oc,gl,sp2,bank,min,allArbs,label,'gameprops',liveFlag);
   });
+}
+
+async function scanGolf(key,bank,min,allArbs,filterMode){
+  try{
+    var listRes=await fetch('https://api.the-odds-api.com/v4/sports/?apiKey='+key);
+    var allSports=await listRes.json();
+    if(!Array.isArray(allSports))return {games:0};
+    var golfTournaments=allSports.filter(function(s){
+      return s.key&&s.key.indexOf('golf_')===0&&s.active;
+    });
+    var gamesCount=0;
+    for(var i=0;i<golfTournaments.length;i++){
+      var t=golfTournaments[i];
+      var res=await fetch('https://api.the-odds-api.com/v4/sports/'+t.key+'/odds/?apiKey='+key+'&regions=us&markets=h2h&oddsFormat=american&bookmakers='+BOOKS);
+      var data=await res.json();
+      if(!Array.isArray(data))continue;
+      data.forEach(function(matchup){
+        gamesCount++;
+        if(!passesFilter(matchup,filterMode))return;
+        var liveFlag=isLive(matchup.commence_time);
+        var gl=(matchup.home_team||'Player A')+' vs '+(matchup.away_team||'Player B')+' — '+t.title;
+        var oc=[];
+        (matchup.bookmakers||[]).forEach(function(book){
+          (book.markets||[]).forEach(function(mkt){
+            if(mkt.key!=='h2h')return;
+            (mkt.outcomes||[]).forEach(function(out){oc.push({name:out.name,price:out.price,book:book.title})});
+          });
+        });
+        if(oc.length>=2)processH2H(oc,gl,'Golf — '+t.title,bank,min,allArbs,'Matchup','golf',liveFlag);
+      });
+    }
+    return {games:gamesCount};
+  }catch(e){return {games:0}}
 }
 
 async function scanAll(){
@@ -225,8 +289,12 @@ async function scanAll(){
   var bank=parseFloat(document.getElementById('bank').value)||1000;
   var min=parseFloat(document.getElementById('mine').value)||0.3;
   var sports=getSports(),markets=getMarkets();
+  var filterMode=getFilter();
   if(!key){document.getElementById('out').innerHTML='<div class="err">Paste your API key first.</div>';return}
-  if(!sports.length||!markets.length){document.getElementById('out').innerHTML='<div class="err">Select at least one sport and market.</div>';return}
+  if(!sports.length){document.getElementById('out').innerHTML='<div class="err">Select at least one sport.</div>';return}
+
+  var doGolf=sports.indexOf('golf')>-1;
+  var stdSports=sports.filter(function(s){return s!=='golf'});
 
   var doProps=markets.indexOf('props')>-1;
   var doGameProps=markets.indexOf('gameprops')>-1;
@@ -234,39 +302,44 @@ async function scanAll(){
   var doAltT=markets.indexOf('alternate_totals')>-1;
   var coreMkts=markets.filter(function(m){return ['props','gameprops','alternate_spreads','alternate_totals'].indexOf(m)===-1});
 
+  if(!stdSports.length&&!doGolf){document.getElementById('out').innerHTML='<div class="err">Select at least one sport.</div>';return}
+
   setStatus(true,'scanning...');scanCount++;
   document.getElementById('prog').style.display='block';
   setProgress(0,'Fetching game odds...');
 
   var allArbs=[],totalGames=0,allGames=[];
 
-  if(coreMkts.length){
-    await Promise.all(sports.map(function(sp){
+  if(coreMkts.length&&stdSports.length){
+    await Promise.all(stdSports.map(function(sp){
       return fetch('https://api.the-odds-api.com/v4/sports/'+sp+'/odds/?apiKey='+key+'&regions=us&markets='+coreMkts.join(',')+'&oddsFormat=american&bookmakers='+BOOKS)
       .then(function(r){return r.json()}).then(function(games){
         if(!Array.isArray(games))return;
         games.forEach(function(g){g._sport=sp});
-        allGames=allGames.concat(games);totalGames+=games.length;
-        games.forEach(function(game){
+        var filtered=games.filter(function(g){return passesFilter(g,filterMode)});
+        allGames=allGames.concat(filtered);totalGames+=games.length;
+        filtered.forEach(function(game){
           var gl=game.away_team+' @ '+game.home_team,sp2=game.sport_title;
+          var liveFlag=isLive(game.commence_time);
           var md={};coreMkts.forEach(function(m){md[m]=[]});
           (game.bookmakers||[]).forEach(function(book){(book.markets||[]).forEach(function(mkt){if(!md[mkt.key])return;(mkt.outcomes||[]).forEach(function(out){md[mkt.key].push({name:out.name,price:out.price,point:out.point,book:book.title})})})});
           coreMkts.forEach(function(mkt){
             var oc=md[mkt];if(!oc||oc.length<2)return;
-            if(mkt==='h2h')processH2H(oc,gl,sp2,bank,min,allArbs);
-            else if(mkt==='spreads')processSpreads(oc,gl,sp2,bank,min,allArbs,'Spread');
-            else if(mkt==='totals')processTotals(oc,gl,sp2,bank,min,allArbs,'Total');
+            if(mkt==='h2h')processH2H(oc,gl,sp2,bank,min,allArbs,'Moneyline','h2h',liveFlag);
+            else if(mkt==='spreads')processSpreads(oc,gl,sp2,bank,min,allArbs,'Spread','spreads',liveFlag);
+            else if(mkt==='totals')processTotals(oc,gl,sp2,bank,min,allArbs,'Total','totals',liveFlag);
           });
         });
       }).catch(function(){});
     }));
-  } else {
-    await Promise.all(sports.map(function(sp){
+  } else if(stdSports.length){
+    await Promise.all(stdSports.map(function(sp){
       return fetch('https://api.the-odds-api.com/v4/sports/'+sp+'/odds/?apiKey='+key+'&regions=us&markets=h2h&oddsFormat=american&bookmakers='+BOOKS)
       .then(function(r){return r.json()}).then(function(games){
         if(!Array.isArray(games))return;
         games.forEach(function(g){g._sport=sp});
-        allGames=allGames.concat(games);totalGames+=games.length;
+        var filtered=games.filter(function(g){return passesFilter(g,filterMode)});
+        allGames=allGames.concat(filtered);totalGames+=games.length;
       }).catch(function(){});
     }));
   }
@@ -282,6 +355,7 @@ async function scanAll(){
       var chunk=allGames.slice(i,i+batch);
       await Promise.all(chunk.map(function(game){
         var gl=game.away_team+' @ '+game.home_team,sp2=game.sport_title,sp=game._sport;
+        var liveFlag=isLive(game.commence_time);
         var propKeys=doProps?(PROP_MARKETS[sp]||[]):[];
         var gpKeys=doGameProps?(GAME_PROP_MARKETS[sp]||[]):[];
         var mkts=altMkts.concat(propKeys).concat(gpKeys);
@@ -291,15 +365,21 @@ async function scanAll(){
           if(!data||!data.bookmakers)return;
           var md={};altMkts.forEach(function(m){md[m]=[]});
           data.bookmakers.forEach(function(book){(book.markets||[]).forEach(function(mkt){if(!md[mkt.key])return;(mkt.outcomes||[]).forEach(function(out){md[mkt.key].push({name:out.name,price:out.price,point:out.point,book:book.title})})})});
-          if(doAltS&&md['alternate_spreads']&&md['alternate_spreads'].length)processSpreads(md['alternate_spreads'],gl,sp2,bank,min,allArbs,'Alt Spreads','alt');
-          if(doAltT&&md['alternate_totals']&&md['alternate_totals'].length)processTotals(md['alternate_totals'],gl,sp2,bank,min,allArbs,'Alt Totals','alt');
-          if(doProps)processProps(data.bookmakers,gl,sp2,bank,min,allArbs);
-          if(doGameProps&&gpKeys.length)processGameProps(data.bookmakers,gl,sp2,bank,min,allArbs,gpKeys);
+          if(doAltS&&md['alternate_spreads']&&md['alternate_spreads'].length)processSpreads(md['alternate_spreads'],gl,sp2,bank,min,allArbs,'Alt Spreads','alt',liveFlag);
+          if(doAltT&&md['alternate_totals']&&md['alternate_totals'].length)processTotals(md['alternate_totals'],gl,sp2,bank,min,allArbs,'Alt Totals','alt',liveFlag);
+          if(doProps)processProps(data.bookmakers,gl,sp2,bank,min,allArbs,liveFlag);
+          if(doGameProps&&gpKeys.length)processGameProps(data.bookmakers,gl,sp2,bank,min,allArbs,gpKeys,liveFlag);
         }).catch(function(){});
       }));
       done+=chunk.length;
-      setProgress(25+Math.round((done/total)*70),'Scanning: '+done+'/'+total+' games...');
+      setProgress(25+Math.round((done/total)*55),'Scanning: '+done+'/'+total+' games...');
     }
+  }
+
+  if(doGolf){
+    setProgress(85,'Scanning golf matchups...');
+    var golfResult=await scanGolf(key,bank,min,allArbs,filterMode);
+    totalGames+=golfResult.games;
   }
 
   allArbs.sort(function(a,b){return b.edge-a.edge});
@@ -312,7 +392,8 @@ async function scanAll(){
   h+='<div class="stats">Scan #'+scanCount+' &bull; '+totalGames+' games &bull; '+allArbs.length+' arbs &bull; '+now+'</div>';
   if(!allArbs.length){h+='<div class="msg">No arbs above '+min+'% right now.<br><br>Keep scanning — try lowering Min % to 0.2.</div>'}
   else{allArbs.forEach(function(x){
-    h+='<div class="card'+(x.middle?' middle':x.edge>2?' hot':'')+'"><div class="ctop"><div style="flex:1;min-width:0"><div class="gmeta">'+x.sport+'</div><span class="mktag '+x.market+'">'+x.label+'</span>';
+    h+='<div class="card'+(x.middle?' middle':x.live?' live':x.edge>2?' hot':'')+'"><div class="ctop"><div style="flex:1;min-width:0"><div class="gmeta">'+x.sport+'</div><span class="mktag '+x.market+'">'+x.label+'</span>';
+    if(x.live)h+='<span class="mktag live">🔴 LIVE</span>';
     if(x.middle)h+='<span class="mktag mid">🎯 Middle</span>';
     h+='<div class="gtitle">'+x.game+'</div></div><div style="text-align:right;flex-shrink:0"><div class="roi">+'+x.roi.toFixed(2)+'%</div><div class="psub">$'+x.profit.toFixed(2)+' profit</div></div></div><div class="sides">';
     [x.side1,x.side2].forEach(function(s){h+='<div class="side"><div class="book">'+s.book+'</div><div class="team">'+s.name+'</div><div class="odds">'+fmt(s.odds)+'</div><div class="stake">Bet $'+s.stake.toFixed(2)+'</div></div>'});
