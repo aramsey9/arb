@@ -90,6 +90,17 @@ button.scan{background:#00ff88;color:#000;border:none;border-radius:8px;padding:
   <div class="mb on" data-m="props">🎯 Player Props</div>
   <div class="mb on" data-m="gameprops">🏟️ Game Props</div>
 </div>
+<div class="slabel">Sportsbooks</div>
+<div class="sports" id="books">
+  <div class="sb on" data-b="fanduel">FanDuel</div>
+  <div class="sb on" data-b="draftkings">DraftKings</div>
+  <div class="sb on" data-b="betmgm">BetMGM</div>
+  <div class="sb on" data-b="williamhill_us">Caesars</div>
+  <div class="sb on" data-b="betrivers">BetRivers</div>
+  <div class="sb on" data-b="fanatics">Fanatics</div>
+  <div class="sb on" data-b="espnbet">ESPN Bet</div>
+  <div class="sb on" data-b="hardrockbet">Hard Rock</div>
+</div>
 <div class="slabel">Game Status</div>
 <div class="filters" id="filters">
   <div class="fb on" data-f="all">🌐 All Games</div>
@@ -111,7 +122,6 @@ button.scan{background:#00ff88;color:#000;border:none;border-radius:8px;padding:
 </div>
 <script>
 var timer=null,autoOn=false,scanCount=0;
-var BOOKS='fanduel,draftkings,betmgm,williamhill_us,betrivers,fanatics,espnbet,hardrockbet';
 
 var PROP_MARKETS={
   baseball_mlb:['batter_hits','batter_home_runs','batter_rbis','batter_runs_scored','batter_strikeouts','batter_total_bases','pitcher_strikeouts','pitcher_hits_allowed','pitcher_walks'],
@@ -138,14 +148,16 @@ var GP_LABEL={
 
 document.getElementById('sports').addEventListener('click',function(e){var b=e.target.closest('.sb');if(b)b.classList.toggle('on')});
 document.getElementById('markets').addEventListener('click',function(e){var b=e.target.closest('.mb');if(b)b.classList.toggle('on')});
+document.getElementById('books').addEventListener('click',function(e){var b=e.target.closest('.sb');if(b)b.classList.toggle('on')});
 document.getElementById('filters').addEventListener('click',function(e){
   var b=e.target.closest('.fb');if(!b)return;
   document.querySelectorAll('.fb').forEach(function(x){x.classList.remove('on')});
   b.classList.add('on');
 });
 
-function getSports(){return Array.from(document.querySelectorAll('.sb.on')).map(b=>b.dataset.s)}
+function getSports(){return Array.from(document.querySelectorAll('#sports .sb.on')).map(b=>b.dataset.s)}
 function getMarkets(){return Array.from(document.querySelectorAll('.mb.on')).map(b=>b.dataset.m)}
+function getBooks(){return Array.from(document.querySelectorAll('#books .sb.on')).map(b=>b.dataset.b)}
 function getFilter(){var el=document.querySelector('.fb.on');return el?el.dataset.f:'all'}
 function oP(o){return o>0?100/(o+100):Math.abs(o)/(Math.abs(o)+100)}
 function oD(o){return o>0?o/100+1:100/Math.abs(o)+1}
@@ -290,6 +302,9 @@ async function scanAll(){
   var min=parseFloat(document.getElementById('mine').value)||0.3;
   var sports=getSports(),markets=getMarkets();
   var filterMode=getFilter();
+  var selectedBooks=getBooks();
+  if(!selectedBooks.length){document.getElementById('out').innerHTML='<div class="err">Select at least one sportsbook.</div>';return}
+  window.BOOKS=selectedBooks.join(',');
   if(!key){document.getElementById('out').innerHTML='<div class="err">Paste your API key first.</div>';return}
   if(!sports.length){document.getElementById('out').innerHTML='<div class="err">Select at least one sport.</div>';return}
 
