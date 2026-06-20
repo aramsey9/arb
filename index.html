@@ -190,6 +190,39 @@ function processH2H(oc,gl,sp2,bank,min,allArbs,label,tag,liveFlag){
   allArbs.push({game:gl,sport:sp2,market:tag,label:label,middle:false,live:!!liveFlag,edge:(1-tot)*100,roi:(pr/bank)*100,profit:pr,side1:{name:tn[0],book:b1.book,odds:b1.odds,stake:s1},side2:{name:tn[1],book:b2.book,odds:b2.odds,stake:s2},middleNote:''});
 }
 
+// 3-way moneyline (soccer): Team A / Team B / Draw - all three must be covered
+function process3Way(oc,gl,sp2,bank,min,allArbs,label,tag,liveFlag){
+  label=label||'Moneyline (3-Way)';tag=tag||'h2h';
+  var bt={};
+  oc.forEach(function(o){if(!bt[o.name])bt[o.name]=[];bt[o.name].push({book:o.book,odds:o.price})});
+  var outcomes=Object.keys(bt);
+  if(outcomes.length<3)return; // not a real 3-way market, skip
+  // best price for each of the 3 outcomes, must be from 3 different angles (can repeat books if needed, but flag same-book)
+  var best={};
+  outcomes.forEach(function(name){
+    best[name]=bt[name].reduce(function(a,b){return a.odds>b.odds?a:b});
+  });
+  var names=Object.keys(best);
+  var oddsArr=names.map(function(n){return best[n].odds});
+  var probs=oddsArr.map(oP);
+  var totalProb=probs.reduce(function(a,b){return a+b},0);
+  var edge=(1-totalProb)*100;
+  if(totalProb>=1.0||edge<min)return; // no arb
+  // Stakes proportional to implied prob, guarantee equal payout on all 3
+  var stakes=names.map(function(n,i){return bank*(probs[i]/totalProb)});
+  var payouts=names.map(function(n,i){return stakes[i]*oD(best[n].odds)});
+  var profit=Math.min.apply(null,payouts)-bank;
+  var booksUsed=names.map(function(n){return best[n].book});
+  var allDiffBooks=new Set(booksUsed).size===booksUsed.length;
+  allArbs.push({
+    game:gl,sport:sp2,market:tag,label:label+(allDiffBooks?'':' ⚠️ same book'),middle:false,live:!!liveFlag,
+    edge:edge,roi:(profit/bank)*100,profit:profit,
+    side1:{name:names[0],book:best[names[0]].book,odds:best[names[0]].odds,stake:stakes[0]},
+    side2:{name:names[1]+' / '+names[2],book:best[names[1]].book+' + '+best[names[2]].book,odds:best[names[1]].odds,stake:stakes[1]+stakes[2]},
+    middleNote:'3-way: Bet '+names[0]+' $'+stakes[0].toFixed(2)+' ('+best[names[0]].book+'), '+names[1]+' $'+stakes[1].toFixed(2)+' ('+best[names[1]].book+'), '+names[2]+' $'+stakes[2].toFixed(2)+' ('+best[names[2]].book+'). All 3 must be covered — this is NOT a 2-bet arb.'
+  });
+}
+
 function processSpreads(oc,gl,sp2,bank,min,allArbs,label,tag,liveFlag){
   tag=tag||'spreads';
   var teams={};oc.forEach(function(o){if(!teams[o.name])teams[o.name]=true});
@@ -247,7 +280,7 @@ function processProps(bookmakers,gl,sp2,bank,min,allArbs,liveFlag){
   });
 }
 
-function processGameProps(bookmakers,gl,sp2,bank,min,allArbs,gpKeys,liveFlag){
+function processGameProps(bookmakers,gl,sp2,bank,min,allArbs,gpKeys,liveFlag,sportKey){
   var md={};gpKeys.forEach(function(m){md[m]=[]});
   bookmakers.forEach(function(book){
     (book.markets||[]).forEach(function(mkt){
@@ -255,10 +288,14 @@ function processGameProps(bookmakers,gl,sp2,bank,min,allArbs,gpKeys,liveFlag){
       (mkt.outcomes||[]).forEach(function(out){md[mkt.key].push({name:out.name,price:out.price,point:out.point,book:book.title})});
     });
   });
+  var isThreeWaySport=sportKey&&sportKey.indexOf('soccer_')===0;
   gpKeys.forEach(function(mkt){
     var oc=md[mkt];if(!oc||oc.length<2)return;
     var label=GP_LABEL[mkt]||mkt;
-    if(mkt.indexOf('h2h')===0)processH2H(oc,gl,sp2,bank,min,allArbs,label,'gameprops',liveFlag);
+    if(mkt.indexOf('h2h')===0){
+      if(isThreeWaySport)process3Way(oc,gl,sp2,bank,min,allArbs,label,'gameprops',liveFlag);
+      else processH2H(oc,gl,sp2,bank,min,allArbs,label,'gameprops',liveFlag);
+    }
     else if(mkt.indexOf('spreads')===0)processSpreads(oc,gl,sp2,bank,min,allArbs,label,'gameprops',liveFlag);
     else if(mkt.indexOf('totals')===0||mkt==='team_totals')processTotals(oc,gl,sp2,bank,min,allArbs,label,'gameprops',liveFlag);
   });
@@ -341,7 +378,11 @@ async function scanAll(){
           (game.bookmakers||[]).forEach(function(book){(book.markets||[]).forEach(function(mkt){if(!md[mkt.key])return;(mkt.outcomes||[]).forEach(function(out){md[mkt.key].push({name:out.name,price:out.price,point:out.point,book:book.title})})})});
           coreMkts.forEach(function(mkt){
             var oc=md[mkt];if(!oc||oc.length<2)return;
-            if(mkt==='h2h')processH2H(oc,gl,sp2,bank,min,allArbs,'Moneyline','h2h',liveFlag);
+            var isThreeWaySport=(sp.indexOf('soccer_')===0);
+            if(mkt==='h2h'){
+              if(isThreeWaySport)process3Way(oc,gl,sp2,bank,min,allArbs,'Moneyline','h2h',liveFlag);
+              else processH2H(oc,gl,sp2,bank,min,allArbs,'Moneyline','h2h',liveFlag);
+            }
             else if(mkt==='spreads')processSpreads(oc,gl,sp2,bank,min,allArbs,'Spread','spreads',liveFlag);
             else if(mkt==='totals')processTotals(oc,gl,sp2,bank,min,allArbs,'Total','totals',liveFlag);
           });
@@ -384,7 +425,7 @@ async function scanAll(){
           if(doAltS&&md['alternate_spreads']&&md['alternate_spreads'].length)processSpreads(md['alternate_spreads'],gl,sp2,bank,min,allArbs,'Alt Spreads','alt',liveFlag);
           if(doAltT&&md['alternate_totals']&&md['alternate_totals'].length)processTotals(md['alternate_totals'],gl,sp2,bank,min,allArbs,'Alt Totals','alt',liveFlag);
           if(doProps)processProps(data.bookmakers,gl,sp2,bank,min,allArbs,liveFlag);
-          if(doGameProps&&gpKeys.length)processGameProps(data.bookmakers,gl,sp2,bank,min,allArbs,gpKeys,liveFlag);
+          if(doGameProps&&gpKeys.length)processGameProps(data.bookmakers,gl,sp2,bank,min,allArbs,gpKeys,liveFlag,sp);
         }).catch(function(){});
       }));
       done+=chunk.length;
