@@ -37,6 +37,9 @@ button.scan{background:#00ff88;color:#000;border:none;border-radius:8px;padding:
 .odds{font-size:15px;font-weight:bold;font-family:monospace}
 .stake{color:#00ff88;font-size:11px;font-family:monospace;margin-top:2px}
 .score-line{color:#fbbf24;font-size:11px;font-family:monospace;margin-top:3px}
+.gdate-tag{color:#666;font-size:10px;font-family:monospace;margin-top:3px}
+.section-divider{margin:24px 0 14px;text-align:center;position:relative;border-top:1px dashed #2a2a3d;padding-top:14px}
+.section-divider span{color:#7c3aed;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px}
 .limit-tag{color:#94a3b8;font-size:10px;font-family:monospace;margin-top:4px}
 .open-link{display:block;margin-top:6px;color:#7c3aed;font-size:11px;font-weight:700;text-decoration:none}
 .open-link:active{opacity:.7}
@@ -159,6 +162,16 @@ document.getElementById('filters').addEventListener('click',function(e){
   document.querySelectorAll('.fb').forEach(function(x){x.classList.remove('on')});
   b.classList.add('on');
 });
+
+(function(){
+  try{
+    var savedKey=localStorage.getItem('arbedge_api_key');
+    if(savedKey)document.getElementById('key').value=savedKey;
+  }catch(e){}
+  document.getElementById('key').addEventListener('input',function(){
+    try{localStorage.setItem('arbedge_api_key',this.value.trim());}catch(e){}
+  });
+})();
 
 function getSports(){return Array.from(document.querySelectorAll('#sports .sb.on')).map(b=>b.dataset.s)}
 function getMarkets(){return Array.from(document.querySelectorAll('.mb.on')).map(b=>b.dataset.m)}
@@ -353,7 +366,9 @@ async function scanGolf(key,bank,min,allArbs,filterMode){
             (mkt.outcomes||[]).forEach(function(out){oc.push({name:out.name,price:out.price,book:book.title})});
           });
         });
+        var preLenG=allArbs.length;
         if(oc.length>=2)processH2H(oc,gl,'Golf — '+t.title,bank,min,allArbs,'Matchup','golf',liveFlag);
+        for(var ag=preLenG;ag<allArbs.length;ag++){allArbs[ag].commenceTime=matchup.commence_time;}
       });
     }
     return {games:gamesCount};
@@ -419,7 +434,7 @@ async function scanAll(){
             else if(mkt==='totals')processTotals(oc,gl,sp2,bank,min,allArbs,'Total','totals',liveFlag);
           });
           var scoreLine=getScoreLine(game.id);
-          for(var ai=preLen;ai<allArbs.length;ai++){allArbs[ai].scoreLine=scoreLine;}
+          for(var ai=preLen;ai<allArbs.length;ai++){allArbs[ai].scoreLine=scoreLine;allArbs[ai].commenceTime=game.commence_time;}
         });
       }).catch(function(){});
     }));
@@ -462,7 +477,7 @@ async function scanAll(){
           if(doProps)processProps(data.bookmakers,gl,sp2,bank,min,allArbs,liveFlag);
           if(doGameProps&&gpKeys.length)processGameProps(data.bookmakers,gl,sp2,bank,min,allArbs,gpKeys,liveFlag,sp);
           var scoreLine2=getScoreLine(game.id);
-          for(var aj=preLen2;aj<allArbs.length;aj++){allArbs[aj].scoreLine=scoreLine2;}
+          for(var aj=preLen2;aj<allArbs.length;aj++){allArbs[aj].scoreLine=scoreLine2;allArbs[aj].commenceTime=game.commence_time;}
         }).catch(function(){});
       }));
       done+=chunk.length;
@@ -480,26 +495,44 @@ async function scanAll(){
   if(allArbs.length)playAlert();
   document.getElementById('prog').style.display='none';
 
+  var THREE_DAYS_MS=3*24*60*60*1000;
+  var cutoff=Date.now()+THREE_DAYS_MS;
+  var soonArbs=[],laterArbs=[];
+  allArbs.forEach(function(x){
+    if(x.commenceTime&&new Date(x.commenceTime).getTime()>cutoff)laterArbs.push(x);
+    else soonArbs.push(x);
+  });
+
+  function renderCard(x){
+    var c='<div class="card'+(x.middle?' middle':x.live?' live':x.edge>2?' hot':'')+'"><div class="ctop"><div style="flex:1;min-width:0"><div class="gmeta">'+x.sport+'</div><span class="mktag '+x.market+'">'+x.label+'</span>';
+    if(x.live)c+='<span class="mktag live">🔴 LIVE</span>';
+    if(x.middle)c+='<span class="mktag mid">🎯 Middle</span>';
+    c+='<div class="gtitle">'+x.game+'</div>';
+    if(x.commenceTime)c+='<div class="gdate-tag">'+new Date(x.commenceTime).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+'</div>';
+    if(x.scoreLine)c+='<div class="score-line">⚡ '+x.scoreLine+'</div>';
+    c+='</div><div style="text-align:right;flex-shrink:0"><div class="roi">+'+x.roi.toFixed(2)+'%</div><div class="psub">$'+x.profit.toFixed(2)+' profit</div></div></div><div class="sides">';
+    [x.side1,x.side2].forEach(function(s){
+      c+='<div class="side"><div class="book">'+s.book+'</div><div class="team">'+s.name+'</div><div class="odds">'+fmt(s.odds)+'</div><div class="stake">Bet $'+s.stake.toFixed(2)+'</div>';
+      if(s.limit)c+='<div class="limit-tag">Max: $'+s.limit+(parseFloat(s.limit)<s.stake?' ⚠️ below stake':'')+'</div>';
+      if(s.link)c+='<a href="'+s.link+'" target="_blank" class="open-link">Open in '+s.book+' →</a>';
+      c+='</div>';
+    });
+    c+='</div>';if(x.middleNote)c+='<div class="middle-note">'+x.middleNote+'</div>';c+='</div>';
+    return c;
+  }
+
   var now=new Date().toLocaleTimeString();
   var h='';
   if(allArbs.length)h+='<div class="alert-bar">🔔 '+allArbs.length+' arb'+(allArbs.length>1?'s':'')+' found at '+now+'</div>';
   h+='<div class="stats">Scan #'+scanCount+' &bull; '+totalGames+' games &bull; '+allArbs.length+' arbs &bull; '+now+'</div>';
   if(!allArbs.length){h+='<div class="msg">No arbs above '+min+'% right now.<br><br>Keep scanning — try lowering Min % to 0.2.</div>'}
-  else{allArbs.forEach(function(x){
-    h+='<div class="card'+(x.middle?' middle':x.live?' live':x.edge>2?' hot':'')+'"><div class="ctop"><div style="flex:1;min-width:0"><div class="gmeta">'+x.sport+'</div><span class="mktag '+x.market+'">'+x.label+'</span>';
-    if(x.live)h+='<span class="mktag live">🔴 LIVE</span>';
-    if(x.middle)h+='<span class="mktag mid">🎯 Middle</span>';
-    h+='<div class="gtitle">'+x.game+'</div>';
-    if(x.scoreLine)h+='<div class="score-line">⚡ '+x.scoreLine+'</div>';
-    h+='</div><div style="text-align:right;flex-shrink:0"><div class="roi">+'+x.roi.toFixed(2)+'%</div><div class="psub">$'+x.profit.toFixed(2)+' profit</div></div></div><div class="sides">';
-    [x.side1,x.side2].forEach(function(s){
-      h+='<div class="side"><div class="book">'+s.book+'</div><div class="team">'+s.name+'</div><div class="odds">'+fmt(s.odds)+'</div><div class="stake">Bet $'+s.stake.toFixed(2)+'</div>';
-      if(s.limit)h+='<div class="limit-tag">Max: $'+s.limit+(parseFloat(s.limit)<s.stake?' ⚠️ below stake':'')+'</div>';
-      if(s.link)h+='<a href="'+s.link+'" target="_blank" class="open-link">Open in '+s.book+' →</a>';
-      h+='</div>';
-    });
-    h+='</div>';if(x.middleNote)h+='<div class="middle-note">'+x.middleNote+'</div>';h+='</div>';
-  })}
+  else{
+    soonArbs.forEach(function(x){h+=renderCard(x)});
+    if(laterArbs.length){
+      h+='<div class="section-divider"><span>📅 Games 3+ Days Away ('+laterArbs.length+')</span></div>';
+      laterArbs.forEach(function(x){h+=renderCard(x)});
+    }
+  }
   document.getElementById('out').innerHTML=h;
   setStatus(autoOn,'#'+scanCount+' at '+now+(autoOn?' — next in 60s':''));
 }
