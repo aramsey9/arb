@@ -650,10 +650,40 @@ function lookupFromArb(idx){
   var x=ARB_CACHE[idx];
   if(!x||!x.gameId||!x.sportKey){document.getElementById('lout').innerHTML='<div class="err">Run a fresh scan first, then tap this button.</div>';switchTab('lookup');return}
   switchTab('lookup');
-  document.getElementById('lout').innerHTML='<div class="msg">Loading all lines for this game...</div>';
+  document.getElementById('lout').innerHTML='<div class="msg">Loading lines...</div>';
   var sp=x.sportKey;
-  var allMkts=['h2h','spreads','totals'].concat(PROP_MARKETS[sp]||[]).concat(GAME_PROP_MARKETS[sp]||[]).filter(function(v,i,a){return a.indexOf(v)===i&&v});
-  fetchEventOdds(x.gameId,sp,allMkts.join(','),x.game.split(' — ')[0]);
+
+  // Figure out which specific markets to fetch and what to filter by
+  var targetMkts=[];
+  var playerFilter=null;
+
+  if(x.market==='props'){
+    // Player prop — fetch only the relevant prop market keys
+    // Extract player name from game string e.g. "KC @ TB — Michael Massey"
+    var parts=x.game.split(' — ');
+    playerFilter=parts.length>1?parts[parts.length-1].toLowerCase():null;
+    // Find which prop market keys match this label
+    var allPropKeys=PROP_MARKETS[sp]||[];
+    // Use all prop keys — filter by player name on the results side
+    targetMkts=allPropKeys.length?allPropKeys:['batter_hits','player_points'];
+  } else if(x.market==='gameprops'){
+    // Game prop (half/quarter/period) — fetch all game prop markets
+    targetMkts=GAME_PROP_MARKETS[sp]||[];
+    if(!targetMkts.length)targetMkts=['h2h_h1','totals_h1'];
+  } else if(x.market==='alt'){
+    targetMkts=['alternate_spreads','alternate_totals'];
+  } else if(x.market==='spreads'){
+    targetMkts=['spreads'];
+  } else if(x.market==='totals'){
+    targetMkts=['totals'];
+  } else {
+    // h2h moneyline or golf
+    targetMkts=['h2h'];
+  }
+
+  var gameLabel=x.game.split(' — ')[0];
+  var arbLabel=x.label;
+  fetchEventOdds(x.gameId,sp,targetMkts.filter(function(v,i,a){return a.indexOf(v)===i&&v}).join(','),gameLabel,playerFilter,arbLabel);
 }
 
 async function runLookup(){
@@ -689,7 +719,7 @@ function fetchEventOddsManual(id,sport,labelEncoded){
   fetchEventOdds(id,sport,allMkts.join(','),label);
 }
 
-async function fetchEventOdds(eventId,sport,markets,gameLabel){
+async function fetchEventOdds(eventId,sport,markets,gameLabel,playerFilter,arbLabel){
   var key=document.getElementById('key').value.trim();
   var BOOKS=getBooks().join(',');
   var out=document.getElementById('lout');
@@ -703,6 +733,8 @@ async function fetchEventOdds(eventId,sport,markets,gameLabel){
       (book.markets||[]).forEach(function(mkt){
         var mktLabel=GP_LABEL[mkt.key]||mkt.key.replace(/_alternate/,' (Alt)').replace(/_/g,' ').replace(/\b\w/g,function(c){return c.toUpperCase()});
         (mkt.outcomes||[]).forEach(function(out2){
+          // If filtering by player, skip outcomes that don't match
+          if(playerFilter&&out2.description&&out2.description.toLowerCase().indexOf(playerFilter)===-1)return;
           var desc=out2.description?out2.description+' — ':'';
           var side=out2.name+(out2.point!=null?' '+out2.point:'');
           var k=mktLabel+'|||'+desc+side;
@@ -712,11 +744,12 @@ async function fetchEventOdds(eventId,sport,markets,gameLabel){
       });
     });
     var keys=Object.keys(groups);
-    if(!keys.length){out.innerHTML='<div class="msg">No lines found.</div>';return}
+    if(!keys.length){out.innerHTML='<div class="msg">No lines found for this specific bet. The book may have removed it.</div>';return}
     keys.forEach(function(k){groups[k].lines.sort(function(a,b){return b.odds-a.odds})});
     var byMkt={};
     keys.forEach(function(k){var ml=groups[k].label;if(!byMkt[ml])byMkt[ml]=[];byMkt[ml].push(groups[k])});
-    var html='<div class="stats" style="margin-bottom:16px">'+gameLabel+'</div>';
+    var titleLine=arbLabel?gameLabel+' — <strong>'+arbLabel+'</strong>':gameLabel;
+    var html='<div class="stats" style="margin-bottom:16px">'+titleLine+'</div>';
     Object.keys(byMkt).forEach(function(mktLabel){
       html+='<div class="section-divider" style="margin:16px 0 10px"><span>'+mktLabel+'</span></div>';
       byMkt[mktLabel].forEach(function(group){
