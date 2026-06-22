@@ -313,12 +313,21 @@ var GP_LABEL={
   team_totals:'Team Total'
 };
 
-document.getElementById('sports').addEventListener('click',function(e){var b=e.target.closest('.sb');if(b)b.classList.toggle('on')});
-document.getElementById('markets').addEventListener('click',function(e){var b=e.target.closest('.mb');if(b)b.classList.toggle('on')});
-document.getElementById('books').addEventListener('click',function(e){var b=e.target.closest('.sb');if(b)b.classList.toggle('on')});
+document.getElementById('sports').addEventListener('click',function(e){
+  var b=e.target.closest('[data-s]');
+  if(b){b.classList.toggle('on');e.stopPropagation();}
+});
+document.getElementById('markets').addEventListener('click',function(e){
+  var b=e.target.closest('[data-m]');
+  if(b){b.classList.toggle('on');e.stopPropagation();}
+});
+document.getElementById('books').addEventListener('click',function(e){
+  var b=e.target.closest('[data-b]');
+  if(b){b.classList.toggle('on');e.stopPropagation();}
+});
 document.getElementById('filters').addEventListener('click',function(e){
-  var b=e.target.closest('.fb');if(!b)return;
-  document.querySelectorAll('.fb').forEach(function(x){x.classList.remove('on')});
+  var b=e.target.closest('[data-f]');if(!b)return;
+  document.querySelectorAll('[data-f]').forEach(function(x){x.classList.remove('on')});
   b.classList.add('on');
 });
 
