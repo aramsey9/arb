@@ -432,7 +432,7 @@ function processProps(bookmakers,gl,sp2,bank,min,allArbs,liveFlag){
     if(bo.book===bu.book||!isTrueArb(bo.odds,bu.odds,min))return;
     var p1=oP(bo.odds),p2=oP(bu.odds),tot=p1+p2,s1=bank*(p1/tot),s2=bank*(p2/tot),pr=Math.min(s1*oD(bo.odds),s2*oD(bu.odds))-(s1+s2);
     var lbl=pm.market.replace(/_alternate/,' Alt').replace(/_/g,' ').replace(/\b\w/g,function(c){return c.toUpperCase()});
-    allArbs.push({game:gl+' — '+pm.desc,sport:sp2,market:'props',label:lbl,middle:false,live:!!liveFlag,edge:(1-tot)*100,roi:(pr/(s1+s2))*100,profit:pr,side1:{name:'Over '+pm.point,book:bo.book,odds:bo.odds,stake:s1,link:bo.link,limit:bo.limit},side2:{name:'Under '+pm.point,book:bu.book,odds:bu.odds,stake:s2,link:bu.link,limit:bu.limit},middleNote:''});
+    allArbs.push({game:gl+' — '+pm.desc,sport:sp2,market:'props',label:lbl,propMarketKey:pm.market,middle:false,live:!!liveFlag,edge:(1-tot)*100,roi:(pr/(s1+s2))*100,profit:pr,side1:{name:'Over '+pm.point,book:bo.book,odds:bo.odds,stake:s1,link:bo.link,limit:bo.limit},side2:{name:'Under '+pm.point,book:bu.book,odds:bu.odds,stake:s2,link:bu.link,limit:bu.limit},middleNote:''});
   });
 }
 
@@ -658,14 +658,18 @@ function lookupFromArb(idx){
   var playerFilter=null;
 
   if(x.market==='props'){
-    // Player prop — fetch only the relevant prop market keys
     // Extract player name from game string e.g. "KC @ TB — Michael Massey"
     var parts=x.game.split(' — ');
     playerFilter=parts.length>1?parts[parts.length-1].toLowerCase():null;
-    // Find which prop market keys match this label
-    var allPropKeys=PROP_MARKETS[sp]||[];
-    // Use all prop keys — filter by player name on the results side
-    targetMkts=allPropKeys.length?allPropKeys:['batter_hits','player_points'];
+    // Use the exact market key stored on the arb — also include its _alternate variant
+    if(x.propMarketKey){
+      targetMkts=[x.propMarketKey];
+      var altKey=x.propMarketKey.replace(/_alternate$/,'')+'_alternate';
+      if(altKey!==x.propMarketKey)targetMkts.push(altKey);
+    } else {
+      var allPropKeys=PROP_MARKETS[sp]||[];
+      targetMkts=allPropKeys.length?allPropKeys:['batter_hits','player_points'];
+    }
   } else if(x.market==='gameprops'){
     // Game prop (half/quarter/period) — fetch all game prop markets
     targetMkts=GAME_PROP_MARKETS[sp]||[];
