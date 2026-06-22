@@ -184,11 +184,6 @@ function setStatus(live,text){document.getElementById('dot').className='tdot'+(l
 function setProgress(pct,text){document.getElementById('progText').textContent=text;document.getElementById('progFill').style.width=pct+'%'}
 function playAlert(){try{var a=new AudioContext(),o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.frequency.value=660;g.gain.setValueAtTime(.3,a.currentTime);g.gain.exponentialRampToValueAtTime(.001,a.currentTime+.5);o.start();o.stop(a.currentTime+.5)}catch(e){}}
 function isTrueArb(o1,o2,minPct){var p1=oP(o1),p2=oP(o2),tot=p1+p2;return tot<1.0&&(1-tot)*100>=minPct}
-function r10(n){return Math.round(n/10)*10;}
-function smartRound(n,o1,o2){
-  var mx=Math.max(Math.abs(o1),Math.abs(o2));
-  return mx>200?Math.round(n):r10(n);
-}
 
 function isLive(commenceTime){
   return new Date(commenceTime).getTime()<=Date.now();
@@ -208,7 +203,7 @@ function processH2H(oc,gl,sp2,bank,min,allArbs,label,tag,liveFlag){
   var tn=Object.keys(bt);if(tn.length<2)return;
   var b1=bt[tn[0]].reduce((a,b)=>a.odds>b.odds?a:b),b2=bt[tn[1]].reduce((a,b)=>a.odds>b.odds?a:b);
   if(b1.book===b2.book||!isTrueArb(b1.odds,b2.odds,min))return;
-  var p1=oP(b1.odds),p2=oP(b2.odds),tot=p1+p2,s1=smartRound(bank*(p1/tot),b1.odds,b2.odds),s2=smartRound(bank*(p2/tot),b1.odds,b2.odds),pr=(Math.min(s1*oD(b1.odds),s2*oD(b2.odds))-(s1+s2));
+  var p1=oP(b1.odds),p2=oP(b2.odds),tot=p1+p2,s1=bank*(p1/tot),s2=bank*(p2/tot),pr=(Math.min(s1*oD(b1.odds),s2*oD(b2.odds))-(s1+s2));
   allArbs.push({game:gl,sport:sp2,market:tag,label:label,middle:false,live:!!liveFlag,edge:(1-tot)*100,roi:(pr/(s1+s2))*100,profit:pr,side1:{name:tn[0],book:b1.book,odds:b1.odds,stake:s1,link:b1.link,limit:b1.limit},side2:{name:tn[1],book:b2.book,odds:b2.odds,stake:s2,link:b2.link,limit:b2.limit},middleNote:''});
 }
 
@@ -230,7 +225,7 @@ function process3Way(oc,gl,sp2,bank,min,allArbs,label,tag,liveFlag){
   var edge=(1-totalProb)*100;
   if(totalProb>=1.0||edge<min)return;
   var maxOdds=Math.max.apply(null,oddsArr.map(Math.abs));
-  var stakes=names.map(function(n,i){return smartRound(bank*(probs[i]/totalProb),maxOdds,-maxOdds)});
+  var stakes=names.map(function(n,i){return bank*(probs[i]/totalProb)});
   var payouts=names.map(function(n,i){return stakes[i]*oD(best[n].odds)});
   var totalStaked3=stakes.reduce(function(a,b){return a+b},0);
   var profit=Math.min.apply(null,payouts)-totalStaked3;
@@ -255,7 +250,7 @@ function processSpreads(oc,gl,sp2,bank,min,allArbs,label,tag,liveFlag){
     if(a.book===b.book)return;
     if(!((a.point<0&&b.point>0)||(a.point>0&&b.point<0)))return;
     if(!isTrueArb(a.odds,b.odds,min))return;
-    var p1=oP(a.odds),p2=oP(b.odds),tot=p1+p2,s1=smartRound(bank*(p1/tot),a.odds,b.odds),s2=smartRound(bank*(p2/tot),a.odds,b.odds),pr=(Math.min(s1*oD(a.odds),s2*oD(b.odds))-(s1+s2));
+    var p1=oP(a.odds),p2=oP(b.odds),tot=p1+p2,s1=bank*(p1/tot),s2=bank*(p2/tot),pr=(Math.min(s1*oD(a.odds),s2*oD(b.odds))-(s1+s2));
     var mf=(a.point>0&&b.point<0&&a.point>Math.abs(b.point))||(b.point>0&&a.point<0&&b.point>Math.abs(a.point));
     var mn=mf?'🎯 MIDDLE: win both if margin between '+Math.min(Math.abs(a.point),Math.abs(b.point))+' and '+Math.max(Math.abs(a.point),Math.abs(b.point)):'';
     if(!best||pr>best.profit)best={game:gl,sport:sp2,market:tag,label:label,middle:mf,live:!!liveFlag,edge:(1-tot)*100,roi:(pr/(s1+s2))*100,profit:pr,side1:{name:tn[0]+' '+fmt(a.point),book:a.book,odds:a.odds,stake:s1,link:a.link,limit:a.limit},side2:{name:tn[1]+' '+fmt(b.point),book:b.book,odds:b.odds,stake:s2,link:b.link,limit:b.limit},middleNote:mn};
@@ -271,7 +266,7 @@ function processTotals(oc,gl,sp2,bank,min,allArbs,label,tag,liveFlag){
   ov.forEach(function(a){un.forEach(function(b){
     if(a.book===b.book||a.point>b.point)return;
     if(!isTrueArb(a.odds,b.odds,min))return;
-    var p1=oP(a.odds),p2=oP(b.odds),tot=p1+p2,s1=smartRound(bank*(p1/tot),a.odds,b.odds),s2=smartRound(bank*(p2/tot),a.odds,b.odds),pr=(Math.min(s1*oD(a.odds),s2*oD(b.odds))-(s1+s2));
+    var p1=oP(a.odds),p2=oP(b.odds),tot=p1+p2,s1=bank*(p1/tot),s2=bank*(p2/tot),pr=(Math.min(s1*oD(a.odds),s2*oD(b.odds))-(s1+s2));
     var mf=b.point>a.point,mn=mf?'🎯 MIDDLE: win both if total lands between '+a.point+' and '+b.point:'';
     if(!best||pr>best.profit)best={game:gl,sport:sp2,market:tag,label:label,middle:mf,live:!!liveFlag,edge:(1-tot)*100,roi:(pr/(s1+s2))*100,profit:pr,side1:{name:'Over '+a.point,book:a.book,odds:a.odds,stake:s1,link:a.link,limit:a.limit},side2:{name:'Under '+b.point,book:b.book,odds:b.odds,stake:s2,link:b.link,limit:b.limit},middleNote:mn};
   })});
@@ -296,7 +291,7 @@ function processProps(bookmakers,gl,sp2,bank,min,allArbs,liveFlag){
     if(!pm.over.length||!pm.under.length)return;
     var bo=pm.over.reduce((a,b)=>a.odds>b.odds?a:b),bu=pm.under.reduce((a,b)=>a.odds>b.odds?a:b);
     if(bo.book===bu.book||!isTrueArb(bo.odds,bu.odds,min))return;
-    var p1=oP(bo.odds),p2=oP(bu.odds),tot=p1+p2,s1=smartRound(bank*(p1/tot),bo.odds,bu.odds),s2=smartRound(bank*(p2/tot),bo.odds,bu.odds),pr=(Math.min(s1*oD(bo.odds),s2*oD(bu.odds))-(s1+s2));
+    var p1=oP(bo.odds),p2=oP(bu.odds),tot=p1+p2,s1=bank*(p1/tot),s2=bank*(p2/tot),pr=(Math.min(s1*oD(bo.odds),s2*oD(bu.odds))-(s1+s2));
     var lbl=pm.market.replace(/_alternate/,' Alt').replace(/_/g,' ').replace(/\b\w/g,function(c){return c.toUpperCase()});
     allArbs.push({game:gl+' — '+pm.desc,sport:sp2,market:'props',label:lbl,middle:false,live:!!liveFlag,edge:(1-tot)*100,roi:(pr/(s1+s2))*100,profit:pr,side1:{name:'Over '+pm.point,book:bo.book,odds:bo.odds,stake:s1,link:bo.link,limit:bo.limit},side2:{name:'Under '+pm.point,book:bu.book,odds:bu.odds,stake:s2,link:bu.link,limit:bu.limit},middleNote:''});
   });
