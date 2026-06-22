@@ -205,7 +205,7 @@ function processH2H(oc,gl,sp2,bank,min,allArbs,label,tag,liveFlag){
   var b1=bt[tn[0]].reduce((a,b)=>a.odds>b.odds?a:b),b2=bt[tn[1]].reduce((a,b)=>a.odds>b.odds?a:b);
   if(b1.book===b2.book||!isTrueArb(b1.odds,b2.odds,min))return;
   var p1=oP(b1.odds),p2=oP(b2.odds),tot=p1+p2,s1=r10(bank*(p1/tot)),s2=r10(bank*(p2/tot)),pr=(Math.min(s1*oD(b1.odds),s2*oD(b2.odds))-(s1+s2));
-  allArbs.push({game:gl,sport:sp2,market:tag,label:label,middle:false,live:!!liveFlag,edge:(1-tot)*100,roi:(pr/bank)*100,profit:pr,side1:{name:tn[0],book:b1.book,odds:b1.odds,stake:s1,link:b1.link,limit:b1.limit},side2:{name:tn[1],book:b2.book,odds:b2.odds,stake:s2,link:b2.link,limit:b2.limit},middleNote:''});
+  allArbs.push({game:gl,sport:sp2,market:tag,label:label,middle:false,live:!!liveFlag,edge:(1-tot)*100,roi:(pr/(s1+s2))*100,profit:pr,side1:{name:tn[0],book:b1.book,odds:b1.odds,stake:s1,link:b1.link,limit:b1.limit},side2:{name:tn[1],book:b2.book,odds:b2.odds,stake:s2,link:b2.link,limit:b2.limit},middleNote:''});
 }
 
 // 3-way moneyline (soccer): Team A / Team B / Draw - all three must be covered
@@ -227,12 +227,13 @@ function process3Way(oc,gl,sp2,bank,min,allArbs,label,tag,liveFlag){
   if(totalProb>=1.0||edge<min)return;
   var stakes=names.map(function(n,i){return r10(bank*(probs[i]/totalProb))});
   var payouts=names.map(function(n,i){return stakes[i]*oD(best[n].odds)});
-  var profit=Math.min.apply(null,payouts)-stakes.reduce(function(a,b){return a+b},0);
+  var totalStaked3=stakes.reduce(function(a,b){return a+b},0);
+  var profit=Math.min.apply(null,payouts)-totalStaked3;
   var booksUsed=names.map(function(n){return best[n].book});
   var allDiffBooks=new Set(booksUsed).size===booksUsed.length;
   allArbs.push({
     game:gl,sport:sp2,market:tag,label:label+(allDiffBooks?'':' ⚠️ same book'),middle:false,live:!!liveFlag,
-    edge:edge,roi:(profit/bank)*100,profit:profit,
+    edge:edge,roi:(profit/totalStaked3)*100,profit:profit,
     side1:{name:names[0],book:best[names[0]].book,odds:best[names[0]].odds,stake:stakes[0],link:best[names[0]].link,limit:best[names[0]].limit},
     side2:{name:names[1]+' / '+names[2],book:best[names[1]].book+' + '+best[names[2]].book,odds:best[names[1]].odds,stake:stakes[1]+stakes[2],link:best[names[1]].link,limit:best[names[1]].limit},
     middleNote:'3-way: Bet '+names[0]+' $'+stakes[0].toFixed(2)+' ('+best[names[0]].book+'), '+names[1]+' $'+stakes[1].toFixed(2)+' ('+best[names[1]].book+'), '+names[2]+' $'+stakes[2].toFixed(2)+' ('+best[names[2]].book+'). All 3 must be covered — this is NOT a 2-bet arb.'
@@ -252,7 +253,7 @@ function processSpreads(oc,gl,sp2,bank,min,allArbs,label,tag,liveFlag){
     var p1=oP(a.odds),p2=oP(b.odds),tot=p1+p2,s1=r10(bank*(p1/tot)),s2=r10(bank*(p2/tot)),pr=(Math.min(s1*oD(a.odds),s2*oD(b.odds))-(s1+s2));
     var mf=(a.point>0&&b.point<0&&a.point>Math.abs(b.point))||(b.point>0&&a.point<0&&b.point>Math.abs(a.point));
     var mn=mf?'🎯 MIDDLE: win both if margin between '+Math.min(Math.abs(a.point),Math.abs(b.point))+' and '+Math.max(Math.abs(a.point),Math.abs(b.point)):'';
-    if(!best||pr>best.profit)best={game:gl,sport:sp2,market:tag,label:label,middle:mf,live:!!liveFlag,edge:(1-tot)*100,roi:(pr/bank)*100,profit:pr,side1:{name:tn[0]+' '+fmt(a.point),book:a.book,odds:a.odds,stake:s1,link:a.link,limit:a.limit},side2:{name:tn[1]+' '+fmt(b.point),book:b.book,odds:b.odds,stake:s2,link:b.link,limit:b.limit},middleNote:mn};
+    if(!best||pr>best.profit)best={game:gl,sport:sp2,market:tag,label:label,middle:mf,live:!!liveFlag,edge:(1-tot)*100,roi:(pr/(s1+s2))*100,profit:pr,side1:{name:tn[0]+' '+fmt(a.point),book:a.book,odds:a.odds,stake:s1,link:a.link,limit:a.limit},side2:{name:tn[1]+' '+fmt(b.point),book:b.book,odds:b.odds,stake:s2,link:b.link,limit:b.limit},middleNote:mn};
   })});
   if(best)allArbs.push(best);
 }
@@ -267,7 +268,7 @@ function processTotals(oc,gl,sp2,bank,min,allArbs,label,tag,liveFlag){
     if(!isTrueArb(a.odds,b.odds,min))return;
     var p1=oP(a.odds),p2=oP(b.odds),tot=p1+p2,s1=r10(bank*(p1/tot)),s2=r10(bank*(p2/tot)),pr=(Math.min(s1*oD(a.odds),s2*oD(b.odds))-(s1+s2));
     var mf=b.point>a.point,mn=mf?'🎯 MIDDLE: win both if total lands between '+a.point+' and '+b.point:'';
-    if(!best||pr>best.profit)best={game:gl,sport:sp2,market:tag,label:label,middle:mf,live:!!liveFlag,edge:(1-tot)*100,roi:(pr/bank)*100,profit:pr,side1:{name:'Over '+a.point,book:a.book,odds:a.odds,stake:s1,link:a.link,limit:a.limit},side2:{name:'Under '+b.point,book:b.book,odds:b.odds,stake:s2,link:b.link,limit:b.limit},middleNote:mn};
+    if(!best||pr>best.profit)best={game:gl,sport:sp2,market:tag,label:label,middle:mf,live:!!liveFlag,edge:(1-tot)*100,roi:(pr/(s1+s2))*100,profit:pr,side1:{name:'Over '+a.point,book:a.book,odds:a.odds,stake:s1,link:a.link,limit:a.limit},side2:{name:'Under '+b.point,book:b.book,odds:b.odds,stake:s2,link:b.link,limit:b.limit},middleNote:mn};
   })});
   if(best)allArbs.push(best);
 }
@@ -292,7 +293,7 @@ function processProps(bookmakers,gl,sp2,bank,min,allArbs,liveFlag){
     if(bo.book===bu.book||!isTrueArb(bo.odds,bu.odds,min))return;
     var p1=oP(bo.odds),p2=oP(bu.odds),tot=p1+p2,s1=r10(bank*(p1/tot)),s2=r10(bank*(p2/tot)),pr=(Math.min(s1*oD(bo.odds),s2*oD(bu.odds))-(s1+s2));
     var lbl=pm.market.replace(/_alternate/,' Alt').replace(/_/g,' ').replace(/\b\w/g,function(c){return c.toUpperCase()});
-    allArbs.push({game:gl+' — '+pm.desc,sport:sp2,market:'props',label:lbl,middle:false,live:!!liveFlag,edge:(1-tot)*100,roi:(pr/bank)*100,profit:pr,side1:{name:'Over '+pm.point,book:bo.book,odds:bo.odds,stake:s1,link:bo.link,limit:bo.limit},side2:{name:'Under '+pm.point,book:bu.book,odds:bu.odds,stake:s2,link:bu.link,limit:bu.limit},middleNote:''});
+    allArbs.push({game:gl+' — '+pm.desc,sport:sp2,market:'props',label:lbl,middle:false,live:!!liveFlag,edge:(1-tot)*100,roi:(pr/(s1+s2))*100,profit:pr,side1:{name:'Over '+pm.point,book:bo.book,odds:bo.odds,stake:s1,link:bo.link,limit:bo.limit},side2:{name:'Under '+pm.point,book:bu.book,odds:bu.odds,stake:s2,link:bu.link,limit:bu.limit},middleNote:''});
   });
 }
 
