@@ -241,27 +241,107 @@ function placeFirstNote(b1,b2){var r1=bookRisk(b1),r2=bookRisk(b2);if(r1===r2)re
 
 // ── Markets ────────────────────────────────────────────────
 var PROP_MARKETS={
-  baseball_mlb:['batter_hits','batter_home_runs','batter_rbis','batter_runs_scored','batter_strikeouts','batter_total_bases','pitcher_strikeouts','pitcher_hits_allowed','pitcher_walks','batter_hits_alternate','batter_home_runs_alternate','batter_total_bases_alternate','pitcher_strikeouts_alternate'],
-  basketball_nba:['player_points','player_rebounds','player_assists','player_threes','player_blocks','player_steals','player_points_alternate','player_rebounds_alternate','player_assists_alternate','player_threes_alternate'],
-  americanfootball_nfl:['player_pass_tds','player_pass_yds','player_rush_yds','player_reception_yds','player_receptions','player_pass_yds_alternate','player_rush_yds_alternate','player_reception_yds_alternate'],
-  americanfootball_ncaaf:['player_pass_yds','player_rush_yds','player_reception_yds'],
-  icehockey_nhl:['player_goals','player_assists','player_shots_on_goal'],
-  soccer_usa_mls:[],soccer_fifa_world_cup:[],tennis_atp_french_open:[],mma_mixed_martial_arts:[]
+  baseball_mlb:[
+    'batter_hits','batter_home_runs','batter_rbis','batter_runs_scored','batter_strikeouts',
+    'batter_total_bases','batter_stolen_bases','batter_walks',
+    'pitcher_strikeouts','pitcher_hits_allowed','pitcher_walks','pitcher_earned_runs','pitcher_outs',
+    'batter_hits_alternate','batter_home_runs_alternate','batter_total_bases_alternate',
+    'pitcher_strikeouts_alternate','batter_rbis_alternate','batter_runs_scored_alternate'
+  ],
+  basketball_nba:[
+    'player_points','player_rebounds','player_assists','player_threes','player_blocks','player_steals',
+    'player_turnovers','player_points_rebounds','player_points_assists',
+    'player_points_rebounds_assists','player_rebounds_assists','player_blocks_steals',
+    'player_double_double','player_triple_double',
+    'player_points_alternate','player_rebounds_alternate','player_assists_alternate',
+    'player_threes_alternate','player_blocks_alternate','player_steals_alternate'
+  ],
+  americanfootball_nfl:[
+    'player_pass_tds','player_pass_yds','player_pass_attempts','player_pass_completions',
+    'player_pass_interceptions','player_rush_yds','player_rush_attempts','player_rush_tds',
+    'player_reception_yds','player_receptions','player_receiving_tds',
+    'player_anytime_td','player_first_td','player_last_td',
+    'player_kicking_points','player_field_goals',
+    'player_pass_yds_alternate','player_rush_yds_alternate','player_reception_yds_alternate',
+    'player_receptions_alternate','player_pass_tds_alternate'
+  ],
+  americanfootball_ncaaf:[
+    'player_pass_yds','player_rush_yds','player_reception_yds',
+    'player_pass_tds','player_rush_tds','player_receptions','player_anytime_td',
+    'player_pass_yds_alternate','player_rush_yds_alternate','player_reception_yds_alternate'
+  ],
+  icehockey_nhl:[
+    'player_goals','player_assists','player_points','player_shots_on_goal',
+    'player_blocked_shots','player_total_saves',
+    'player_goals_alternate','player_assists_alternate','player_shots_on_goal_alternate'
+  ],
+  soccer_usa_mls:[
+    'player_goal_scorer_anytime','player_goal_scorer_first',
+    'player_shots','player_shots_on_target','player_assists'
+  ],
+  soccer_fifa_world_cup:[
+    'player_goal_scorer_anytime','player_goal_scorer_first',
+    'player_shots','player_shots_on_target','player_assists'
+  ],
+  tennis_atp_french_open:[
+    'player_aces','player_double_faults','player_games_won'
+  ],
+  mma_mixed_martial_arts:[
+    'player_significant_strikes','player_takedowns_landed'
+  ]
 };
 var GAME_PROP_MARKETS={
-  baseball_mlb:['h2h_1st_5_innings','spreads_1st_5_innings','totals_1st_5_innings','h2h_1st_3_innings','totals_1st_3_innings'],
-  basketball_nba:['h2h_h1','spreads_h1','totals_h1','h2h_q1','spreads_q1','totals_q1','team_totals'],
-  americanfootball_nfl:['h2h_h1','spreads_h1','totals_h1','h2h_q1','spreads_q1','totals_q1','team_totals'],
-  americanfootball_ncaaf:['h2h_h1','spreads_h1','totals_h1','team_totals'],
-  icehockey_nhl:['h2h_p1','spreads_p1','totals_p1','team_totals'],
-  soccer_usa_mls:['h2h_h1','totals_h1'],soccer_fifa_world_cup:['h2h_h1','totals_h1'],tennis_atp_french_open:[],mma_mixed_martial_arts:[]
+  baseball_mlb:[
+    'h2h_1st_5_innings','spreads_1st_5_innings','totals_1st_5_innings',
+    'h2h_1st_3_innings','totals_1st_3_innings',
+    'team_totals'
+  ],
+  basketball_nba:[
+    'h2h_h1','spreads_h1','totals_h1',
+    'h2h_q1','spreads_q1','totals_q1',
+    'h2h_q2','spreads_q2','totals_q2',
+    'h2h_q3','spreads_q3','totals_q3',
+    'h2h_q4','spreads_q4','totals_q4',
+    'team_totals'
+  ],
+  americanfootball_nfl:[
+    'h2h_h1','spreads_h1','totals_h1',
+    'h2h_h2','spreads_h2','totals_h2',
+    'h2h_q1','spreads_q1','totals_q1',
+    'h2h_q2','spreads_q2','totals_q2',
+    'h2h_q3','spreads_q3','totals_q3',
+    'h2h_q4','spreads_q4','totals_q4',
+    'team_totals'
+  ],
+  americanfootball_ncaaf:[
+    'h2h_h1','spreads_h1','totals_h1',
+    'h2h_h2','spreads_h2','totals_h2',
+    'h2h_q1','spreads_q1','totals_q1',
+    'team_totals'
+  ],
+  icehockey_nhl:[
+    'h2h_p1','spreads_p1','totals_p1',
+    'h2h_p2','spreads_p2','totals_p2',
+    'h2h_p3','spreads_p3','totals_p3',
+    'team_totals'
+  ],
+  soccer_usa_mls:['h2h_h1','totals_h1','h2h_h2','totals_h2','team_totals'],
+  soccer_fifa_world_cup:['h2h_h1','totals_h1','h2h_h2','totals_h2','team_totals'],
+  tennis_atp_french_open:[],
+  mma_mixed_martial_arts:[]
 };
 var GP_LABEL={
   h2h_1st_5_innings:'1st 5 Inn ML',spreads_1st_5_innings:'1st 5 Inn Spread',totals_1st_5_innings:'1st 5 Inn Total',
   h2h_1st_3_innings:'1st 3 Inn ML',totals_1st_3_innings:'1st 3 Inn Total',
   h2h_h1:'1st Half ML',spreads_h1:'1st Half Spread',totals_h1:'1st Half Total',
+  h2h_h2:'2nd Half ML',spreads_h2:'2nd Half Spread',totals_h2:'2nd Half Total',
   h2h_q1:'1st Qtr ML',spreads_q1:'1st Qtr Spread',totals_q1:'1st Qtr Total',
+  h2h_q2:'2nd Qtr ML',spreads_q2:'2nd Qtr Spread',totals_q2:'2nd Qtr Total',
+  h2h_q3:'3rd Qtr ML',spreads_q3:'3rd Qtr Spread',totals_q3:'3rd Qtr Total',
+  h2h_q4:'4th Qtr ML',spreads_q4:'4th Qtr Spread',totals_q4:'4th Qtr Total',
   h2h_p1:'1st Period ML',spreads_p1:'1st Period Spread',totals_p1:'1st Period Total',
+  h2h_p2:'2nd Period ML',spreads_p2:'2nd Period Spread',totals_p2:'2nd Period Total',
+  h2h_p3:'3rd Period ML',spreads_p3:'3rd Period Spread',totals_p3:'3rd Period Total',
   team_totals:'Team Total'
 };
 
