@@ -764,12 +764,15 @@ async function scanAll(){
     else soonArbs.push(x);
   });
 
-  function renderCard(x){
+  // Store globally so lookup buttons can reference by index
+  window.ARB_CACHE=allArbs;
+
+  function renderCard(x,idx){
     var c='<div class="card'+(x.middle?' middle':x.live?' live':x.edge>2?' hot':'')+'"><div class="ctop"><div style="flex:1;min-width:0"><div class="gmeta">'+x.sport+'</div><span class="mktag '+x.market+'">'+x.label+'</span>';
     if(x.live)c+='<span class="mktag live">🔴 LIVE</span>';
     if(x.middle)c+='<span class="mktag mid">🎯 Middle</span>';
     c+='<div class="gtitle">'+x.game+'</div>';
-    if(x.commenceTime)c+='<div class="gdate-tag">'+new Date(x.commenceTime).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+(x.rotHome?' · Rot: '+x.rotAway+'/'+x.rotHome:'')+'</div>';
+    if(x.commenceTime)c+='<div class="gdate-tag">'+new Date(x.commenceTime).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+'</div>';
     if(x.scoreLine)c+='<div class="score-line">⚡ '+x.scoreLine+'</div>';
     c+='</div><div style="text-align:right;flex-shrink:0"><div class="roi">+'+x.roi.toFixed(2)+'%</div><div class="psub">$'+x.profit.toFixed(2)+' profit</div></div></div><div class="sides">';
     [x.side1,x.side2].forEach(function(s){
@@ -782,6 +785,7 @@ async function scanAll(){
     var pfNote=placeFirstNote(x.side1.book,x.side2.book);
     if(pfNote)c+='<div class="place-first-note">'+pfNote+'</div>';
     if(x.middleNote)c+='<div class="middle-note">'+x.middleNote+'</div>';
+    c+='<div style="padding:8px 12px;border-top:1px solid #2a2a3d"><button onclick="lookupFromArb('+idx+')" style="width:100%;background:#1a1a26;color:#7c3aed;border:1px solid #7c3aed;border-radius:8px;padding:8px;font-size:12px;font-weight:700;cursor:pointer">🔍 Find Alternative Lines</button></div>';
     c+='</div>';
     return c;
   }
@@ -792,10 +796,10 @@ async function scanAll(){
   h+='<div class="stats">Scan #'+scanCount+' &bull; '+totalGames+' games &bull; '+allArbs.length+' arbs &bull; '+now+'</div>';
   if(!allArbs.length){h+='<div class="msg">No arbs above '+min+'% right now.<br><br>Keep scanning — try lowering Min % to 0.2.</div>'}
   else{
-    soonArbs.forEach(function(x){h+=renderCard(x)});
+    soonArbs.forEach(function(x){h+=renderCard(x,allArbs.indexOf(x))});
     if(laterArbs.length){
       h+='<div class="section-divider"><span>📅 Games 3+ Days Away ('+laterArbs.length+')</span></div>';
-      laterArbs.forEach(function(x){h+=renderCard(x)});
+      laterArbs.forEach(function(x){h+=renderCard(x,allArbs.indexOf(x))});
     }
   }
   h+='<div class="limit-log"><div class="limit-log-title">📋 Known Book Limits</div><div class="limit-log-entry">🚫 <strong>Bally Bet</strong> — limited to <strong>$255</strong> on player props (Jun 22, 2026)</div></div>';
@@ -804,6 +808,58 @@ async function scanAll(){
 }
 
 function startScan(){scanAll()}
+
+function lookupFromArb(idx){
+  var x=window.ARB_CACHE&&window.ARB_CACHE[idx];
+  if(!x)return;
+
+  // Switch to lookup tab
+  switchTab('lookup');
+
+  // Map sport
+  var sportMap={
+    'MLB':'baseball_mlb','NBA':'basketball_nba','NFL':'americanfootball_nfl',
+    'NHL':'icehockey_nhl','MLS':'soccer_usa_mls','Golf':'golf',
+    'World Cup':'soccer_fifa_world_cup','MMA':'mma_mixed_martial_arts'
+  };
+  var sportKey='baseball_mlb';
+  for(var k in sportMap){if(x.sport&&x.sport.indexOf(k)>-1){sportKey=sportMap[k];break}}
+  document.getElementById('lsport').value=sportKey;
+
+  // Set query to game name (just teams part, strip player)
+  var gamePart=x.game.split(' — ')[0];
+  document.getElementById('lquery').value=gamePart;
+
+  // Set market - map arb market tag to lookup market
+  var mktMap={
+    'props':x.label.toLowerCase().includes('hit')?'batter_hits,batter_hits_alternate':
+            x.label.toLowerCase().includes('hr')||x.label.toLowerCase().includes('home run')?'batter_home_runs,batter_home_runs_alternate':
+            x.label.toLowerCase().includes('strikeout')||x.label.toLowerCase().includes(' k ')?'pitcher_strikeouts,pitcher_strikeouts_alternate':
+            x.label.toLowerCase().includes('rbi')?'batter_rbis':
+            x.label.toLowerCase().includes('point')?'player_points,player_points_alternate':
+            x.label.toLowerCase().includes('rebound')?'player_rebounds,player_rebounds_alternate':
+            x.label.toLowerCase().includes('assist')?'player_assists':
+            x.label.toLowerCase().includes('pass yds')?'player_pass_yds,player_pass_yds_alternate':
+            x.label.toLowerCase().includes('rush')?'player_rush_yds,player_rush_yds_alternate':
+            x.label.toLowerCase().includes('rec')?'player_reception_yds,player_reception_yds_alternate':'h2h',
+    'h2h':'h2h','gameprops':'h2h','spreads':'spreads','totals':'totals','alt':'spreads'
+  };
+  var targetMkt=mktMap[x.market]||'h2h';
+
+  // Highlight correct market button
+  document.querySelectorAll('[data-lm]').forEach(function(b){
+    b.classList.remove('on');
+    if(b.dataset.lm===targetMkt)b.classList.add('on');
+  });
+
+  // If it's a prop, also set player name as query
+  if(x.market==='props'&&x.game.indexOf(' — ')>-1){
+    document.getElementById('lquery').value=x.game.split(' — ')[1]||gamePart;
+  }
+
+  // Auto-run
+  runLookup();
+}
 function toggleAuto(){
   autoOn=!autoOn;var btn=document.getElementById('autoBtn');
   if(autoOn){btn.textContent='⏹ Stop';btn.style.background='#ff4757';btn.style.color='#fff';scanAll();timer=setInterval(scanAll,60000)}
