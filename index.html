@@ -432,7 +432,7 @@ function processProps(bookmakers,gl,sp2,bank,min,allArbs,liveFlag){
     if(bo.book===bu.book||!isTrueArb(bo.odds,bu.odds,min))return;
     var p1=oP(bo.odds),p2=oP(bu.odds),tot=p1+p2,s1=bank*(p1/tot),s2=bank*(p2/tot),pr=Math.min(s1*oD(bo.odds),s2*oD(bu.odds))-(s1+s2);
     var lbl=pm.market.replace(/_alternate/,' Alt').replace(/_/g,' ').replace(/\b\w/g,function(c){return c.toUpperCase()});
-    allArbs.push({game:gl+' — '+pm.desc,sport:sp2,market:'props',label:lbl,propMarketKey:pm.market,middle:false,live:!!liveFlag,edge:(1-tot)*100,roi:(pr/(s1+s2))*100,profit:pr,side1:{name:'Over '+pm.point,book:bo.book,odds:bo.odds,stake:s1,link:bo.link,limit:bo.limit},side2:{name:'Under '+pm.point,book:bu.book,odds:bu.odds,stake:s2,link:bu.link,limit:bu.limit},middleNote:''});
+    allArbs.push({game:gl+' — '+pm.desc,sport:sp2,market:'props',label:lbl,propMarketKey:pm.market,propPoint:pm.point,middle:false,live:!!liveFlag,edge:(1-tot)*100,roi:(pr/(s1+s2))*100,profit:pr,side1:{name:'Over '+pm.point,book:bo.book,odds:bo.odds,stake:s1,link:bo.link,limit:bo.limit},side2:{name:'Under '+pm.point,book:bu.book,odds:bu.odds,stake:s2,link:bu.link,limit:bu.limit},middleNote:''});
   });
 }
 
@@ -687,7 +687,7 @@ function lookupFromArb(idx){
 
   var gameLabel=x.game.split(' — ')[0];
   var arbLabel=x.label;
-  fetchEventOdds(x.gameId,sp,targetMkts.filter(function(v,i,a){return a.indexOf(v)===i&&v}).join(','),gameLabel,playerFilter,arbLabel);
+  fetchEventOdds(x.gameId,sp,targetMkts.filter(function(v,i,a){return a.indexOf(v)===i&&v}).join(','),gameLabel,playerFilter,arbLabel,x.propPoint);
 }
 
 async function runLookup(){
@@ -723,7 +723,7 @@ function fetchEventOddsManual(id,sport,labelEncoded){
   fetchEventOdds(id,sport,allMkts.join(','),label);
 }
 
-async function fetchEventOdds(eventId,sport,markets,gameLabel,playerFilter,arbLabel){
+async function fetchEventOdds(eventId,sport,markets,gameLabel,playerFilter,arbLabel,propPoint){
   var key=document.getElementById('key').value.trim();
   var BOOKS=getBooks().join(',');
   var out=document.getElementById('lout');
@@ -732,33 +732,26 @@ async function fetchEventOdds(eventId,sport,markets,gameLabel,playerFilter,arbLa
     var res=await fetch('https://api.the-odds-api.com/v4/sports/'+sport+'/events/'+eventId+'/odds?apiKey='+key+'&regions=us&markets='+markets+'&oddsFormat=american&bookmakers='+BOOKS+'&includeLinks=true');
     var data=await res.json();
     if(!data||!data.bookmakers){out.innerHTML='<div class="msg">No lines returned.</div>';return}
-    // First pass: collect all outcomes, track which (market+point) combos matched the player
-    var allOutcomes=[];
-    var matchedKeys={}; // mktKey+point combos where we found a player match
+    var groups={};
     data.bookmakers.forEach(function(book){
       (book.markets||[]).forEach(function(mkt){
+        var mktLabel=GP_LABEL[mkt.key]||mkt.key.replace(/_alternate/,' (Alt)').replace(/_/g,' ').replace(/\b\w/g,function(c){return c.toUpperCase()});
         (mkt.outcomes||[]).forEach(function(out2){
-          allOutcomes.push({book:book.title,mktKey:mkt.key,name:out2.name,price:out2.price,point:out2.point,description:out2.description,link:out2.link||book.link});
-          if(playerFilter&&out2.description&&out2.description.toLowerCase().indexOf(playerFilter)>-1){
-            matchedKeys[mkt.key+'::'+out2.point]=true;
+          if(playerFilter){
+            var hasDesc=out2.description&&out2.description.trim()!=='';
+            var descMatches=hasDesc&&out2.description.toLowerCase().indexOf(playerFilter)>-1;
+            var pointMatches=propPoint!=null&&out2.point==propPoint;
+            // Include if: description matches player, OR (no description AND point matches exactly)
+            if(hasDesc&&!descMatches)return;
+            if(!hasDesc&&!pointMatches)return;
           }
+          var desc=out2.description?out2.description+' — ':'';
+          var side=out2.name+(out2.point!=null?' '+out2.point:'');
+          var k=mktLabel+'|||'+desc+side;
+          if(!groups[k])groups[k]={label:mktLabel,desc:desc,side:side,lines:[]};
+          groups[k].lines.push({book:book.title,odds:out2.price,link:out2.link||book.link});
         });
       });
-    });
-    // If no player filter, all outcomes pass; otherwise only include outcomes whose (market+point) had a player match
-    var groups={};
-    allOutcomes.forEach(function(out2){
-      if(playerFilter&&Object.keys(matchedKeys).length>0){
-        if(!matchedKeys[out2.mktKey+'::'+out2.point])return;
-      } else if(playerFilter&&out2.description&&out2.description.trim()!==''&&out2.description.toLowerCase().indexOf(playerFilter)===-1){
-        return;
-      }
-      var mktLabel=GP_LABEL[out2.mktKey]||out2.mktKey.replace(/_alternate/,' (Alt)').replace(/_/g,' ').replace(/\b\w/g,function(c){return c.toUpperCase()});
-      var desc=out2.description?out2.description+' — ':'';
-      var side=out2.name+(out2.point!=null?' '+out2.point:'');
-      var k=mktLabel+'|||'+desc+side;
-      if(!groups[k])groups[k]={label:mktLabel,desc:desc,side:side,lines:[]};
-      groups[k].lines.push({book:out2.book,odds:out2.price,link:out2.link});
     });
     var keys=Object.keys(groups);
     if(!keys.length){out.innerHTML='<div class="msg">No lines found for this specific bet. The book may have removed it.</div>';return}
