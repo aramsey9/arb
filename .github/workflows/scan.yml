@@ -1,26 +1,28 @@
 name: ArbEdge Background Scanner
 
 on:
- schedule:
-   - cron: '*/10 11-23 * * *'
-   - cron: '*/10 0-3 * * *'
- workflow_dispatch:
+  schedule:
+    # Every 10 minutes, 6am–10pm Eastern (EDT = UTC-4)
+    # 6am ET = 10:00 UTC, 10pm ET = 02:00 UTC next day
+    - cron: '*/10 10-23 * * *'
+    - cron: '*/10 0-2 * * *'
+  workflow_dispatch:
 
 jobs:
- scan:
-   runs-on: ubuntu-latest
-   steps:
-     - name: Checkout repo
-       uses: actions/checkout@v4
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-     - name: Setup Node.js
-       uses: actions/setup-node@v4
-       with:
-         node-version: '20'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-     - name: Run ArbEdge Scanner
-       env:
-         ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
-         PUSHOVER_TOKEN: ${{ secrets.PUSHOVER_TOKEN }}
-         PUSHOVER_USER: ${{ secrets.PUSHOVER_USER }}
-       run: node scanner.js
+      - name: Run ArbEdge Scanner
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          PUSHOVER_TOKEN: ${{ secrets.PUSHOVER_TOKEN }}
+          PUSHOVER_USER: ${{ secrets.PUSHOVER_USER }}
+        run: node scanner.js
