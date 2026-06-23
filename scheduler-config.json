@@ -1,0 +1,16 @@
+{
+  "enabled": true,
+  "sports": [
+    "baseball_mlb",
+    "icehockey_nhl",
+    "soccer_usa_mls",
+    "tennis_atp_french_open",
+    "mma_mixed_martial_arts",
+    "golf",
+    "basketball_wnba",
+    "soccer_epl",
+    "boxing_boxing"
+  ],
+  "minEdge": 0.5,
+  "lastSaved": "2026-06-23T13:54:03.063Z"
+}
