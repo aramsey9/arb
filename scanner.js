@@ -104,6 +104,8 @@ async function scanSport(sport, allArbs, min) {
     if(!Array.isArray(games))return;
     console.log(sport+': '+games.length+' games');
     games.forEach(function(game){
+      // Skip live games — upcoming only
+      if(new Date(game.commence_time).getTime() <= Date.now()) return;
       var gl=game.away_team+' @ '+game.home_team;
       var md={h2h:[],spreads:[],totals:[]};
       (game.bookmakers||[]).forEach(function(book){(book.markets||[]).forEach(function(mkt){if(!md[mkt.key])return;(mkt.outcomes||[]).forEach(function(out){md[mkt.key].push({name:out.name,price:out.price,point:out.point,book:book.title});});});});
