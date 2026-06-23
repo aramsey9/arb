@@ -1047,6 +1047,83 @@ async function fetchEventOdds(eventId,sport,markets,gameLabel,playerFilter,arbLa
 }
 
 // ── Controls ───────────────────────────────────────────────
+// ── Scheduler ──────────────────────────────────────────────
+(function(){
+  try{
+    var gt=localStorage.getItem('gh_token');
+    if(gt)document.getElementById('ghToken').value=gt;
+  }catch(e){}
+  document.getElementById('ghToken').addEventListener('input',function(){try{localStorage.setItem('gh_token',this.value.trim());}catch(e){}});
+  document.querySelector('.sch-sports').addEventListener('click',function(e){var b=e.target.closest('[data-ss]');if(b)b.classList.toggle('on');});
+  loadSchedulerSettings();
+})();
+
+async function loadSchedulerSettings(){
+  try{
+    var res=await fetch('https://raw.githubusercontent.com/aramsey9/arb/main/scheduler-config.json?t='+Date.now());
+    if(!res.ok)return;
+    var cfg=await res.json();
+    document.getElementById('schEnabled').checked=!!cfg.enabled;
+    if(cfg.minEdge)document.getElementById('schMinEdge').value=cfg.minEdge;
+    if(cfg.sports){
+      document.querySelectorAll('[data-ss]').forEach(function(b){
+        b.classList.toggle('on',cfg.sports.indexOf(b.dataset.ss)>-1);
+      });
+    }
+    updateSchStatus(!!cfg.enabled);
+    var d=cfg.lastSaved?new Date(cfg.lastSaved).toLocaleString():'never';
+    document.getElementById('schLog').textContent='Last saved: '+d+(cfg.enabled?' — Scanner ACTIVE':' — Scanner PAUSED');
+  }catch(e){
+    document.getElementById('schLog').textContent='No config yet — save settings to activate.';
+  }
+}
+
+function toggleScheduler(){
+  var en=document.getElementById('schEnabled').checked;
+  updateSchStatus(en);
+}
+
+function updateSchStatus(on){
+  document.getElementById('schEnabled').checked=on;
+  document.getElementById('schStatus').textContent=on?'ON':'OFF';
+  document.getElementById('schStatus').className='sch-status '+(on?'on':'off');
+  document.getElementById('schToggleLabel').textContent='Scanner is '+(on?'ON':'OFF');
+  document.getElementById('schBox').classList.toggle('active',on);
+}
+
+async function saveSchedulerSettings(){
+  var token=document.getElementById('ghToken').value.trim();
+  if(!token){alert('Enter your GitHub Personal Access Token first.');return;}
+  var btn=document.getElementById('schSaveBtn');
+  btn.textContent='Saving...';btn.disabled=true;
+  var enabled=document.getElementById('schEnabled').checked;
+  var sports=Array.from(document.querySelectorAll('[data-ss].on')).map(function(b){return b.dataset.ss});
+  var minEdge=parseFloat(document.getElementById('schMinEdge').value)||0.5;
+  var cfg={enabled:enabled,sports:sports,minEdge:minEdge,lastSaved:new Date().toISOString()};
+  try{
+    var shaRes=await fetch('https://api.github.com/repos/aramsey9/arb/contents/scheduler-config.json',{headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json'}});
+    var sha=null;
+    if(shaRes.ok){var shaData=await shaRes.json();sha=shaData.sha;}
+    var body={message:'Update scheduler config',content:btoa(JSON.stringify(cfg,null,2))};
+    if(sha)body.sha=sha;
+    var res=await fetch('https://api.github.com/repos/aramsey9/arb/contents/scheduler-config.json',{method:'PUT',headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(res.ok){
+      btn.textContent='✓ Saved!';btn.style.background='#7c3aed';btn.style.color='#fff';
+      document.getElementById('schLog').textContent='Saved at '+new Date().toLocaleTimeString()+' — Scanner is '+(enabled?'ACTIVE — runs every 10 min 6am-10pm ET':'PAUSED');
+      updateSchStatus(enabled);
+      try{localStorage.setItem('gh_token',token);}catch(e){}
+    }else{
+      var err=await res.json();
+      btn.textContent='✗ Failed';btn.style.background='#ff4757';btn.style.color='#fff';
+      document.getElementById('schLog').textContent='Error: '+(err.message||'Check your GitHub token');
+    }
+  }catch(e){
+    btn.textContent='✗ Error';btn.style.background='#ff4757';btn.style.color='#fff';
+    document.getElementById('schLog').textContent='Error: '+e.message;
+  }
+  setTimeout(function(){btn.textContent='💾 Save Settings to GitHub';btn.disabled=false;btn.style.background='#00ff88';btn.style.color='#000';},3000);
+}
+
 function startScan(){scanAll()}
 function toggleAuto(){
   autoOn=!autoOn;var btn=document.getElementById('autoBtn');
