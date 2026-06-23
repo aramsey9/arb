@@ -2,6 +2,7 @@
   "enabled": true,
   "sports": [
     "baseball_mlb",
+    "americanfootball_nfl",
     "icehockey_nhl",
     "soccer_usa_mls",
     "tennis_atp_french_open",
@@ -12,5 +13,5 @@
     "boxing_boxing"
   ],
   "minEdge": 0.1,
-  "lastSaved": "2026-06-23T14:15:54.997Z"
+  "lastSaved": "2026-06-23T14:16:37.969Z"
 }
