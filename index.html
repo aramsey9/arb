@@ -131,7 +131,7 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
 <div class="tab-bar">
   <button class="tab-btn active" id="tab-scanner" onclick="switchTab('scanner')">🔍 Scanner</button>
   <button class="tab-btn" id="tab-lookup" onclick="switchTab('lookup')">📋 Line Lookup</button>
-  <button class="tab-btn" id="tab-scheduler" onclick="switchTab('scheduler')">⏰ Scheduler</button>
+  <button class="tab-btn" id="tab-notify" onclick="switchTab('notify')">🔔 Notify</button>
 </div>
 
 <div id="view-scanner" class="view active">
@@ -193,28 +193,13 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
   <div class="fb" data-f="upcoming">📅 Upcoming Only</div>
 </div>
 <!-- ── Pushover Notifications ── -->
-<div class="po-box" id="poBox">
-  <div class="po-title">
-    🔔 Pushover Notifications
-    <span class="po-status" id="poStatus">Not connected</span>
-  </div>
-  <div class="po-row">
-    <input type="text" id="poToken" placeholder="App API Token (from pushover.net)" />
-  </div>
-  <div class="po-row">
-    <input type="text" id="poUser" placeholder="User Key (from pushover.net)" />
-    <button class="po-btn" id="poTestBtn" onclick="testPushover()">Test</button>
-  </div>
-  <div class="po-toggle">
-    <label>Send alert when arbs are found</label>
-    <label class="switch"><input type="checkbox" id="poEnabled" /><span class="slider"></span></label>
-  </div>
-  <div class="po-min-row">
-    <label>Only notify if edge ≥</label>
-    <input type="number" id="poMinEdge" value="0.5" step="0.1" min="0" placeholder="%" />
-    <span style="color:#666;font-size:12px">%</span>
-  </div>
-</div>
+<div id="poToken" style="display:none"></div>
+<div id="poUser" style="display:none"></div>
+<div id="poStatus" style="display:none"></div>
+<div id="poBox" style="display:none"></div>
+<input type="checkbox" id="poEnabled" style="display:none" checked />
+<input type="number" id="poMinEdge" value="0.5" style="display:none" />
+<button id="poTestBtn" style="display:none"></button>
 
 <button class="scan" onclick="startScan()">🔍 Scan Now</button>
 <div id="prog" style="display:none" class="prog">
@@ -257,7 +242,7 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
   <div id="lout"></div>
 </div>
 
-<div id="view-scheduler" class="view">
+<div id="view-notify" class="view">
   <div class="sch-box" id="schBox">
     <div class="sch-title">⏰ Background Scanner<span class="sch-status off" id="schStatus">OFF</span></div>
     <div class="big-toggle" onclick="toggleScheduler()">
@@ -284,7 +269,7 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
     </div>
     <div class="slabel" style="margin-top:14px">Min edge % to notify</div>
     <input type="number" id="schMinEdge" value="0.5" step="0.1" min="0" placeholder="%" style="width:100px;margin-bottom:0" />
-    <div class="sch-note">⏰ Runs every 10 min between 6am–10pm Eastern.<br>🔕 Automatically pauses overnight so you sleep undisturbed.<br>🔔 Pushover credentials are pulled from the Notifications panel.</div>
+    <div class="sch-note">⏰ Runs every 10 min between 6am–10pm Eastern — upcoming games only.<br>🔕 Automatically pauses overnight so you sleep undisturbed.<br>🔔 Pushover credentials are pulled from the Notifications panel.</div>
     <button class="sch-save" id="schSaveBtn" onclick="saveSchedulerSettings()">💾 Save Settings to GitHub</button>
     <div class="sch-log" id="schLog">Not saved yet — tap Save Settings to activate.</div>
   </div>
@@ -297,7 +282,15 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
       4. You get a Pushover alert when arbs are found<br>
       5. Toggle OFF anytime — scanner stops immediately
     </div>
-    <div class="slabel" style="margin-top:12px">GitHub Personal Access Token</div>
+    <div class="slabel" style="margin-top:12px">Pushover App Token</div>
+    <input type="text" id="poTokenInput" placeholder="App API Token (from pushover.net)" />
+    <div class="slabel">Pushover User Key</div>
+    <input type="text" id="poUserInput" placeholder="User Key (from pushover.net)" />
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <label style="font-size:12px;color:#888;flex:1">Notify on manual scans too</label>
+      <label class="switch"><input type="checkbox" id="poManualEnabled" /><span class="slider"></span></label>
+    </div>
+    <div class="slabel">GitHub Personal Access Token</div>
     <input type="password" id="ghToken" placeholder="ghp_xxxxxxxxxxxx (stored locally only)" />
     <div style="font-size:10px;color:#666;margin-top:-6px">Never sent anywhere except directly to GitHub API</div>
   </div>
@@ -317,7 +310,7 @@ var ARB_CACHE=[];
 
 // ── Tab switching ──────────────────────────────────────────
 function switchTab(tab){
-  ['scanner','lookup','scheduler'].forEach(function(t){
+  ['scanner','lookup','notify'].forEach(function(t){
     document.getElementById('tab-'+t).classList.remove('active');
     document.getElementById('view-'+t).classList.remove('active');
   });
@@ -369,8 +362,8 @@ function updatePoStatus(){
 }
 
 async function sendPushover(title,message,priority){
-  var token=document.getElementById('poToken').value.trim();
-  var user=document.getElementById('poUser').value.trim();
+  var token=localStorage.getItem('po_token')||'';
+  var user=localStorage.getItem('po_user')||'';
   if(!token||!user)return false;
   var payload={token:token,user:user,title:title,message:message,priority:priority||0,sound:'cashregister'};
   // Try corsproxy.io first to bypass CORS block
@@ -406,8 +399,8 @@ async function testPushover(){
 var LAST_ARB_IDS=new Set();
 async function maybePushoverNotify(arbs){
   if(!document.getElementById('poEnabled').checked)return;
-  var token=document.getElementById('poToken').value.trim();
-  var user=document.getElementById('poUser').value.trim();
+  var token=localStorage.getItem('po_token')||'';
+  var user=localStorage.getItem('po_user')||'';
   if(!token||!user)return;
   var minEdge=parseFloat(document.getElementById('poMinEdge').value)||0;
   var newArbs=arbs.filter(function(x){
@@ -1050,10 +1043,25 @@ async function fetchEventOdds(eventId,sport,markets,gameLabel,playerFilter,arbLa
 // ── Scheduler ──────────────────────────────────────────────
 (function(){
   try{
-    var gt=localStorage.getItem('gh_token');
-    if(gt)document.getElementById('ghToken').value=gt;
+    var gt=localStorage.getItem('gh_token');if(gt)document.getElementById('ghToken').value=gt;
+    var pt=localStorage.getItem('po_token');if(pt)document.getElementById('poTokenInput').value=pt;
+    var pu=localStorage.getItem('po_user');if(pu)document.getElementById('poUserInput').value=pu;
+    var pm=localStorage.getItem('po_manual');if(pm==='1')document.getElementById('poManualEnabled').checked=true;
+    // Sync hidden elements used by scanner
+    if(pt){document.getElementById('poToken').textContent=pt;}
+    if(pu){document.getElementById('poUser').textContent=pu;}
+    if(pm==='1')document.getElementById('poEnabled').checked=true;
   }catch(e){}
   document.getElementById('ghToken').addEventListener('input',function(){try{localStorage.setItem('gh_token',this.value.trim());}catch(e){}});
+  document.getElementById('poTokenInput').addEventListener('input',function(){
+    try{localStorage.setItem('po_token',this.value.trim());document.getElementById('poToken').textContent=this.value.trim();}catch(e){}
+  });
+  document.getElementById('poUserInput').addEventListener('input',function(){
+    try{localStorage.setItem('po_user',this.value.trim());document.getElementById('poUser').textContent=this.value.trim();}catch(e){}
+  });
+  document.getElementById('poManualEnabled').addEventListener('change',function(){
+    try{localStorage.setItem('po_manual',this.checked?'1':'0');document.getElementById('poEnabled').checked=this.checked;}catch(e){}
+  });
   document.querySelector('.sch-sports').addEventListener('click',function(e){var b=e.target.closest('[data-ss]');if(b)b.classList.toggle('on');});
   loadSchedulerSettings();
 })();
