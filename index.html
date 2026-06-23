@@ -120,6 +120,9 @@ button.scan{background:#00ff88;color:#000;border:none;border-radius:8px;padding:
   <div class="sb on" data-s="soccer_france_ligue_1">⚽ Ligue 1</div>
   <div class="sb on" data-s="soccer_mexico_ligamx">⚽ Liga MX</div>
   <div class="sb on" data-s="soccer_uefa_europa_league">⚽ Europa</div>
+  <div class="sb on" data-s="boxing_boxing">🥊 Boxing</div>
+  <div class="sb on" data-s="lacrosse_pll">🥍 PLL</div>
+  <div class="sb on" data-s="lacrosse_ncaa">🥍 NCAA Lax</div>
 </div>
 <div class="slabel">Markets</div>
 <div class="markets" id="markets">
@@ -177,6 +180,9 @@ button.scan{background:#00ff88;color:#000;border:none;border-radius:8px;padding:
     <option value="soccer_france_ligue_1">⚽ Ligue 1</option>
     <option value="soccer_mexico_ligamx">⚽ Liga MX</option>
     <option value="soccer_uefa_europa_league">⚽ Europa League</option>
+    <option value="boxing_boxing">🥊 Boxing</option>
+    <option value="lacrosse_pll">🥍 PLL</option>
+    <option value="lacrosse_ncaa">🥍 NCAA Lacrosse</option>
   </select>
   <div class="slabel">Team or player name</div>
   <div class="row" style="margin-bottom:14px">
@@ -349,7 +355,10 @@ var PROP_MARKETS={
   ],
   mma_mixed_martial_arts:[
     'player_significant_strikes','player_takedowns_landed'
-  ]
+  ],
+  boxing_boxing:[],
+  lacrosse_pll:[],
+  lacrosse_ncaa:[]
 };
 var GAME_PROP_MARKETS={
   baseball_mlb:[
@@ -399,7 +408,10 @@ var GAME_PROP_MARKETS={
   basketball_wnba:['h2h_h1','spreads_h1','totals_h1','h2h_q1','spreads_q1','totals_q1','h2h_q2','spreads_q2','totals_q2','h2h_q3','spreads_q3','totals_q3','h2h_q4','spreads_q4','totals_q4','team_totals'],
   basketball_ncaab:['h2h_h1','spreads_h1','totals_h1','h2h_h2','spreads_h2','totals_h2','team_totals'],
   tennis_atp_french_open:[],
-  mma_mixed_martial_arts:[]
+  mma_mixed_martial_arts:[],
+  boxing_boxing:[],
+  lacrosse_pll:[],
+  lacrosse_ncaa:[]
 };
 var GP_LABEL={
   h2h_1st_5_innings:'1st 5 Inn ML',spreads_1st_5_innings:'1st 5 Inn Spread',totals_1st_5_innings:'1st 5 Inn Total',
@@ -711,7 +723,7 @@ async function scanAll(){
     soonArbs.forEach(function(x){h+=renderCard(x,allArbs.indexOf(x))});
     if(laterArbs.length){h+='<div class="section-divider"><span>📅 Games 3+ Days Away ('+laterArbs.length+')</span></div>';laterArbs.forEach(function(x){h+=renderCard(x,allArbs.indexOf(x))})}
   }
-  h+='<div class="limit-log"><div class="limit-log-title">📋 Known Book Limits</div><div class="limit-log-entry">🚫 <strong>Bally Bet</strong> — limited to <strong>$255</strong> on player props (Jun 22, 2026)</div></div>';
+  h+='<div class="limit-log"><div class="limit-log-title">📋 Known Book Limits</div><div class="limit-log-entry">🚫 <strong>Bally Bet</strong> — limited to <strong>$255</strong> on player props (Jun 22, 2026)</div><div class="limit-log-entry">🚫 <strong>Hard Rock Bet</strong> — limited to <strong>$280</strong> on WNBA (Jun 22, 2026)</div></div>';
   document.getElementById('out').innerHTML=h;
   setStatus(autoOn,'#'+scanCount+' at '+now+(autoOn?' — next in 60s':''));
 }
