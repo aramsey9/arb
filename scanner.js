@@ -148,7 +148,7 @@ function processSpreads(oc, gl, allArbs, min) {
 
 // ── Main scan ──────────────────────────────────────────────
 async function scanSport(sport, allArbs, min) {
-  var BOOKS = 'fanduel,draftkings,betmgm,williamhill_us,fanatics,thescore,hardrockbet,ballybet';
+  var BOOKS = 'fanduel,draftkings,betmgm,williamhill_us,fanatics,thescore,hardrockbet,ballybet,espnbet';
   try {
     var res = await fetch('https://api.the-odds-api.com/v4/sports/' + sport + '/odds/?apiKey=' + ODDS_API_KEY + '&regions=us&markets=h2h,spreads,totals&oddsFormat=american&bookmakers=' + BOOKS);
     if (!res.ok) { console.log('API error for', sport, res.status); return; }
