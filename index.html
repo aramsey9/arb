@@ -903,7 +903,7 @@ async function scanAll(){
     soonArbs.forEach(function(x){h+=renderCard(x,allArbs.indexOf(x))});
     if(laterArbs.length){h+='<div class="section-divider"><span>📅 Games 3+ Days Away ('+laterArbs.length+')</span></div>';laterArbs.forEach(function(x){h+=renderCard(x,allArbs.indexOf(x))})}
   }
-  h+='<div class="limit-log"><div class="limit-log-title">📋 Known Book Limits</div><div class="limit-log-entry">🚫 <strong>Bally Bet</strong> — limited to <strong>$255</strong> on player props (Jun 22, 2026)</div><div class="limit-log-entry">🚫 <strong>Bally Bet</strong> — limited to <strong>$46</strong> on MLB player props (Jun 23, 2026)</div><div class="limit-log-entry">🚫 <strong>Hard Rock Bet</strong> — limited to <strong>$280</strong> on WNBA (Jun 22, 2026)</div></div>';
+  h+='<div class="limit-log"><div class="limit-log-title">📋 Known Book Limits</div><div class="limit-log-entry">🚫 <strong>Bally Bet</strong> — limited to <strong>$255</strong> on player props (Jun 22, 2026)</div><div class="limit-log-entry">🚫 <strong>Bally Bet</strong> — limited to <strong>$46</strong> on MLB player props (Jun 23, 2026)</div><div class="limit-log-entry">🚫 <strong>Hard Rock Bet</strong> — limited to <strong>$280</strong> on WNBA (Jun 22, 2026)</div><div class="limit-log-entry">⚠️ <strong>Hard Rock Bet</strong> — account gubbed Jun 24, 2026. No future promos. Limits may follow.</div></div>';
   document.getElementById('out').innerHTML=h;
   setStatus(autoOn,'#'+scanCount+' at '+now+(autoOn?' — next in 60s':''));
 }
