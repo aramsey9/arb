@@ -186,6 +186,7 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
   <div class="sb on" data-b="hardrockbet">Hard Rock</div>
   <div class="sb on" data-b="ballybet">Bally Bet</div>
   <div class="sb on" data-b="espnbet">ESPN Bet</div>
+  <div class="sb on" data-b="bet365">Bet365</div>
 </div>
 <div class="slabel">Game Status</div>
 <div class="filters" id="filters">
@@ -442,7 +443,7 @@ function isLive(t){return new Date(t).getTime()<=Date.now()}
 function passesFilter(game,mode){if(mode==='all')return true;var live=isLive(game.commence_time);return mode==='live'?live:!live}
 
 // ── Book risk (lower = place first) ──────────────────────
-var BOOK_RISK={'bally':1,'thescore':2,'hard rock':3,'espn':3,'fanatics':4,'betmgm':5,'caesars':6,'williamhill':6,'draftkings':7,'fanduel':8};
+var BOOK_RISK={'bally':1,'thescore':2,'hard rock':3,'espn':3,'fanatics':4,'betmgm':5,'caesars':6,'williamhill':6,'bet365':6,'draftkings':7,'fanduel':8};
 function bookRisk(name){var n=name.toLowerCase();for(var k in BOOK_RISK){if(n.indexOf(k)>-1)return BOOK_RISK[k]}return 5}
 function placeFirstNote(b1,b2){var r1=bookRisk(b1),r2=bookRisk(b2);if(r1===r2)return '';var first=r1<r2?b1:b2;return '<div class="place-first-note">⚠️ Place <strong>'+first+'</strong> first — smaller book, higher limit risk</div>'}
 
