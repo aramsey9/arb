@@ -1122,13 +1122,23 @@ function kalshiToAmerican(priceDollars) {
 
 // Fetch Kalshi sports events for a series
 async function fetchKalshiEvents(seriesTicker) {
+  var baseUrl = 'https://api.elections.kalshi.com/trade-api/v2/events?series_ticker='+seriesTicker+'&with_nested_markets=true&status=open&limit=200';
+  // Try direct first
   try {
-    var url = 'https://api.elections.kalshi.com/trade-api/v2/events?series_ticker='+seriesTicker+'&with_nested_markets=true&status=open&limit=200';
-    var res = await fetch(url);
-    if (!res.ok) return [];
-    var data = await res.json();
-    return data.events || [];
-  } catch(e) { return []; }
+    var res = await fetch(baseUrl);
+    if (res.ok) { var data = await res.json(); return data.events || []; }
+  } catch(e) {}
+  // Fallback: CORS proxy
+  try {
+    var res2 = await fetch('https://corsproxy.io/?'+encodeURIComponent(baseUrl));
+    if (res2.ok) { var data2 = await res2.json(); return data2.events || []; }
+  } catch(e) {}
+  // Fallback 2: allorigins
+  try {
+    var res3 = await fetch('https://api.allorigins.win/raw?url='+encodeURIComponent(baseUrl));
+    if (res3.ok) { var data3 = await res3.json(); return data3.events || []; }
+  } catch(e) {}
+  return [];
 }
 
 // Normalize Kalshi event title to match Odds API game
