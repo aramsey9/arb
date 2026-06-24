@@ -131,6 +131,7 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
 <div class="tab-bar">
   <button class="tab-btn active" id="tab-scanner" onclick="switchTab('scanner')">🔍 Scanner</button>
   <button class="tab-btn" id="tab-lookup" onclick="switchTab('lookup')">📋 Line Lookup</button>
+  <button class="tab-btn" id="tab-kalshi" onclick="switchTab('kalshi')">📊 Kalshi Arb</button>
   <button class="tab-btn" id="tab-notify" onclick="switchTab('notify')">🔔 Notify</button>
 </div>
 
@@ -244,6 +245,47 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
   <div id="lout"></div>
 </div>
 
+<div id="view-kalshi" class="view">
+  <div class="row">
+    <input type="number" id="kbank" value="1000" placeholder="Bankroll $" />
+    <input type="number" id="kmine" value="0.5" placeholder="Min %" step="0.1" />
+  </div>
+  <div class="slabel">Sports (Kalshi)</div>
+  <div class="sports" id="ksports">
+    <div class="sb on" data-ks="KXMLB">⚾ MLB</div>
+    <div class="sb on" data-ks="KXNBA">🏀 NBA</div>
+    <div class="sb on" data-ks="KXNFL">🏈 NFL</div>
+    <div class="sb on" data-ks="KXCFB">🏈 NCAAF</div>
+    <div class="sb on" data-ks="KXCBB">🏀 NCAAB</div>
+    <div class="sb on" data-ks="KXNHL">🏒 NHL</div>
+    <div class="sb on" data-ks="KXMLS">⚽ MLS</div>
+    <div class="sb on" data-ks="KXEPL">⚽ EPL</div>
+    <div class="sb on" data-ks="KXUFC">🥊 UFC</div>
+    <div class="sb on" data-ks="KXWNBA">🏀 WNBA</div>
+    <div class="sb on" data-ks="KXPGA">⛳ Golf</div>
+    <div class="sb on" data-ks="KXWC">🌍 World Cup</div>
+  </div>
+  <div class="slabel">Sportsbooks to compare</div>
+  <div class="sports" id="kbooks">
+    <div class="sb on" data-kb="fanduel">FanDuel</div>
+    <div class="sb on" data-kb="draftkings">DraftKings</div>
+    <div class="sb on" data-kb="betmgm">BetMGM</div>
+    <div class="sb on" data-kb="williamhill_us">Caesars</div>
+    <div class="sb on" data-kb="fanatics">Fanatics</div>
+    <div class="sb on" data-kb="thescore">theScore</div>
+    <div class="sb on" data-kb="hardrockbet">Hard Rock</div>
+    <div class="sb on" data-kb="ballybet">Bally Bet</div>
+    <div class="sb on" data-kb="espnbet">ESPN Bet</div>
+    <div class="sb on" data-kb="bet365">Bet365</div>
+  </div>
+  <button class="scan" onclick="scanKalshi()">📊 Scan Kalshi Arbs</button>
+  <div id="kprog" style="display:none" class="prog">
+    <span id="kprogText">Fetching Kalshi markets...</span>
+    <div class="prog-bar"><div class="prog-fill" id="kprogFill" style="width:0%"></div></div>
+  </div>
+  <div id="kout"></div>
+</div>
+
 <div id="view-notify" class="view">
   <div class="sch-box" id="schBox">
     <div class="sch-title">⏰ Background Scanner<span class="sch-status off" id="schStatus">OFF</span></div>
@@ -312,7 +354,7 @@ var ARB_CACHE=[];
 
 // ── Tab switching ──────────────────────────────────────────
 function switchTab(tab){
-  ['scanner','lookup','notify'].forEach(function(t){
+  ['scanner','lookup','kalshi','notify'].forEach(function(t){
     document.getElementById('tab-'+t).classList.remove('active');
     document.getElementById('view-'+t).classList.remove('active');
   });
@@ -905,7 +947,7 @@ async function scanAll(){
     soonArbs.forEach(function(x){h+=renderCard(x,allArbs.indexOf(x))});
     if(laterArbs.length){h+='<div class="section-divider"><span>📅 Games 3+ Days Away ('+laterArbs.length+')</span></div>';laterArbs.forEach(function(x){h+=renderCard(x,allArbs.indexOf(x))})}
   }
-  h+='<div class="limit-log"><div class="limit-log-title">📋 Known Book Limits</div><div class="limit-log-entry">🚫 <strong>Bally Bet</strong> — limited to <strong>$255</strong> on player props (Jun 22, 2026)</div><div class="limit-log-entry">🚫 <strong>Bally Bet</strong> — limited to <strong>$46</strong> on MLB player props (Jun 23, 2026)</div><div class="limit-log-entry">🚫 <strong>Hard Rock Bet</strong> — limited to <strong>$280</strong> on WNBA (Jun 22, 2026)</div><div class="limit-log-entry">⚠️ <strong>Hard Rock Bet</strong> — account gubbed Jun 24, 2026. No future promos. Limits may follow.</div></div>';
+  h+='<div class="limit-log"><div class="limit-log-title">📋 Known Book Limits</div><div class="limit-log-entry">🚫 <strong>Bally Bet</strong> — limited to <strong>$255</strong> on player props (Jun 22, 2026)</div><div class="limit-log-entry">🚫 <strong>Bally Bet</strong> — limited to <strong>$46</strong> on MLB player props (Jun 23, 2026)</div><div class="limit-log-entry">🚫 <strong>Hard Rock Bet</strong> — limited to <strong>$280</strong> on WNBA (Jun 22, 2026)</div><div class="limit-log-entry">⚠️ <strong>Hard Rock Bet</strong> — account gubbed Jun 24, 2026. No future promos. Limits may follow.</div><div class="limit-log-entry">🚫 <strong>Bally Bet</strong> — limited to <strong>$10</strong> per bet (Jun 24, 2026)</div><div class="limit-log-entry">🚫 <strong>Hard Rock Bet</strong> — limited to <strong>$10</strong> per bet (Jun 24, 2026)</div></div>';
   document.getElementById('out').innerHTML=h;
   setStatus(autoOn,'#'+scanCount+' at '+now+(autoOn?' — next in 60s':''));
 }
@@ -1042,6 +1084,245 @@ async function fetchEventOdds(eventId,sport,markets,gameLabel,playerFilter,arbLa
 }
 
 // ── Controls ───────────────────────────────────────────────
+// ── Kalshi Arb Scanner ────────────────────────────────────────
+document.getElementById('ksports').addEventListener('click',function(e){var b=e.target.closest('[data-ks]');if(b)b.classList.toggle('on');});
+document.getElementById('kbooks').addEventListener('click',function(e){var b=e.target.closest('[data-kb]');if(b)b.classList.toggle('on');});
+
+function getKSports(){return Array.from(document.querySelectorAll('#ksports [data-ks].on')).map(function(b){return b.dataset.ks});}
+function getKBooks(){return Array.from(document.querySelectorAll('#kbooks [data-kb].on')).map(function(b){return b.dataset.kb});}
+
+// Map Kalshi series tickers to Odds API sport keys
+var KALSHI_SPORT_MAP = {
+  'KXMLB':'baseball_mlb',
+  'KXNBA':'basketball_nba',
+  'KXNFL':'americanfootball_nfl',
+  'KXCFB':'americanfootball_ncaaf',
+  'KXCBB':'basketball_ncaab',
+  'KXNHL':'icehockey_nhl',
+  'KXMLS':'soccer_usa_mls',
+  'KXEPL':'soccer_epl',
+  'KXUFC':'mma_mixed_martial_arts',
+  'KXWNBA':'basketball_wnba',
+  'KXPGA':'golf',
+  'KXWC':'soccer_fifa_world_cup'
+};
+
+function setKProgress(pct, text){
+  document.getElementById('kprogText').textContent=text;
+  document.getElementById('kprogFill').style.width=pct+'%';
+}
+
+// Convert Kalshi yes_bid price (dollars string) to American odds
+function kalshiToAmerican(priceDollars) {
+  var p = parseFloat(priceDollars);
+  if (!p || p <= 0 || p >= 1) return null;
+  if (p >= 0.5) return Math.round(-p/(1-p)*100);
+  return Math.round((1-p)/p*100);
+}
+
+// Fetch Kalshi sports events for a series
+async function fetchKalshiEvents(seriesTicker) {
+  try {
+    var url = 'https://api.elections.kalshi.com/trade-api/v2/events?series_ticker='+seriesTicker+'&with_nested_markets=true&status=open&limit=200';
+    var res = await fetch(url);
+    if (!res.ok) return [];
+    var data = await res.json();
+    return data.events || [];
+  } catch(e) { return []; }
+}
+
+// Normalize Kalshi event title to match Odds API game
+function normalizeTeam(name) {
+  return (name||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+}
+
+async function scanKalshi() {
+  var key = document.getElementById('key').value.trim();
+  if (!key) { document.getElementById('kout').innerHTML='<div class="err">Paste your Odds API key at the top first.</div>'; return; }
+  var bank = parseFloat(document.getElementById('kbank').value)||1000;
+  var min = parseFloat(document.getElementById('kmine').value)||0.5;
+  var kSports = getKSports();
+  var kBooks = getKBooks();
+  if (!kSports.length) { document.getElementById('kout').innerHTML='<div class="err">Select at least one sport.</div>'; return; }
+  if (!kBooks.length) { document.getElementById('kout').innerHTML='<div class="err">Select at least one sportsbook.</div>'; return; }
+
+  document.getElementById('kprog').style.display='block';
+  setKProgress(0,'Fetching Kalshi markets...');
+  document.getElementById('kout').innerHTML='';
+
+  var allArbs = [];
+  var totalGames = 0;
+
+  for (var si=0; si<kSports.length; si++) {
+    var seriesTicker = kSports[si];
+    var oddsApiSport = KALSHI_SPORT_MAP[seriesTicker];
+    if (!oddsApiSport) continue;
+
+    setKProgress(Math.round((si/kSports.length)*40), 'Fetching Kalshi: '+seriesTicker+'...');
+
+    // Fetch Kalshi events
+    var kalshiEvents = await fetchKalshiEvents(seriesTicker);
+    if (!kalshiEvents.length) continue;
+
+    // Fetch Odds API for same sport
+    var BOOKS = kBooks.join(',');
+    var oddsRes = await fetch('https://api.the-odds-api.com/v4/sports/'+oddsApiSport+'/odds/?apiKey='+key+'&regions=us&markets=h2h&oddsFormat=american&bookmakers='+BOOKS);
+    if (!oddsRes.ok) continue;
+    var oddsGames = await oddsRes.json();
+    if (!Array.isArray(oddsGames)) continue;
+    totalGames += oddsGames.length;
+
+    // Try to match each Kalshi event to an Odds API game
+    kalshiEvents.forEach(function(kEvent) {
+      if (!kEvent.markets || !kEvent.markets.length) return;
+      var kTitle = (kEvent.title||'').toLowerCase();
+
+      // Find matching Odds API game by team name fuzzy match
+      var matchedGame = null;
+      oddsGames.forEach(function(game) {
+        if (new Date(game.commence_time).getTime() <= Date.now()) return; // upcoming only
+        var homeNorm = normalizeTeam(game.home_team);
+        var awayNorm = normalizeTeam(game.away_team);
+        // Check if both team names appear in Kalshi event title
+        var kNorm = normalizeTeam(kTitle);
+        if (kNorm.indexOf(homeNorm.slice(0,5))>-1 || kNorm.indexOf(awayNorm.slice(0,5))>-1) {
+          matchedGame = game;
+        }
+      });
+      if (!matchedGame) return;
+
+      // Get best sportsbook odds for home and away
+      var bestHome = null, bestAway = null;
+      (matchedGame.bookmakers||[]).forEach(function(book) {
+        (book.markets||[]).forEach(function(mkt) {
+          if (mkt.key !== 'h2h') return;
+          (mkt.outcomes||[]).forEach(function(out) {
+            if (out.name === matchedGame.home_team) {
+              if (!bestHome || out.price > bestHome.price) bestHome={price:out.price, book:book.title};
+            }
+            if (out.name === matchedGame.away_team) {
+              if (!bestAway || out.price > bestAway.price) bestAway={price:out.price, book:book.title};
+            }
+          });
+        });
+      });
+      if (!bestHome || !bestAway) return;
+
+      // Find Kalshi moneyline markets (home win / away win)
+      kEvent.markets.forEach(function(km) {
+        if (km.status !== 'active') return;
+        var ymTitle = (km.yes_sub_title||'').toLowerCase();
+        var nmTitle = (km.no_sub_title||'').toLowerCase();
+        var homeNorm = normalizeTeam(matchedGame.home_team);
+        var awayNorm = normalizeTeam(matchedGame.away_team);
+
+        // YES side = home team wins?
+        var yesIsHome = normalizeTeam(ymTitle).indexOf(homeNorm.slice(0,4))>-1;
+        var yesIsAway = normalizeTeam(ymTitle).indexOf(awayNorm.slice(0,4))>-1;
+        if (!yesIsHome && !yesIsAway) return;
+
+        var kalshiYesPrice = parseFloat(km.yes_bid_dollars||0);
+        var kalshiNoPrice = parseFloat(km.no_bid_dollars||0);
+        if (!kalshiYesPrice || !kalshiNoPrice) return;
+
+        // Convert Kalshi prices to implied probabilities
+        var kYesProb = kalshiYesPrice;  // already in dollars = probability
+        var kNoProb = kalshiNoPrice;
+
+        // YES side matches home team
+        if (yesIsHome) {
+          // Arb: Kalshi YES (home) vs Sportsbook Away
+          var sbAwayProb = oP(bestAway.price);
+          var totalProb = kYesProb + sbAwayProb;
+          var edge = (1-totalProb)*100;
+          if (edge >= min && totalProb < 1.0) {
+            var s1 = bank*(kYesProb/totalProb);
+            var s2 = bank*(sbAwayProb/totalProb);
+            // Kalshi YES pays $1/contract, so payout = s1/kYesProb
+            var pay1 = s1/kYesProb;
+            var pay2 = s2*oD(bestAway.price);
+            var profit = Math.min(pay1,pay2) - bank;
+            if (profit > 0) {
+              allArbs.push({
+                game: matchedGame.away_team+' @ '+matchedGame.home_team,
+                sport: matchedGame.sport_title||seriesTicker,
+                edge: edge,
+                roi: (profit/bank)*100,
+                profit: profit,
+                commenceTime: matchedGame.commence_time,
+                side1: {name:'YES — '+km.yes_sub_title, book:'Kalshi', odds:kalshiYesPrice, stake:s1, isKalshi:true, price:kalshiYesPrice},
+                side2: {name:matchedGame.away_team, book:bestAway.book, odds:bestAway.price, stake:s2, isKalshi:false}
+              });
+            }
+          }
+          // Arb: Kalshi NO (away) vs Sportsbook Home
+          var sbHomeProb = oP(bestHome.price);
+          var totalProb2 = kNoProb + sbHomeProb;
+          var edge2 = (1-totalProb2)*100;
+          if (edge2 >= min && totalProb2 < 1.0) {
+            var s1b = bank*(kNoProb/totalProb2);
+            var s2b = bank*(sbHomeProb/totalProb2);
+            var pay1b = s1b/kNoProb;
+            var pay2b = s2b*oD(bestHome.price);
+            var profit2 = Math.min(pay1b,pay2b) - bank;
+            if (profit2 > 0) {
+              allArbs.push({
+                game: matchedGame.away_team+' @ '+matchedGame.home_team,
+                sport: matchedGame.sport_title||seriesTicker,
+                edge: edge2,
+                roi: (profit2/bank)*100,
+                profit: profit2,
+                commenceTime: matchedGame.commence_time,
+                side1: {name:'NO — '+km.no_sub_title, book:'Kalshi', odds:kalshiNoPrice, stake:s1b, isKalshi:true, price:kalshiNoPrice},
+                side2: {name:matchedGame.home_team, book:bestHome.book, odds:bestHome.price, stake:s2b, isKalshi:false}
+              });
+            }
+          }
+        }
+      });
+    });
+
+    setKProgress(40+Math.round(((si+1)/kSports.length)*55), 'Scanned '+seriesTicker+'...');
+    await new Promise(function(r){setTimeout(r,200);});
+  }
+
+  document.getElementById('kprog').style.display='none';
+  allArbs.sort(function(a,b){return b.edge-a.edge;});
+
+  var now = new Date().toLocaleTimeString();
+  var h = '<div class="stats">'+totalGames+' games scanned · '+allArbs.length+' Kalshi arbs · '+now+'</div>';
+
+  if (!allArbs.length) {
+    h += '<div class="msg">No Kalshi arbs found above '+min+'%.<br><br>Try lowering Min % or check back when more markets are open.</div>';
+  } else {
+    h += '<div class="alert-bar">📊 '+allArbs.length+' Kalshi arb'+(allArbs.length>1?'s':'')+' found at '+now+'</div>';
+    allArbs.forEach(function(x) {
+      var c = '<div class="card'+(x.edge>2?' hot':'')+'">';
+      c += '<div class="ctop"><div style="flex:1;min-width:0">';
+      c += '<div class="gmeta">'+x.sport+'</div>';
+      c += '<span class="mktag h2h">Kalshi vs Book</span>';
+      c += '<div class="gtitle">'+x.game+'</div>';
+      if (x.commenceTime) c += '<div class="gdate-tag">'+new Date(x.commenceTime).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+'</div>';
+      c += '</div><div style="text-align:right;flex-shrink:0"><div class="roi">+'+x.roi.toFixed(2)+'%</div><div class="psub">$'+x.profit.toFixed(2)+' profit</div></div></div>';
+      c += '<div class="sides">';
+      // Side 1 - Kalshi
+      c += '<div class="side"><div class="book" style="color:#00c896">KALSHI</div>';
+      c += '<div class="team">'+x.side1.name+'</div>';
+      c += '<div class="odds" style="color:#00c896">'+(x.side1.price*100).toFixed(0)+'¢</div>';
+      c += '<div class="stake">Bet $'+x.side1.stake.toFixed(2)+'</div>';
+      c += '<a href="https://kalshi.com/sports" target="_blank" class="open-link">Open Kalshi →</a></div>';
+      // Side 2 - Sportsbook
+      c += '<div class="side"><div class="book">'+x.side2.book+'</div>';
+      c += '<div class="team">'+x.side2.name+'</div>';
+      c += '<div class="odds">'+fmt(x.side2.odds)+'</div>';
+      c += '<div class="stake">Bet $'+x.side2.stake.toFixed(2)+'</div></div>';
+      c += '</div></div>';
+      h += c;
+    });
+  }
+  document.getElementById('kout').innerHTML = h;
+}
+
 // ── Scheduler ──────────────────────────────────────────────
 (function(){
   try{
