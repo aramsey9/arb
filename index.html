@@ -1120,24 +1120,24 @@ function kalshiToAmerican(priceDollars) {
   return Math.round((1-p)/p*100);
 }
 
-// Fetch Kalshi sports events for a series
-async function fetchKalshiEvents(seriesTicker) {
-  var baseUrl = 'https://api.elections.kalshi.com/trade-api/v2/events?series_ticker='+seriesTicker+'&with_nested_markets=true&status=open&limit=200';
-  // Try direct first
-  try {
-    var res = await fetch(baseUrl);
-    if (res.ok) { var data = await res.json(); return data.events || []; }
-  } catch(e) {}
-  // Fallback: CORS proxy
-  try {
-    var res2 = await fetch('https://corsproxy.io/?'+encodeURIComponent(baseUrl));
-    if (res2.ok) { var data2 = await res2.json(); return data2.events || []; }
-  } catch(e) {}
-  // Fallback 2: allorigins
-  try {
-    var res3 = await fetch('https://api.allorigins.win/raw?url='+encodeURIComponent(baseUrl));
-    if (res3.ok) { var data3 = await res3.json(); return data3.events || []; }
-  } catch(e) {}
+// Fetch Kalshi markets for a series using correct endpoint
+async function fetchKalshiMarkets(seriesTicker) {
+  var baseUrl = 'https://external-api.kalshi.com/trade-api/v2/markets?series_ticker='+seriesTicker+'&status=open&limit=200';
+  var proxies = [
+    'https://corsproxy.io/?'+encodeURIComponent(baseUrl),
+    'https://api.allorigins.win/raw?url='+encodeURIComponent(baseUrl),
+    baseUrl
+  ];
+  for (var i=0; i<proxies.length; i++) {
+    try {
+      var res = await fetch(proxies[i]);
+      if (res.ok) {
+        var data = await res.json();
+        var markets = data.markets || [];
+        return markets;
+      }
+    } catch(e) {}
+  }
   return [];
 }
 
@@ -1163,6 +1163,7 @@ async function scanKalshi() {
   var allArbs = [];
   var totalGames = 0;
 
+  var BOOKS = kBooks.join(',');
   for (var si=0; si<kSports.length; si++) {
     var seriesTicker = kSports[si];
     var oddsApiSport = KALSHI_SPORT_MAP[seriesTicker];
@@ -1170,38 +1171,44 @@ async function scanKalshi() {
 
     setKProgress(Math.round((si/kSports.length)*40), 'Fetching Kalshi: '+seriesTicker+'...');
 
-    // Fetch Kalshi events
-    var kalshiEvents = await fetchKalshiEvents(seriesTicker);
-    if (!kalshiEvents.length) continue;
+    // Fetch Kalshi markets for this series
+    var kalshiMarkets = await fetchKalshiMarkets(seriesTicker);
+    if (!kalshiMarkets.length) continue;
 
     // Fetch Odds API for same sport
-    var BOOKS = kBooks.join(',');
     var oddsRes = await fetch('https://api.the-odds-api.com/v4/sports/'+oddsApiSport+'/odds/?apiKey='+key+'&regions=us&markets=h2h&oddsFormat=american&bookmakers='+BOOKS);
     if (!oddsRes.ok) continue;
     var oddsGames = await oddsRes.json();
     if (!Array.isArray(oddsGames)) continue;
     totalGames += oddsGames.length;
 
-    // Try to match each Kalshi event to an Odds API game
-    kalshiEvents.forEach(function(kEvent) {
-      if (!kEvent.markets || !kEvent.markets.length) return;
-      var kTitle = (kEvent.title||'').toLowerCase();
+    // Each Kalshi market is a game-level moneyline (yes_sub_title = team name)
+    kalshiMarkets.forEach(function(km) {
+      if (km.status !== 'active') return;
+      var kalshiYesPrice = parseFloat(km.yes_bid_dollars||0);
+      var kalshiNoPrice = parseFloat(km.no_bid_dollars||0);
+      if (!kalshiYesPrice || !kalshiNoPrice) return;
 
-      // Find matching Odds API game by team name fuzzy match
+      var yesTeam = (km.yes_sub_title||'').trim();
+      var noTeam = (km.no_sub_title||'').trim();
+      if (!yesTeam || !noTeam) return;
+
+      // Find matching Odds API game
       var matchedGame = null;
       oddsGames.forEach(function(game) {
-        if (new Date(game.commence_time).getTime() <= Date.now()) return; // upcoming only
+        if (new Date(game.commence_time).getTime() <= Date.now()) return;
         var homeNorm = normalizeTeam(game.home_team);
         var awayNorm = normalizeTeam(game.away_team);
-        // Check if both team names appear in Kalshi event title
-        var kNorm = normalizeTeam(kTitle);
-        if (kNorm.indexOf(homeNorm.slice(0,5))>-1 || kNorm.indexOf(awayNorm.slice(0,5))>-1) {
+        var yesNorm = normalizeTeam(yesTeam);
+        var noNorm = normalizeTeam(noTeam);
+        if ((yesNorm.indexOf(homeNorm.slice(0,5))>-1 || homeNorm.indexOf(yesNorm.slice(0,5))>-1) ||
+            (yesNorm.indexOf(awayNorm.slice(0,5))>-1 || awayNorm.indexOf(yesNorm.slice(0,5))>-1)) {
           matchedGame = game;
         }
       });
       if (!matchedGame) return;
 
-      // Get best sportsbook odds for home and away
+      // Get best sportsbook odds for each side
       var bestHome = null, bestAway = null;
       (matchedGame.bookmakers||[]).forEach(function(book) {
         (book.markets||[]).forEach(function(mkt) {
@@ -1218,78 +1225,39 @@ async function scanKalshi() {
       });
       if (!bestHome || !bestAway) return;
 
-      // Find Kalshi moneyline markets (home win / away win)
-      kEvent.markets.forEach(function(km) {
-        if (km.status !== 'active') return;
-        var ymTitle = (km.yes_sub_title||'').toLowerCase();
-        var nmTitle = (km.no_sub_title||'').toLowerCase();
-        var homeNorm = normalizeTeam(matchedGame.home_team);
-        var awayNorm = normalizeTeam(matchedGame.away_team);
+      // YES side of Kalshi = one team winning
+      // Check arb: Kalshi YES + Sportsbook opposite
+      var yesNorm2 = normalizeTeam(yesTeam);
+      var homeNorm2 = normalizeTeam(matchedGame.home_team);
+      var yesIsHome = yesNorm2.indexOf(homeNorm2.slice(0,5))>-1 || homeNorm2.indexOf(yesNorm2.slice(0,5))>-1;
+      var sbOpp = yesIsHome ? bestAway : bestHome;
+      var sbOppName = yesIsHome ? matchedGame.away_team : matchedGame.home_team;
 
-        // YES side = home team wins?
-        var yesIsHome = normalizeTeam(ymTitle).indexOf(homeNorm.slice(0,4))>-1;
-        var yesIsAway = normalizeTeam(ymTitle).indexOf(awayNorm.slice(0,4))>-1;
-        if (!yesIsHome && !yesIsAway) return;
+      // Arb: Kalshi YES + Sportsbook opposite team
+      var kYesProb = kalshiYesPrice;
+      var sbOppProb = oP(sbOpp.price);
+      var tot1 = kYesProb + sbOppProb;
+      var edge1 = (1-tot1)*100;
+      if (edge1 >= min && tot1 < 1.0) {
+        var s1 = bank*(kYesProb/tot1);
+        var s2 = bank*(sbOppProb/tot1);
+        var profit1 = Math.min(s1/kYesProb, s2*oD(sbOpp.price)) - bank;
+        if (profit1 > 0) allArbs.push({game:matchedGame.away_team+' @ '+matchedGame.home_team, sport:matchedGame.sport_title||seriesTicker, edge:edge1, roi:(profit1/bank)*100, profit:profit1, commenceTime:matchedGame.commence_time, side1:{name:'YES — '+yesTeam, book:'Kalshi', odds:kalshiYesPrice, stake:s1, isKalshi:true}, side2:{name:sbOppName, book:sbOpp.book, odds:sbOpp.price, stake:s2, isKalshi:false}});
+      }
 
-        var kalshiYesPrice = parseFloat(km.yes_bid_dollars||0);
-        var kalshiNoPrice = parseFloat(km.no_bid_dollars||0);
-        if (!kalshiYesPrice || !kalshiNoPrice) return;
-
-        // Convert Kalshi prices to implied probabilities
-        var kYesProb = kalshiYesPrice;  // already in dollars = probability
-        var kNoProb = kalshiNoPrice;
-
-        // YES side matches home team
-        if (yesIsHome) {
-          // Arb: Kalshi YES (home) vs Sportsbook Away
-          var sbAwayProb = oP(bestAway.price);
-          var totalProb = kYesProb + sbAwayProb;
-          var edge = (1-totalProb)*100;
-          if (edge >= min && totalProb < 1.0) {
-            var s1 = bank*(kYesProb/totalProb);
-            var s2 = bank*(sbAwayProb/totalProb);
-            // Kalshi YES pays $1/contract, so payout = s1/kYesProb
-            var pay1 = s1/kYesProb;
-            var pay2 = s2*oD(bestAway.price);
-            var profit = Math.min(pay1,pay2) - bank;
-            if (profit > 0) {
-              allArbs.push({
-                game: matchedGame.away_team+' @ '+matchedGame.home_team,
-                sport: matchedGame.sport_title||seriesTicker,
-                edge: edge,
-                roi: (profit/bank)*100,
-                profit: profit,
-                commenceTime: matchedGame.commence_time,
-                side1: {name:'YES — '+km.yes_sub_title, book:'Kalshi', odds:kalshiYesPrice, stake:s1, isKalshi:true, price:kalshiYesPrice},
-                side2: {name:matchedGame.away_team, book:bestAway.book, odds:bestAway.price, stake:s2, isKalshi:false}
-              });
-            }
-          }
-          // Arb: Kalshi NO (away) vs Sportsbook Home
-          var sbHomeProb = oP(bestHome.price);
-          var totalProb2 = kNoProb + sbHomeProb;
-          var edge2 = (1-totalProb2)*100;
-          if (edge2 >= min && totalProb2 < 1.0) {
-            var s1b = bank*(kNoProb/totalProb2);
-            var s2b = bank*(sbHomeProb/totalProb2);
-            var pay1b = s1b/kNoProb;
-            var pay2b = s2b*oD(bestHome.price);
-            var profit2 = Math.min(pay1b,pay2b) - bank;
-            if (profit2 > 0) {
-              allArbs.push({
-                game: matchedGame.away_team+' @ '+matchedGame.home_team,
-                sport: matchedGame.sport_title||seriesTicker,
-                edge: edge2,
-                roi: (profit2/bank)*100,
-                profit: profit2,
-                commenceTime: matchedGame.commence_time,
-                side1: {name:'NO — '+km.no_sub_title, book:'Kalshi', odds:kalshiNoPrice, stake:s1b, isKalshi:true, price:kalshiNoPrice},
-                side2: {name:matchedGame.home_team, book:bestHome.book, odds:bestHome.price, stake:s2b, isKalshi:false}
-              });
-            }
-          }
-        }
-      });
+      // Arb: Kalshi NO + Sportsbook YES team
+      var sbSame = yesIsHome ? bestHome : bestAway;
+      var sbSameName = yesIsHome ? matchedGame.home_team : matchedGame.away_team;
+      var kNoProb = kalshiNoPrice;
+      var sbSameProb = oP(sbSame.price);
+      var tot2 = kNoProb + sbSameProb;
+      var edge2 = (1-tot2)*100;
+      if (edge2 >= min && tot2 < 1.0) {
+        var s1b = bank*(kNoProb/tot2);
+        var s2b = bank*(sbSameProb/tot2);
+        var profit2 = Math.min(s1b/kNoProb, s2b*oD(sbSame.price)) - bank;
+        if (profit2 > 0) allArbs.push({game:matchedGame.away_team+' @ '+matchedGame.home_team, sport:matchedGame.sport_title||seriesTicker, edge:edge2, roi:(profit2/bank)*100, profit:profit2, commenceTime:matchedGame.commence_time, side1:{name:'NO — '+noTeam, book:'Kalshi', odds:kalshiNoPrice, stake:s1b, isKalshi:true}, side2:{name:sbSameName, book:sbSame.book, odds:sbSame.price, stake:s2b, isKalshi:false}});
+      }
     });
 
     setKProgress(40+Math.round(((si+1)/kSports.length)*55), 'Scanned '+seriesTicker+'...');
