@@ -1129,49 +1129,76 @@ function matchesGameSport(polyTitle, sportKey) {
 }
 
 // Fetch Polymarket sports markets
+async function pmFetch(url) {
+  var proxies = [
+    'https://corsproxy.io/?'+encodeURIComponent(url),
+    'https://api.allorigins.win/raw?url='+encodeURIComponent(url),
+    url
+  ];
+  for (var pi=0; pi<proxies.length; pi++) {
+    try {
+      var res = await fetch(proxies[pi]);
+      if (res.ok) return await res.json();
+    } catch(e) {}
+  }
+  return null;
+}
+
+// Map our sport selections to Polymarket sports-tag slugs
+var POLY_SPORT_SLUGS = {
+  'baseball_mlb':'mlb','basketball_nba':'nba','americanfootball_nfl':'nfl',
+  'americanfootball_ncaaf':'cfb','icehockey_nhl':'nhl','soccer_usa_mls':'mls',
+  'basketball_wnba':'wnba','soccer_epl':'epl','mma_mixed_martial_arts':'ufc','golf':'golf'
+};
+
 async function fetchPolymarketSports(sportKeys) {
   var allMarkets = [];
-  var offset = 0;
-  var limit = 500;
-  try {
-    for (var page=0; page<8; page++) {
-      var url = 'https://gamma-api.polymarket.com/markets?closed=false&limit='+limit+'&offset='+offset+'&order=volume&ascending=false';
-      var proxies = [
-        'https://corsproxy.io/?'+encodeURIComponent(url),
-        'https://api.allorigins.win/raw?url='+encodeURIComponent(url),
-        url
-      ];
-      var data = null;
-      for (var pi=0; pi<proxies.length; pi++) {
-        try {
-          var res = await fetch(proxies[pi]);
-          if (res.ok) { data = await res.json(); break; }
-        } catch(e) {}
-      }
-      if (!data || !Array.isArray(data) || !data.length) break;
-      // Filter to sports — match keywords OR sports-related tags/category
-      var sports = data.filter(function(m) {
-        if (!m.active || m.closed) return false;
-        var title = normalizePolyTitle(m.question||m.title||'');
-        // Keyword match against selected sports
-        for (var si=0; si<sportKeys.length; si++) {
-          if (matchesGameSport(title, sportKeys[si])) return true;
-        }
-        // Also accept if Polymarket tags/category indicate sports
-        var cat = ((m.category||'')+' '+(m.tags?JSON.stringify(m.tags):'')).toLowerCase();
-        if (/sport|mlb|nba|nfl|nhl|soccer|baseball|basketball|football|hockey|tennis|golf|ufc|mma|wnba/.test(cat)) {
-          // Still require a selected-sport keyword OR generic team-vs-team structure
-          var looksLikeGame = / vs\.? | @ | v |beat|defeat|win/.test(title);
-          if (looksLikeGame) return true;
-        }
-        return false;
-      });
-      allMarkets = allMarkets.concat(sports);
-      offset += limit;
-      setPProgress(10+Math.min(page*8,35), 'Fetching Polymarket... '+allMarkets.length+' sports markets');
-      if (data.length < limit) break;
+  var seenIds = {};
+
+  // Step 1: get the sports tag metadata to resolve tag IDs
+  var sportsTags = await pmFetch('https://gamma-api.polymarket.com/sports');
+  var tagIdByLabel = {};
+  if (Array.isArray(sportsTags)) {
+    sportsTags.forEach(function(s){
+      var lbl = (s.label||s.slug||'').toLowerCase();
+      var tid = s.tagId||s.tag_id||s.id;
+      if (lbl && tid) tagIdByLabel[lbl] = tid;
+    });
+  }
+
+  // Step 2: for each selected sport, fetch its events (events contain markets)
+  for (var si=0; si<sportKeys.length; si++) {
+    var slug = POLY_SPORT_SLUGS[sportKeys[si]];
+    if (!slug) continue;
+    var tagId = tagIdByLabel[slug];
+
+    setPProgress(10+Math.round((si/sportKeys.length)*30), 'Fetching Polymarket '+slug.toUpperCase()+'...');
+
+    var eventsUrl;
+    if (tagId) {
+      eventsUrl = 'https://gamma-api.polymarket.com/events?tag_id='+tagId+'&active=true&closed=false&limit=200';
+    } else {
+      // Fallback: search by tag slug directly
+      eventsUrl = 'https://gamma-api.polymarket.com/events?active=true&closed=false&limit=200&order=volume24hr&ascending=false';
     }
-  } catch(e) {}
+
+    var events = await pmFetch(eventsUrl);
+    if (!Array.isArray(events)) continue;
+
+    events.forEach(function(ev){
+      // Each event has nested markets
+      var mkts = ev.markets || [];
+      mkts.forEach(function(m){
+        if (!m || seenIds[m.id]) return;
+        if (m.closed) return;
+        seenIds[m.id] = true;
+        // Attach event title for context
+        m._eventTitle = ev.title || '';
+        allMarkets.push(m);
+      });
+    });
+  }
+
   return allMarkets;
 }
 
