@@ -1152,6 +1152,26 @@ function fetchWithTimeout(url, ms) {
   });
 }
 
+// Fetch the LIVE best ask price (what you'd pay to BUY) from CLOB.
+// Per Polymarket docs: side=sell returns the best ask. /price not /book
+// (the /book endpoint serves stale ghost data).
+async function fetchPolyAsk(tokenId) {
+  var url = 'https://clob.polymarket.com/price?token_id='+tokenId+'&side=sell';
+  var proxies = [
+    'https://corsproxy.io/?'+encodeURIComponent(url),
+    'https://api.allorigins.win/raw?url='+encodeURIComponent(url),
+    url
+  ];
+  for (var pi=0; pi<proxies.length; pi++) {
+    var data = await fetchWithTimeout(proxies[pi], 6000);
+    if (data && data.price != null) {
+      var p = parseFloat(data.price);
+      if (p > 0 && p < 1) return p;
+    }
+  }
+  return null;
+}
+
 async function pmFetch(url) {
   var proxies = [
     'https://corsproxy.io/?'+encodeURIComponent(url),
@@ -1400,10 +1420,14 @@ async function scanPoly() {
     var pOutcomes = [];
     try { pPrices = JSON.parse(pm.outcomePrices||'[]'); } catch(e) {}
     try { pOutcomes = JSON.parse(pm.outcomes||'[]'); } catch(e) {}
+    var pTokenIds = [];
+    try { pTokenIds = JSON.parse(pm.clobTokenIds||'[]'); } catch(e) {}
     if (pPrices.length < 2 || pOutcomes.length < 2) return;
 
     var pYesPrice = parseFloat(pPrices[0]||0);
     var pNoPrice = parseFloat(pPrices[1]||0);
+    var pYesToken = pTokenIds[0]||null;
+    var pNoToken = pTokenIds[1]||null;
     if (!pYesPrice || !pNoPrice || pYesPrice<=0.01 || pYesPrice>=0.99) return;
 
     // Classify the Polymarket market type — reject futures/invalid
@@ -1479,7 +1503,7 @@ async function scanPoly() {
         var edge = (1-tot)*100 - feeDrag*100;
         if (edge >= min && tot < 1.0) {
           var s1 = bank*(pYesPrice/tot), s2 = bank*(sbProb/tot), profit = ((bank/tot)-bank) - bank*feeDrag;
-          arbs.push({polyTitle:pTitle, game:awayTeam+' @ '+homeTeam, sport:game.sport_title||game._sport, edge:edge, roi:(profit/bank)*100, profit:profit, commenceTime:game.commence_time, polySide:'YES ('+yesTeam+' wins)', polyPrice:pYesPrice, polyStake:s1, sbSide:bestNo.name+' ML', sbBook:bestNo.book, sbOdds:bestNo.price, sbStake:s2, sbLink:bestNo.link, sbMarket:'h2h', polySlug:pm.slug||pm.id});
+          arbs.push({polyTitle:pTitle, game:awayTeam+' @ '+homeTeam, sport:game.sport_title||game._sport, edge:edge, roi:(profit/bank)*100, profit:profit, commenceTime:game.commence_time, polySide:'YES ('+yesTeam+' wins)', polyPrice:pYesPrice, polyToken:pYesToken, polyStake:s1, sbSide:bestNo.name+' ML', sbBook:bestNo.book, sbOdds:bestNo.price, sbStake:s2, sbLink:bestNo.link, sbMarket:'h2h', polySlug:pm.slug||pm.id});
         }
       }
       // Arb 2: Poly NO (noTeam wins) + Sportsbook yesTeam ML
@@ -1489,7 +1513,7 @@ async function scanPoly() {
         var edge2 = (1-tot2)*100 - feeDrag*100;
         if (edge2 >= min && tot2 < 1.0) {
           var s1b = bank*(pNoPrice/tot2), s2b = bank*(sbProb2/tot2), profit2 = ((bank/tot2)-bank) - bank*feeDrag;
-          arbs.push({polyTitle:pTitle, game:awayTeam+' @ '+homeTeam, sport:game.sport_title||game._sport, edge:edge2, roi:(profit2/bank)*100, profit:profit2, commenceTime:game.commence_time, polySide:'NO ('+noTeam+' wins)', polyPrice:pNoPrice, polyStake:s1b, sbSide:bestYes.name+' ML', sbBook:bestYes.book, sbOdds:bestYes.price, sbStake:s2b, sbLink:bestYes.link, sbMarket:'h2h', polySlug:pm.slug||pm.id});
+          arbs.push({polyTitle:pTitle, game:awayTeam+' @ '+homeTeam, sport:game.sport_title||game._sport, edge:edge2, roi:(profit2/bank)*100, profit:profit2, commenceTime:game.commence_time, polySide:'NO ('+noTeam+' wins)', polyPrice:pNoPrice, polyToken:pNoToken, polyStake:s1b, sbSide:bestYes.name+' ML', sbBook:bestYes.book, sbOdds:bestYes.price, sbStake:s2b, sbLink:bestYes.link, sbMarket:'h2h', polySlug:pm.slug||pm.id});
         }
       }
     }
@@ -1521,7 +1545,7 @@ async function scanPoly() {
         var ed = (1-tt)*100 - feeDrag*100;
         if (ed >= min && tt < 1.0) {
           var ss1=bank*(pYesPrice/tt), ss2=bank*(sbP/tt), pr=((bank/tt)-bank) - bank*feeDrag;
-          arbs.push({polyTitle:pTitle, game:awayTeam+' @ '+homeTeam, sport:game.sport_title||game._sport, edge:ed, roi:(pr/bank)*100, profit:pr, commenceTime:game.commence_time, polySide:'Over '+cls.point, polyPrice:pYesPrice, polyStake:ss1, sbSide:'Under '+bestUnder.point, sbBook:bestUnder.book, sbOdds:bestUnder.price, sbStake:ss2, sbLink:bestUnder.link, sbMarket:'totals', polySlug:pm.slug||pm.id});
+          arbs.push({polyTitle:pTitle, game:awayTeam+' @ '+homeTeam, sport:game.sport_title||game._sport, edge:ed, roi:(pr/bank)*100, profit:pr, commenceTime:game.commence_time, polySide:'Over '+cls.point, polyPrice:pYesPrice, polyToken:pYesToken, polyStake:ss1, sbSide:'Under '+bestUnder.point, sbBook:bestUnder.book, sbOdds:bestUnder.price, sbStake:ss2, sbLink:bestUnder.link, sbMarket:'totals', polySlug:pm.slug||pm.id});
         }
       }
       // Poly Under (NO) vs Sportsbook Over
@@ -1531,7 +1555,7 @@ async function scanPoly() {
         var ed2 = (1-tt2)*100 - feeDrag*100;
         if (ed2 >= min && tt2 < 1.0) {
           var sss1=bank*(pNoPrice/tt2), sss2=bank*(sbP2/tt2), pr2=((bank/tt2)-bank) - bank*feeDrag;
-          arbs.push({polyTitle:pTitle, game:awayTeam+' @ '+homeTeam, sport:game.sport_title||game._sport, edge:ed2, roi:(pr2/bank)*100, profit:pr2, commenceTime:game.commence_time, polySide:'Under '+cls.point, polyPrice:pNoPrice, polyStake:sss1, sbSide:'Over '+bestOver.point, sbBook:bestOver.book, sbOdds:bestOver.price, sbStake:sss2, sbLink:bestOver.link, sbMarket:'totals', polySlug:pm.slug||pm.id});
+          arbs.push({polyTitle:pTitle, game:awayTeam+' @ '+homeTeam, sport:game.sport_title||game._sport, edge:ed2, roi:(pr2/bank)*100, profit:pr2, commenceTime:game.commence_time, polySide:'Under '+cls.point, polyPrice:pNoPrice, polyToken:pNoToken, polyStake:sss1, sbSide:'Over '+bestOver.point, sbBook:bestOver.book, sbOdds:bestOver.price, sbStake:sss2, sbLink:bestOver.link, sbMarket:'totals', polySlug:pm.slug||pm.id});
         }
       }
     }
@@ -1544,6 +1568,35 @@ async function scanPoly() {
     var MAX_REALISTIC_EDGE = 15;
     arbs = arbs.filter(function(x){ return x.edge <= MAX_REALISTIC_EDGE; });
     arbs.sort(function(a,b){return b.edge-a.edge;});
+
+  // ── LIVE PRICE VERIFICATION ──
+  // Gamma prices are last-trade (stale). Re-check each candidate against the
+  // live CLOB ask (the price you'd actually PAY). side=sell returns best ask.
+  // Only keep arbs that still clear after using the real executable price.
+  if (arbs.length) {
+    setPProgress(90, 'Verifying live prices on '+arbs.length+' candidates...');
+    var verified = [];
+    for (var vi=0; vi<arbs.length; vi++) {
+      var a = arbs[vi];
+      if (!a.polyToken) { verified.push(a); continue; } // can't verify, keep as-is
+      var liveAsk = await fetchPolyAsk(a.polyToken);
+      if (liveAsk == null) { verified.push(a); continue; } // fetch failed, keep
+      // Recompute edge with the REAL price you'd pay on Polymarket
+      var sbProbV = oP(a.sbOdds);
+      var totV = liveAsk + sbProbV;
+      var edgeV = (1-totV)*100 - feeDrag*100;
+      a.polyPrice = liveAsk;          // show the real price
+      a.edge = edgeV;
+      a.profit = ((bank/totV)-bank) - bank*feeDrag;
+      a.roi = (a.profit/bank)*100;
+      a.liveVerified = true;
+      // Only keep if it STILL clears the min after using live price
+      if (edgeV >= min && totV < 1.0) verified.push(a);
+    }
+    arbs = verified;
+    arbs.sort(function(a,b){return b.edge-a.edge;});
+  }
+
   document.getElementById('pprog').style.display='none';
 
   var now = new Date().toLocaleTimeString();
@@ -1571,7 +1624,7 @@ async function scanPoly() {
       h += '<div class="sides">';
       // Polymarket side
       h += '<div class="side">';
-      h += '<div class="book" style="color:#0087ff">POLYMARKET</div>';
+      h += '<div class="book" style="color:#0087ff">POLYMARKET'+(x.liveVerified?' ✓ LIVE':'')+'</div>';
       h += '<div class="team">'+x.polySide+'</div>';
       h += '<div class="odds" style="color:#0087ff">'+(x.polyPrice*100).toFixed(0)+'¢</div>';
       h += '<div class="stake">Bet $'+x.polyStake.toFixed(2)+'</div>';
