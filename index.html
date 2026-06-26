@@ -1202,20 +1202,31 @@ async function fetchPolyJson(url) {
 // Polymarket's /book lists asks; the 0.01/0.99 edges are deep parked liquidity,
 // so we sort ascending and fill from the lowest ask upward (real touch).
 async function fetchPolyDepth(tokenId, dollars) {
+  // First get the TRUE live price from /price (accurate, unlike /book which has
+  // ghost data). We'll only count book liquidity near this price — ghost orders
+  // parked at 0.99 are excluded so "available" reflects REAL takeable depth.
+  var anchorAsk = await fetchPolyAsk(tokenId);
+  if (anchorAsk == null) return null;
+
   var book = await fetchPolyJson('https://clob.polymarket.com/book?token_id='+tokenId);
-  if (!book || !book.asks || !book.asks.length) return null;
-  // asks: [{price, size}] — sort ascending by price (lowest/best first)
-  var asks = book.asks.map(function(a){ return {price:parseFloat(a.price), size:parseFloat(a.size)}; })
-    .filter(function(a){ return a.price>0.001 && a.price<0.999 && a.size>0; })
-    .sort(function(a,b){ return a.price - b.price; });
-  if (!asks.length) return null;
-  var need = dollars, spent = 0, shares = 0, availableDollars = 0;
-  for (var i=0; i<asks.length; i++) {
-    var levelDollars = asks[i].price * asks[i].size; // $ available at this level
-    availableDollars += levelDollars;
+  if (!book || !book.asks || !book.asks.length) {
+    // No usable book — return the anchor price but zero real depth
+    return { price: anchorAsk, availableDollars: 0, filled: false };
   }
-  // Walk to fill `dollars` worth, computing weighted avg fill price
-  var remaining = dollars;
+
+  // Only count asks within 5c ABOVE the true anchor price. This is the band you'd
+  // realistically fill in. Anything higher (incl. 0.99 ghosts) is excluded.
+  var band = anchorAsk + 0.05;
+  var asks = book.asks.map(function(a){ return {price:parseFloat(a.price), size:parseFloat(a.size)}; })
+    .filter(function(a){ return a.price >= anchorAsk - 0.02 && a.price <= band && a.size > 0; })
+    .sort(function(a,b){ return a.price - b.price; });
+
+  // Real takeable depth in dollars within the band
+  var availableDollars = 0;
+  for (var i=0; i<asks.length; i++) availableDollars += asks[i].price * asks[i].size;
+
+  // Walk the real (non-ghost) levels to fill `dollars`, computing blended price
+  var remaining = dollars, spent = 0, shares = 0;
   for (var j=0; j<asks.length && remaining > 0.01; j++) {
     var lvlCost = asks[j].price * asks[j].size;
     var take = Math.min(lvlCost, remaining);
@@ -1223,27 +1234,26 @@ async function fetchPolyDepth(tokenId, dollars) {
     spent += take;
     remaining -= take;
   }
-  if (spent <= 0) return null;
-  var effPrice = spent / shares; // weighted avg price per share actually paid
-  var filled = (remaining <= 0.01); // could we fill the whole order?
+  var filled = (remaining <= 0.01);
+  // Effective price: blended if we got fills, else the anchor price
+  var effPrice = shares > 0 ? (spent / shares) : anchorAsk;
+  // If we couldn't fill the whole order within the band, it's effectively illiquid
   return { price: effPrice, availableDollars: availableDollars, filled: filled };
 }
 
 async function fetchPolyAsk(tokenId) {
-  // Polymarket's /book returns stale ghost data (issue #180), so use /price.
-  // Empirically, side=SELL returns the ASK (the higher price you PAY to buy) —
-  // side=BUY was returning the lower bid, making arbs look too good. We take
-  // the HIGHER of both sides to be safe = the true ask you'd pay.
+  // Goal: never UNDERSTATE the price you'd pay. We gather every price signal and
+  // take the highest sensible one, then the depth walk refines it further.
+  var signals = [];
   var sell = await fetchPolyJson('https://clob.polymarket.com/price?token_id='+tokenId+'&side=SELL');
   var buy = await fetchPolyJson('https://clob.polymarket.com/price?token_id='+tokenId+'&side=BUY');
-  var prices = [];
-  if (sell && sell.price != null) { var sp=parseFloat(sell.price); if(sp>0.001&&sp<0.999) prices.push(sp); }
-  if (buy && buy.price != null) { var bp=parseFloat(buy.price); if(bp>0.001&&bp<0.999) prices.push(bp); }
-  if (prices.length) return Math.max.apply(null, prices); // higher = the ask you pay
-  // Fallback: midpoint
   var mid = await fetchPolyJson('https://clob.polymarket.com/midpoint?token_id='+tokenId);
-  if (mid && mid.mid != null) { var mp=parseFloat(mid.mid); if(mp>0.001&&mp<0.999) return mp; }
-  return null;
+  if (sell && sell.price != null) { var sp=parseFloat(sell.price); if(sp>0.001&&sp<0.999) signals.push(sp); }
+  if (buy && buy.price != null) { var bp=parseFloat(buy.price); if(bp>0.001&&bp<0.999) signals.push(bp); }
+  if (mid && mid.mid != null) { var mp=parseFloat(mid.mid); if(mp>0.001&&mp<0.999) signals.push(mp); }
+  if (!signals.length) return null;
+  // The ask you PAY is at/above the highest of these signals. Take the max.
+  return Math.max.apply(null, signals);
 }
 
 async function pmFetch(url) {
@@ -1681,7 +1691,9 @@ async function scanPoly() {
 
       var depth = await fetchPolyDepth(a.polyToken, roughPolyStake);
       // DROP if: no book, can't fill the order, or thin available depth
-      var MIN_DEPTH = 50; // require at least $50 of fillable liquidity
+      // Require enough REAL takeable depth to actually place the Poly stake.
+      // depth.filled means the order fills within the price band (no ghost orders).
+      var MIN_DEPTH = Math.max(100, roughPolyStake * 0.5); // at least half the stake, min $100
       if (!depth || !depth.filled || depth.availableDollars < MIN_DEPTH) {
         continue; // illiquid — not a real, executable arb
       }
