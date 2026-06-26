@@ -1197,6 +1197,38 @@ async function fetchPolyJson(url) {
 // Return the TRUE price you'd pay to BUY this token = the lowest ASK in the book.
 // We read the full order book and take the lowest ask level. The /price endpoint
 // was returning the bid (a few cents low), making arbs look better than reality.
+// Walk the order book asks to find the TRUE effective price to buy `dollars`
+// worth, plus how much $ depth exists. Returns {price, availableDollars} or null.
+// Polymarket's /book lists asks; the 0.01/0.99 edges are deep parked liquidity,
+// so we sort ascending and fill from the lowest ask upward (real touch).
+async function fetchPolyDepth(tokenId, dollars) {
+  var book = await fetchPolyJson('https://clob.polymarket.com/book?token_id='+tokenId);
+  if (!book || !book.asks || !book.asks.length) return null;
+  // asks: [{price, size}] — sort ascending by price (lowest/best first)
+  var asks = book.asks.map(function(a){ return {price:parseFloat(a.price), size:parseFloat(a.size)}; })
+    .filter(function(a){ return a.price>0.001 && a.price<0.999 && a.size>0; })
+    .sort(function(a,b){ return a.price - b.price; });
+  if (!asks.length) return null;
+  var need = dollars, spent = 0, shares = 0, availableDollars = 0;
+  for (var i=0; i<asks.length; i++) {
+    var levelDollars = asks[i].price * asks[i].size; // $ available at this level
+    availableDollars += levelDollars;
+  }
+  // Walk to fill `dollars` worth, computing weighted avg fill price
+  var remaining = dollars;
+  for (var j=0; j<asks.length && remaining > 0.01; j++) {
+    var lvlCost = asks[j].price * asks[j].size;
+    var take = Math.min(lvlCost, remaining);
+    shares += take / asks[j].price;
+    spent += take;
+    remaining -= take;
+  }
+  if (spent <= 0) return null;
+  var effPrice = spent / shares; // weighted avg price per share actually paid
+  var filled = (remaining <= 0.01); // could we fill the whole order?
+  return { price: effPrice, availableDollars: availableDollars, filled: filled };
+}
+
 async function fetchPolyAsk(tokenId) {
   // Polymarket's /book returns stale ghost data (issue #180), so use /price.
   // Empirically, side=SELL returns the ASK (the higher price you PAY to buy) —
@@ -1636,36 +1668,44 @@ async function scanPoly() {
       var a = toVerify[vi];
       if (!a.polyToken) { continue; } // no token = can't verify = drop
       setPProgress(90+Math.round((vi/toVerify.length)*9), 'Verifying live prices '+(vi+1)+'/'+toVerify.length+'...');
-      var liveAsk = await fetchPolyAsk(a.polyToken);
-      if (liveAsk == null) {
-        // Could NOT fetch the real ask — DROP it. Never show a stale-price arb.
-        continue;
+      setPProgress(90+Math.round((vi/toVerify.length)*9), 'Checking price & liquidity '+(vi+1)+'/'+toVerify.length+'...');
+      // First get the top-of-book price to size the stake
+      var topAsk = await fetchPolyAsk(a.polyToken);
+      if (topAsk == null) { continue; } // can't price = drop
+
+      // Estimate the Poly stake we'd want (rough, using top price), then check
+      // real depth for that dollar amount to get the true effective fill price.
+      var roughPolyProb = topAsk, roughSbProb = oP(a.sbOdds);
+      var roughTot = roughPolyProb + roughSbProb;
+      var roughPolyStake = bank * (1/(1/topAsk)) / roughTot; // ≈ bank*topAsk/tot
+
+      var depth = await fetchPolyDepth(a.polyToken, roughPolyStake);
+      // DROP if: no book, can't fill the order, or thin available depth
+      var MIN_DEPTH = 50; // require at least $50 of fillable liquidity
+      if (!depth || !depth.filled || depth.availableDollars < MIN_DEPTH) {
+        continue; // illiquid — not a real, executable arb
       }
-      // Recompute EVERYTHING with the REAL price you'd pay on Polymarket.
-      // Critical: the stakes must be re-sized off the live price, or the two
-      // legs won't hedge and you can LOSE money on one outcome.
-      var polyProbV = liveAsk;            // Poly cost = implied prob of that side
-      var sbProbV = oP(a.sbOdds);         // sportsbook implied prob
-      var totV = polyProbV + sbProbV;     // total "cost" of covering both sides
+      var liveAsk = depth.price; // TRUE effective price including slippage
+
+      // Recompute EVERYTHING with the REAL effective price you'd pay.
+      var polyProbV = liveAsk;
+      var sbProbV = oP(a.sbOdds);
+      var totV = polyProbV + sbProbV;
       var edgeV = (1-totV)*100 - feeDrag*100;
 
-      // Size stakes so BOTH outcomes pay out the same (true hedge).
-      // Poly side pays 1/price per $1; sportsbook pays decimal odds per $1.
-      var polyDecimal = 1/liveAsk;        // Poly YES at 0.51 -> 1.96x
-      var sbDecimal = oD(a.sbOdds);       // sportsbook decimal odds
-      // Stake inversely proportional to each side's decimal odds, summing to bank
+      var polyDecimal = 1/liveAsk;
+      var sbDecimal = oD(a.sbOdds);
       var polyStakeV = bank * (1/polyDecimal) / totV;
       var sbStakeV   = bank * (1/sbDecimal) / totV;
-      // Payout if each side hits (should be ~equal for a real arb)
       var polyPayout = polyStakeV * polyDecimal;
       var sbPayout   = sbStakeV * sbDecimal;
-      // Worst-case profit = smaller payout minus total staked, minus fees
       var totalStaked = polyStakeV + sbStakeV;
       var worstProfit = Math.min(polyPayout, sbPayout) - totalStaked - bank*feeDrag;
 
       a.polyPrice = liveAsk;
       a.polyStake = polyStakeV;
       a.sbStake = sbStakeV;
+      a.polyAvailable = depth.availableDollars;
       a.edge = edgeV;
       a.profit = worstProfit;
       a.roi = (worstProfit/totalStaked)*100;
@@ -1709,6 +1749,7 @@ async function scanPoly() {
       h += '<div class="team">'+x.polySide+'</div>';
       h += '<div class="odds" style="color:#0087ff">'+(x.polyPrice*100).toFixed(0)+'¢</div>';
       h += '<div class="stake">Bet $'+x.polyStake.toFixed(2)+'</div>';
+      if (x.polyAvailable != null) h += '<div class="limit-tag">~$'+Math.round(x.polyAvailable)+' available'+(x.polyAvailable < x.polyStake ? ' ⚠️' : '')+'</div>';
       if (x.polySlug) h += '<a href="https://polymarket.com/event/'+x.polySlug+'" target="_blank" class="open-link" style="color:#0087ff">Open Polymarket →</a>';
       h += '</div>';
       // Sportsbook side
