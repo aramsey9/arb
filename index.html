@@ -1242,18 +1242,40 @@ async function fetchPolyDepth(tokenId, dollars) {
 }
 
 async function fetchPolyAsk(tokenId) {
-  // Goal: never UNDERSTATE the price you'd pay. We gather every price signal and
-  // take the highest sensible one, then the depth walk refines it further.
-  var signals = [];
-  var sell = await fetchPolyJson('https://clob.polymarket.com/price?token_id='+tokenId+'&side=SELL');
-  var buy = await fetchPolyJson('https://clob.polymarket.com/price?token_id='+tokenId+'&side=BUY');
+  // The /price and /midpoint endpoints return the MIDPOINT (e.g. 63c), but the
+  // real ASK you pay is higher (e.g. 70c) because the spread is wide on thin
+  // markets. To get the true ask, read the actual ask orders from the book and
+  // take the LOWEST ask that has real size. Validate it's >= the midpoint.
+  var midSignals = [];
   var mid = await fetchPolyJson('https://clob.polymarket.com/midpoint?token_id='+tokenId);
-  if (sell && sell.price != null) { var sp=parseFloat(sell.price); if(sp>0.001&&sp<0.999) signals.push(sp); }
-  if (buy && buy.price != null) { var bp=parseFloat(buy.price); if(bp>0.001&&bp<0.999) signals.push(bp); }
-  if (mid && mid.mid != null) { var mp=parseFloat(mid.mid); if(mp>0.001&&mp<0.999) signals.push(mp); }
-  if (!signals.length) return null;
-  // The ask you PAY is at/above the highest of these signals. Take the max.
-  return Math.max.apply(null, signals);
+  if (mid && mid.mid != null) { var mp=parseFloat(mid.mid); if(mp>0.001&&mp<0.999) midSignals.push(mp); }
+  var sell = await fetchPolyJson('https://clob.polymarket.com/price?token_id='+tokenId+'&side=SELL');
+  if (sell && sell.price != null) { var sp=parseFloat(sell.price); if(sp>0.001&&sp<0.999) midSignals.push(sp); }
+  var midFloor = midSignals.length ? Math.max.apply(null, midSignals) : null;
+
+  // Read the real order book to find the lowest ask with genuine size
+  var book = await fetchPolyJson('https://clob.polymarket.com/book?token_id='+tokenId);
+  var trueAsk = null;
+  if (book && book.asks && book.asks.length) {
+    // Polymarket /book asks: array of {price, size}. The best ask = lowest price
+    // with real size. Ghost/parked orders sit at extreme prices (0.99) — but the
+    // genuine touch is the lowest-priced ask that has meaningful size behind it.
+    var asks = book.asks.map(function(a){ return {price:parseFloat(a.price), size:parseFloat(a.size)}; })
+      .filter(function(a){ return a.price>0.001 && a.price<0.999 && a.size>0; })
+      .sort(function(a,b){ return a.price - b.price; });
+    // If we have a midpoint floor, the true ask is the lowest ask AT OR ABOVE it
+    // (asks below the midpoint would be bids mislabeled — skip those).
+    if (midFloor != null) {
+      for (var i=0;i<asks.length;i++){ if (asks[i].price >= midFloor - 0.005){ trueAsk = asks[i].price; break; } }
+    } else if (asks.length) {
+      trueAsk = asks[0].price;
+    }
+  }
+
+  // Prefer the true book ask; fall back to the midpoint floor if no book
+  if (trueAsk != null) return trueAsk;
+  if (midFloor != null) return midFloor;
+  return null;
 }
 
 async function pmFetch(url) {
@@ -1708,6 +1730,7 @@ async function scanPoly() {
         continue; // illiquid — not a real, executable arb
       }
       var liveAsk = depth.price; // TRUE effective price including slippage
+      a.dbgTopAsk = topAsk; a.dbgDepthPrice = depth.price; a.dbgAvail = depth.availableDollars;
 
       // Recompute EVERYTHING with the REAL effective price you'd pay.
       var polyProbV = liveAsk;
@@ -1769,6 +1792,7 @@ async function scanPoly() {
       h += '<div class="side">';
       h += '<div class="book" style="color:#0087ff">POLYMARKET'+(x.liveVerified?' <span style="color:#00ff88">✓ LIVE</span>':(x.unverified?' <span style="color:#ff9500">⚠ UNVERIFIED</span>':''))+'</div>';
       h += '<div class="team">'+x.polySide+'</div>';
+      if (x.dbgTopAsk != null) h += '<div class="limit-tag" style="color:#888">dbg: ask '+(x.dbgTopAsk*100).toFixed(1)+'¢ · fill '+(x.dbgDepthPrice*100).toFixed(1)+'¢</div>';
       h += '<div class="odds" style="color:#0087ff">'+(x.polyPrice*100).toFixed(0)+'¢</div>';
       h += '<div class="stake">Bet $'+x.polyStake.toFixed(2)+'</div>';
       if (x.polyAvailable != null) h += '<div class="limit-tag">~$'+Math.round(x.polyAvailable)+' available'+(x.polyAvailable < x.polyStake ? ' ⚠️' : '')+'</div>';
