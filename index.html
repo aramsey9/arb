@@ -1641,18 +1641,38 @@ async function scanPoly() {
         // Could NOT fetch the real ask — DROP it. Never show a stale-price arb.
         continue;
       }
-      // Recompute edge with the REAL price you'd pay on Polymarket
-      var sbProbV = oP(a.sbOdds);
-      var totV = liveAsk + sbProbV;
+      // Recompute EVERYTHING with the REAL price you'd pay on Polymarket.
+      // Critical: the stakes must be re-sized off the live price, or the two
+      // legs won't hedge and you can LOSE money on one outcome.
+      var polyProbV = liveAsk;            // Poly cost = implied prob of that side
+      var sbProbV = oP(a.sbOdds);         // sportsbook implied prob
+      var totV = polyProbV + sbProbV;     // total "cost" of covering both sides
       var edgeV = (1-totV)*100 - feeDrag*100;
-      a.polyPrice = liveAsk;          // show the real executable price
+
+      // Size stakes so BOTH outcomes pay out the same (true hedge).
+      // Poly side pays 1/price per $1; sportsbook pays decimal odds per $1.
+      var polyDecimal = 1/liveAsk;        // Poly YES at 0.51 -> 1.96x
+      var sbDecimal = oD(a.sbOdds);       // sportsbook decimal odds
+      // Stake inversely proportional to each side's decimal odds, summing to bank
+      var polyStakeV = bank * (1/polyDecimal) / totV;
+      var sbStakeV   = bank * (1/sbDecimal) / totV;
+      // Payout if each side hits (should be ~equal for a real arb)
+      var polyPayout = polyStakeV * polyDecimal;
+      var sbPayout   = sbStakeV * sbDecimal;
+      // Worst-case profit = smaller payout minus total staked, minus fees
+      var totalStaked = polyStakeV + sbStakeV;
+      var worstProfit = Math.min(polyPayout, sbPayout) - totalStaked - bank*feeDrag;
+
+      a.polyPrice = liveAsk;
+      a.polyStake = polyStakeV;
+      a.sbStake = sbStakeV;
       a.edge = edgeV;
-      a.profit = ((bank/totV)-bank) - bank*feeDrag;
-      a.roi = (a.profit/bank)*100;
+      a.profit = worstProfit;
+      a.roi = (worstProfit/totalStaked)*100;
       a.liveVerified = true;
       a.unverified = false;
-      // Only keep if it STILL clears the min after using the live price
-      if (edgeV >= min && totV < 1.0) verified.push(a);
+      // Only keep if it's a REAL arb: total < 1.0 AND worst-case profit is positive
+      if (edgeV >= min && totV < 1.0 && worstProfit > 0) verified.push(a);
     }
     arbs = verified;
     arbs.sort(function(a,b){return b.edge-a.edge;});
