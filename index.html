@@ -1194,29 +1194,44 @@ async function fetchPolyJson(url) {
 // We read the full order book and take the lowest ask level. The /price endpoint
 // was returning the bid (a few cents low), making arbs look better than reality.
 async function fetchPolyAsk(tokenId) {
-  // 1) Primary: full order book — asks are sell orders; lowest ask = your buy price
+  // The Polymarket app DISPLAYS the midpoint. To BUY you pay the ask, which is
+  // the midpoint plus half the spread. We anchor to the midpoint (so our number
+  // matches what you see in the app) and read the real spread from the book to
+  // add the correct half-spread on top. This fixes the "always cheaper" bug,
+  // which was caused by reading the bid side of the book.
+  var mid = null, bestBid = null, bestAsk = null;
+
+  // Get the order book to read the true best bid and best ask
   var book = await fetchPolyJson('https://clob.polymarket.com/book?token_id='+tokenId);
-  if (book && book.asks && book.asks.length) {
-    // asks may be sorted either way; the BEST ask is the LOWEST price
-    var askPrices = book.asks.map(function(a){ return parseFloat(a.price); })
-      .filter(function(p){ return p > 0.015 && p < 0.985; });
-    if (askPrices.length) {
-      var bestAsk = Math.min.apply(null, askPrices);
-      return bestAsk;
+  if (book) {
+    if (book.bids && book.bids.length) {
+      var bidPrices = book.bids.map(function(b){return parseFloat(b.price);}).filter(function(p){return p>0.001&&p<0.999;});
+      if (bidPrices.length) bestBid = Math.max.apply(null, bidPrices); // highest bid = best bid
+    }
+    if (book.asks && book.asks.length) {
+      var askPrices = book.asks.map(function(a){return parseFloat(a.price);}).filter(function(p){return p>0.001&&p<0.999;});
+      if (askPrices.length) bestAsk = Math.min.apply(null, askPrices); // lowest ask = best ask
     }
   }
-  // 2) Fallback: midpoint + half a typical spread (conservative bump up)
+
+  // If we have BOTH sides and they make sense (ask > bid), the ask is what you pay
+  if (bestBid != null && bestAsk != null && bestAsk > bestBid && (bestAsk - bestBid) < 0.15) {
+    return bestAsk;
+  }
+
+  // Otherwise anchor to the midpoint (matches the app's displayed price)
   var midData = await fetchPolyJson('https://clob.polymarket.com/midpoint?token_id='+tokenId);
   if (midData && midData.mid != null) {
-    var mid = parseFloat(midData.mid);
-    if (mid > 0.015 && mid < 0.985) return Math.min(mid + 0.02, 0.985); // bump up ~2c to approx ask
+    mid = parseFloat(midData.mid);
+  } else if (bestBid != null && bestAsk != null) {
+    mid = (bestBid + bestAsk) / 2;
   }
-  // 3) Last resort: SELL side of /price (documented as the ask on some clients)
-  var sellData = await fetchPolyJson('https://clob.polymarket.com/price?token_id='+tokenId+'&side=SELL');
-  if (sellData && sellData.price != null) {
-    var sp = parseFloat(sellData.price);
-    if (sp > 0.015 && sp < 0.985) return sp;
+  if (mid != null && mid > 0.015 && mid < 0.985) {
+    // Add half of a realistic spread (~2c) to approximate the ask you'd pay
+    var halfSpread = (bestBid != null && bestAsk != null) ? (bestAsk - bestBid)/2 : 0.015;
+    return Math.min(mid + halfSpread, 0.985);
   }
+
   return null;
 }
 
