@@ -1198,20 +1198,19 @@ async function fetchPolyJson(url) {
 // We read the full order book and take the lowest ask level. The /price endpoint
 // was returning the bid (a few cents low), making arbs look better than reality.
 async function fetchPolyAsk(tokenId) {
-  // Polymarket's /book endpoint is KNOWN to return stale ghost data (0.01/0.99)
-  // for active markets — confirmed in py-clob-client issue #180. The /price
-  // endpoint returns the correct LIVE price. side=BUY = the price to buy (ask).
+  // Polymarket's /book returns stale ghost data (issue #180), so use /price.
+  // Empirically, side=SELL returns the ASK (the higher price you PAY to buy) —
+  // side=BUY was returning the lower bid, making arbs look too good. We take
+  // the HIGHER of both sides to be safe = the true ask you'd pay.
+  var sell = await fetchPolyJson('https://clob.polymarket.com/price?token_id='+tokenId+'&side=SELL');
   var buy = await fetchPolyJson('https://clob.polymarket.com/price?token_id='+tokenId+'&side=BUY');
-  if (buy && buy.price != null) {
-    var bp = parseFloat(buy.price);
-    if (bp > 0.001 && bp < 0.999) return bp;
-  }
-  // Fallback to midpoint if /price BUY is unavailable
+  var prices = [];
+  if (sell && sell.price != null) { var sp=parseFloat(sell.price); if(sp>0.001&&sp<0.999) prices.push(sp); }
+  if (buy && buy.price != null) { var bp=parseFloat(buy.price); if(bp>0.001&&bp<0.999) prices.push(bp); }
+  if (prices.length) return Math.max.apply(null, prices); // higher = the ask you pay
+  // Fallback: midpoint
   var mid = await fetchPolyJson('https://clob.polymarket.com/midpoint?token_id='+tokenId);
-  if (mid && mid.mid != null) {
-    var mp = parseFloat(mid.mid);
-    if (mp > 0.001 && mp < 0.999) return mp;
-  }
+  if (mid && mid.mid != null) { var mp=parseFloat(mid.mid); if(mp>0.001&&mp<0.999) return mp; }
   return null;
 }
 
