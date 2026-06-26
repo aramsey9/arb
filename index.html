@@ -1167,28 +1167,34 @@ async function fetchPolyJson(url) {
   return null;
 }
 
-// Return the TRUE price you'd pay to BUY this token (the best ask).
-// The site shows the midpoint, but a market buy pays the ask, which is higher.
-// We fetch both side prices and the midpoint, then take the most conservative
-// (highest) sensible value so the arb is never overstated.
+// Return the TRUE price you'd pay to BUY this token = the lowest ASK in the book.
+// We read the full order book and take the lowest ask level. The /price endpoint
+// was returning the bid (a few cents low), making arbs look better than reality.
 async function fetchPolyAsk(tokenId) {
-  var base = 'https://clob.polymarket.com/price?token_id='+tokenId;
-  var buyData = await fetchPolyJson(base+'&side=BUY');
-  var sellData = await fetchPolyJson(base+'&side=SELL');
+  // 1) Primary: full order book — asks are sell orders; lowest ask = your buy price
+  var book = await fetchPolyJson('https://clob.polymarket.com/book?token_id='+tokenId);
+  if (book && book.asks && book.asks.length) {
+    // asks may be sorted either way; the BEST ask is the LOWEST price
+    var askPrices = book.asks.map(function(a){ return parseFloat(a.price); })
+      .filter(function(p){ return p > 0.015 && p < 0.985; });
+    if (askPrices.length) {
+      var bestAsk = Math.min.apply(null, askPrices);
+      return bestAsk;
+    }
+  }
+  // 2) Fallback: midpoint + half a typical spread (conservative bump up)
   var midData = await fetchPolyJson('https://clob.polymarket.com/midpoint?token_id='+tokenId);
-
-  var candidates = [];
-  if (buyData && buyData.price != null) candidates.push(parseFloat(buyData.price));
-  if (sellData && sellData.price != null) candidates.push(parseFloat(sellData.price));
-  if (midData && midData.mid != null) candidates.push(parseFloat(midData.mid));
-
-  // Filter out ghost/invalid sentinels
-  candidates = candidates.filter(function(p){ return p > 0.015 && p < 0.985; });
-  if (!candidates.length) return null;
-
-  // The ASK (buy price) is the HIGHEST of the side quotes. Taking the max here
-  // is conservative: it never makes the arb look better than reality.
-  return Math.max.apply(null, candidates);
+  if (midData && midData.mid != null) {
+    var mid = parseFloat(midData.mid);
+    if (mid > 0.015 && mid < 0.985) return Math.min(mid + 0.02, 0.985); // bump up ~2c to approx ask
+  }
+  // 3) Last resort: SELL side of /price (documented as the ask on some clients)
+  var sellData = await fetchPolyJson('https://clob.polymarket.com/price?token_id='+tokenId+'&side=SELL');
+  if (sellData && sellData.price != null) {
+    var sp = parseFloat(sellData.price);
+    if (sp > 0.015 && sp < 0.985) return sp;
+  }
+  return null;
 }
 
 async function pmFetch(url) {
