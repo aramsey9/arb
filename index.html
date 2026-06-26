@@ -1105,6 +1105,16 @@ var SPORT_KEYWORDS = {
   'golf': ['pga','golf','masters','open championship','us open','ryder cup','tour championship','tiger','mcilroy','spieth','koepka','johnson','thomas','cantlay']
 };
 
+// Odds API futures market keys per sport (outright winners)
+var FUTURES_MARKETS = {
+  'baseball_mlb': ['baseball_mlb_world_series_winner','baseball_mlb_division_winner'],
+  'basketball_nba': ['basketball_nba_championship_winner'],
+  'americanfootball_nfl': ['americanfootball_nfl_super_bowl_winner'],
+  'icehockey_nhl': ['icehockey_nhl_championship_winner'],
+  'basketball_wnba': ['basketball_wnba_championship_winner'],
+  'soccer_epl': ['soccer_epl_winner']
+};
+
 function normalizePolyTitle(t) {
   return (t||'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').trim();
 }
@@ -1139,12 +1149,20 @@ async function fetchPolymarketSports(sportKeys) {
         } catch(e) {}
       }
       if (!data || !Array.isArray(data) || !data.length) break;
-      // Filter to sports only
+      // Filter to sports — match keywords OR sports-related tags/category
       var sports = data.filter(function(m) {
         if (!m.active || m.closed) return false;
         var title = normalizePolyTitle(m.question||m.title||'');
+        // Keyword match against selected sports
         for (var si=0; si<sportKeys.length; si++) {
           if (matchesGameSport(title, sportKeys[si])) return true;
+        }
+        // Also accept if Polymarket tags/category indicate sports
+        var cat = ((m.category||'')+' '+(m.tags?JSON.stringify(m.tags):'')).toLowerCase();
+        if (/sport|mlb|nba|nfl|nhl|soccer|baseball|basketball|football|hockey|tennis|golf|ufc|mma|wnba/.test(cat)) {
+          // Still require a selected-sport keyword OR generic team-vs-team structure
+          var looksLikeGame = / vs\.? | @ | v |beat|defeat|win/.test(title);
+          if (looksLikeGame) return true;
         }
         return false;
       });
@@ -1167,21 +1185,17 @@ function polyPriceToAmerican(price) {
 // Classify what type of bet a Polymarket market represents
 function classifyPolyMarket(title, outcomes) {
   var t = (title||'').toLowerCase();
-  // Reject futures / season-long markets — these can't arb against single games
-  if (/title|championship|champion|division|conference|mvp|award|playoff|world series|super bowl|nl east|nl west|nl central|al east|al west|al central|finals|win the|to make|season|standings|playoffs|division winner|pennant/.test(t)) {
-    return {type:'futures', valid:false};
+  // FUTURES — championship/division/award markets (matched separately against SB futures)
+  if (/championship|champion|division title|conference title|win the.*title|mvp|cy young|rookie of the year|award|world series|super bowl winner|stanley cup|nba finals|to win the|pennant|division winner|win the.*east|win the.*west|win the.*central|win the.*conference|win the.*division/.test(t)) {
+    return {type:'futures', valid:true};
   }
   // Totals (Over/Under)
-  if (/o\/u|over\/under|total|combined/.test(t) || (outcomes[0]||'').toLowerCase()==='over') {
+  if (/o\/u|over\/under|total points|total runs|combined/.test(t) || (outcomes[0]||'').toLowerCase()==='over') {
     var pointMatch = t.match(/(\d+\.?\d*)/);
     return {type:'totals', valid:true, point: pointMatch?parseFloat(pointMatch[1]):null};
   }
-  // Spread
-  if (/spread|handicap|[-+]\d+\.?\d*/.test(t) && /vs|@|beat/.test(t)) {
-    return {type:'spreads', valid:true};
-  }
   // Moneyline — "Will X beat Y" or "X vs Y" head to head for a single game
-  if (/will .* (beat|win|defeat)|vs\.?|@| v /.test(t)) {
+  if (/will .* (beat|win|defeat)|vs\.?| @ | v /.test(t)) {
     return {type:'h2h', valid:true};
   }
   return {type:'unknown', valid:false};
@@ -1252,6 +1266,34 @@ async function scanPoly() {
     setPProgress(50+Math.round(((si+1)/sportKeys.length)*30), 'Fetching odds: '+sportKeys[si]+'...');
   }
 
+  // Fetch futures (outright winners) for each sport
+  var futuresData = {};  // { 'Team Name': {price, book, market, sport} }
+  for (var fi=0; fi<sportKeys.length; fi++) {
+    var fsp = sportKeys[fi];
+    var fmkts = FUTURES_MARKETS[fsp];
+    if (!fmkts || !fmkts.length) continue;
+    try {
+      var fres = await fetch('https://api.the-odds-api.com/v4/sports/'+fsp+'/odds/?apiKey='+key+'&regions=us&markets='+fmkts.join(',')+'&oddsFormat=american&bookmakers='+books+'&includeLinks=true');
+      if (fres.ok) {
+        var fgames = await fres.json();
+        if (Array.isArray(fgames)) {
+          fgames.forEach(function(fg) {
+            (fg.bookmakers||[]).forEach(function(book) {
+              (book.markets||[]).forEach(function(mkt) {
+                (mkt.outcomes||[]).forEach(function(out) {
+                  var teamKey = (out.name||'').toLowerCase();
+                  if (!futuresData[teamKey] || out.price > futuresData[teamKey].price) {
+                    futuresData[teamKey] = {price:out.price, book:book.title, market:mkt.key, sport:fg.sport_title||fsp, link:out.link||book.link, name:out.name};
+                  }
+                });
+              });
+            });
+          });
+        }
+      }
+    } catch(e) {}
+  }
+
   setPProgress(85,'Comparing Polymarket vs sportsbooks...');
 
   var arbs = [];
@@ -1272,6 +1314,34 @@ async function scanPoly() {
     // Classify the Polymarket market type — reject futures/invalid
     var cls = classifyPolyMarket(pTitle, pOutcomes);
     if (!cls.valid) return;
+
+    // ── FUTURES matching (championship/division winners) ──
+    if (cls.type === 'futures') {
+      // Find which team this Poly futures market is about
+      var titleN = normalizePolyTitle(pTitle);
+      var matchedFuture = null;
+      Object.keys(futuresData).forEach(function(teamKey) {
+        var teamWords = teamKey.split(' ').filter(function(w){return w.length>3;});
+        var allPresent = teamWords.length>0 && teamWords.every(function(w){return titleN.indexOf(w)>-1;});
+        if (allPresent) matchedFuture = futuresData[teamKey];
+      });
+      if (!matchedFuture) return;
+
+      // Poly YES = team wins championship. Sportsbook has team at outright odds.
+      // Arb: Poly NO (team does NOT win) + Sportsbook YES (team wins outright)
+      // OR Poly YES (team wins) priced cheaper than sportsbook implied
+      var sbProbF = oP(matchedFuture.price);
+      // Arb: Poly YES + bet against on sportsbook isn't possible (no "field" market)
+      // Real arb: if Poly YES price < sportsbook implied prob, buy Poly YES, but need opposing side
+      // The clean arb: Poly NO + Sportsbook YES(team to win)
+      var totF = pNoPrice + sbProbF;
+      var edgeF = (1-totF)*100;
+      if (edgeF >= min && totF < 1.0) {
+        var sf1 = bank*(pNoPrice/totF), sf2 = bank*(sbProbF/totF), profitF = (bank/totF)-bank;
+        arbs.push({polyTitle:pTitle, game:matchedFuture.name+' (Futures)', sport:matchedFuture.sport, edge:edgeF, roi:(profitF/bank)*100, profit:profitF, commenceTime:null, polySide:'NO ('+matchedFuture.name+' does NOT win)', polyPrice:pNoPrice, polyStake:sf1, sbSide:matchedFuture.name+' to win', sbBook:matchedFuture.book, sbOdds:matchedFuture.price, sbStake:sf2, sbLink:matchedFuture.link, sbMarket:'futures', polySlug:pm.slug||pm.id, isFutures:true});
+      }
+      return;
+    }
 
     // Match to a single game (both teams must be present)
     var game = findMatchingGame(pTitle, allOddsGames);
@@ -1397,7 +1467,7 @@ async function scanPoly() {
   document.getElementById('pprog').style.display='none';
 
   var now = new Date().toLocaleTimeString();
-  var mktLabels = {'h2h':'Moneyline','spreads':'Spread','totals':'Total','props':'Props'};
+  var mktLabels = {'h2h':'Moneyline','spreads':'Spread','totals':'Total','props':'Props','futures':'Futures'};
   var h = '<div class="stats">'+polyMarkets.length+' Poly markets · '+allOddsGames.length+' games · '+arbs.length+' arbs · '+now+'</div>';
 
   if (!arbs.length) {
