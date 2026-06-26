@@ -1242,39 +1242,47 @@ async function fetchPolyDepth(tokenId, dollars) {
 }
 
 async function fetchPolyAsk(tokenId) {
-  // The /price and /midpoint endpoints return the MIDPOINT (e.g. 63c), but the
-  // real ASK you pay is higher (e.g. 70c) because the spread is wide on thin
-  // markets. To get the true ask, read the actual ask orders from the book and
-  // take the LOWEST ask that has real size. Validate it's >= the midpoint.
-  var midSignals = [];
-  var mid = await fetchPolyJson('https://clob.polymarket.com/midpoint?token_id='+tokenId);
-  if (mid && mid.mid != null) { var mp=parseFloat(mid.mid); if(mp>0.001&&mp<0.999) midSignals.push(mp); }
-  var sell = await fetchPolyJson('https://clob.polymarket.com/price?token_id='+tokenId+'&side=SELL');
-  if (sell && sell.price != null) { var sp=parseFloat(sell.price); if(sp>0.001&&sp<0.999) midSignals.push(sp); }
-  var midFloor = midSignals.length ? Math.max.apply(null, midSignals) : null;
-
-  // Read the real order book to find the lowest ask with genuine size
+  window._lastBookDbg = 'no-book';
+  // Per Polymarket's official CLOB docs, the /book response is:
+  //   { bids:[{price,size}...], asks:[{price,size}...] }
+  // Prices arrive as STRINGS. Asks are ordered; the BEST ask = LOWEST price.
+  // The /book endpoint IS accurate for live markets when read correctly (the
+  // "ghost 0.99" issue is from reading the wrong end of the array).
   var book = await fetchPolyJson('https://clob.polymarket.com/book?token_id='+tokenId);
-  var trueAsk = null;
-  if (book && book.asks && book.asks.length) {
-    // Polymarket /book asks: array of {price, size}. The best ask = lowest price
-    // with real size. Ghost/parked orders sit at extreme prices (0.99) — but the
-    // genuine touch is the lowest-priced ask that has meaningful size behind it.
-    var asks = book.asks.map(function(a){ return {price:parseFloat(a.price), size:parseFloat(a.size)}; })
-      .filter(function(a){ return a.price>0.001 && a.price<0.999 && a.size>0; })
-      .sort(function(a,b){ return a.price - b.price; });
-    // If we have a midpoint floor, the true ask is the lowest ask AT OR ABOVE it
-    // (asks below the midpoint would be bids mislabeled — skip those).
-    if (midFloor != null) {
-      for (var i=0;i<asks.length;i++){ if (asks[i].price >= midFloor - 0.005){ trueAsk = asks[i].price; break; } }
-    } else if (asks.length) {
-      trueAsk = asks[0].price;
+  var bestAsk = null, bestBid = null;
+  if (book) {
+    if (book.asks && book.asks.length) {
+      var askP = book.asks.map(function(a){ return parseFloat(a.price); })
+        .filter(function(p){ return p>0.001 && p<0.999; });
+      if (askP.length) bestAsk = Math.min.apply(null, askP); // best ask = lowest
+    }
+    if (book.bids && book.bids.length) {
+      var bidP = book.bids.map(function(b){ return parseFloat(b.price); })
+        .filter(function(p){ return p>0.001 && p<0.999; });
+      if (bidP.length) bestBid = Math.max.apply(null, bidP); // best bid = highest
     }
   }
 
-  // Prefer the true book ask; fall back to the midpoint floor if no book
-  if (trueAsk != null) return trueAsk;
-  if (midFloor != null) return midFloor;
+  // If we got a sane book (ask > bid, reasonable spread), the ASK is what you pay
+  if (bestAsk != null && bestBid != null && bestAsk > bestBid) {
+    window._lastBookDbg = 'bid '+(bestBid*100).toFixed(0)+'/ask '+(bestAsk*100).toFixed(0);
+    return bestAsk;
+  }
+  // If only an ask came back and it's sane, use it
+  if (bestAsk != null && bestBid == null) return bestAsk;
+
+  // Book unusable (ghost/empty). Per docs, when spread >10c the UI shows last
+  // trade, not midpoint — so /price (midpoint) understates the ask. As a safe
+  // fallback, take the midpoint and add a conservative half-spread estimate.
+  var midData = await fetchPolyJson('https://clob.polymarket.com/midpoint?token_id='+tokenId);
+  if (midData && midData.mid != null) {
+    var mid = parseFloat(midData.mid);
+    if (mid > 0.001 && mid < 0.999) {
+      // If we have a bid, derive ask = mid + (mid - bid). Else add 4c buffer.
+      if (bestBid != null && mid > bestBid) return Math.min(mid + (mid - bestBid), 0.99);
+      return Math.min(mid + 0.04, 0.99);
+    }
+  }
   return null;
 }
 
@@ -1713,6 +1721,7 @@ async function scanPoly() {
       setPProgress(90+Math.round((vi/toVerify.length)*9), 'Checking price & liquidity '+(vi+1)+'/'+toVerify.length+'...');
       // First get the top-of-book price to size the stake
       var topAsk = await fetchPolyAsk(a.polyToken);
+      a.dbgBook = window._lastBookDbg;
       if (topAsk == null) { continue; } // can't price = drop
 
       // Estimate the Poly stake we'd want (rough, using top price), then check
@@ -1792,7 +1801,7 @@ async function scanPoly() {
       h += '<div class="side">';
       h += '<div class="book" style="color:#0087ff">POLYMARKET'+(x.liveVerified?' <span style="color:#00ff88">✓ LIVE</span>':(x.unverified?' <span style="color:#ff9500">⚠ UNVERIFIED</span>':''))+'</div>';
       h += '<div class="team">'+x.polySide+'</div>';
-      if (x.dbgTopAsk != null) h += '<div class="limit-tag" style="color:#888">dbg: ask '+(x.dbgTopAsk*100).toFixed(1)+'¢ · fill '+(x.dbgDepthPrice*100).toFixed(1)+'¢</div>';
+      if (x.dbgTopAsk != null) h += '<div class="limit-tag" style="color:#888">dbg: '+(x.dbgBook||'?')+' · ask '+(x.dbgTopAsk*100).toFixed(1)+'¢</div>';
       h += '<div class="odds" style="color:#0087ff">'+(x.polyPrice*100).toFixed(0)+'¢</div>';
       h += '<div class="stake">Bet $'+x.polyStake.toFixed(2)+'</div>';
       if (x.polyAvailable != null) h += '<div class="limit-tag">~$'+Math.round(x.polyAvailable)+' available'+(x.polyAvailable < x.polyStake ? ' ⚠️' : '')+'</div>';
