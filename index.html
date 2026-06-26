@@ -1565,53 +1565,63 @@ async function scanPoly() {
       var h2hOuts = getOutcomesForMarket('h2h');
       if (!h2hOuts.length) return;
 
-      // Determine which team Poly YES refers to
-      var pYesNorm = normalizePolyTitle(pOutcomes[0]==='Yes'||pOutcomes[0]==='No' ? pTitle : pOutcomes[0]);
-      // For "Will X beat Y" YES=X. Try to detect X from title
-      var homeWords = homeTeam.toLowerCase().split(' ').filter(function(w){return w.length>3;});
-      var awayWords = awayTeam.toLowerCase().split(' ').filter(function(w){return w.length>3;});
+      // CRITICAL: map each Poly outcome to its OWN token+price by index, then
+      // match each outcome's team name to the sportsbook. Never guess YES/NO
+      // from title word order — that attaches the price to the wrong team.
+      // pOutcomes[i] <-> pPrices[i] <-> pTokenIds[i] are index-aligned.
+      function teamMatches(outcomeName, team) {
+        var o = (outcomeName||'').toLowerCase();
+        var tWords = team.toLowerCase().split(' ').filter(function(w){return w.length>3;});
+        return tWords.some(function(w){ return o.indexOf(w) > -1; });
+      }
 
-      // Find which team appears FIRST in poly title = the YES team
-      var titleLower = pTitle.toLowerCase();
-      var homeIdx = 999, awayIdx = 999;
-      homeWords.forEach(function(w){var i=titleLower.indexOf(w);if(i>-1&&i<homeIdx)homeIdx=i;});
-      awayWords.forEach(function(w){var i=titleLower.indexOf(w);if(i>-1&&i<awayIdx)awayIdx=i;});
+      // Build a per-outcome structure: which team, what price, what token
+      var polyLegs = [];
+      for (var oi=0; oi<pOutcomes.length; oi++) {
+        var oname = pOutcomes[oi];
+        var oprice = parseFloat(pPrices[oi]||0);
+        var otoken = pTokenIds[oi]||null;
+        var matchedTeam = null;
+        if (teamMatches(oname, homeTeam)) matchedTeam = homeTeam;
+        else if (teamMatches(oname, awayTeam)) matchedTeam = awayTeam;
+        // Handle Yes/No markets: "Yes" = team named in title, "No" = other team
+        if (!matchedTeam && (oname==='Yes'||oname==='No')) {
+          var titleLower2 = pTitle.toLowerCase();
+          var homeWords2 = homeTeam.toLowerCase().split(' ').filter(function(w){return w.length>3;});
+          var awayWords2 = awayTeam.toLowerCase().split(' ').filter(function(w){return w.length>3;});
+          var homeIn = homeWords2.some(function(w){return titleLower2.indexOf(w)>-1;});
+          var awayIn = awayWords2.some(function(w){return titleLower2.indexOf(w)>-1;});
+          // "Yes" refers to the subject team of the title. If only one team is in
+          // the title, Yes=that team. Otherwise we can't safely tell — skip.
+          if (homeIn && !awayIn) matchedTeam = (oname==='Yes') ? homeTeam : awayTeam;
+          else if (awayIn && !homeIn) matchedTeam = (oname==='Yes') ? awayTeam : homeTeam;
+        }
+        if (matchedTeam && oprice>0.01 && oprice<0.99) {
+          polyLegs.push({ team:matchedTeam, price:oprice, token:otoken });
+        }
+      }
+      // Need exactly two legs, one per team, mapped unambiguously
+      if (polyLegs.length !== 2 || polyLegs[0].team === polyLegs[1].team) return;
 
-      // Detect "beat/win" pattern: "Will [TEAM A] beat [TEAM B]" → YES = team A
-      var yesTeam = homeIdx < awayIdx ? homeTeam : awayTeam;
-      var noTeam = homeIdx < awayIdx ? awayTeam : homeTeam;
-
-      // Best sportsbook ML odds for the NO team (opposing Poly YES)
-      var bestNo = null;
-      h2hOuts.forEach(function(out){
-        if (out.name === noTeam && (!bestNo || out.price > bestNo.price)) bestNo = out;
-      });
-      // Best sportsbook ML odds for the YES team (opposing Poly NO)
-      var bestYes = null;
-      h2hOuts.forEach(function(out){
-        if (out.name === yesTeam && (!bestYes || out.price > bestYes.price)) bestYes = out;
-      });
-
-      // Arb 1: Poly YES (yesTeam wins) + Sportsbook noTeam ML
-      if (bestNo) {
-        var sbProb = oP(bestNo.price);
-        var tot = pYesPrice + sbProb;
+      // For each Poly leg (betting that team to win), the hedge is the OTHER
+      // team's best moneyline at a sportsbook.
+      polyLegs.forEach(function(leg) {
+        var otherTeam = (leg.team === homeTeam) ? awayTeam : homeTeam;
+        var bestOpp = null;
+        h2hOuts.forEach(function(out){
+          if (out.name === otherTeam && (!bestOpp || out.price > bestOpp.price)) bestOpp = out;
+        });
+        if (!bestOpp) return;
+        var sbProb = oP(bestOpp.price);
+        var tot = leg.price + sbProb;
         var edge = (1-tot)*100 - feeDrag*100;
         if (edge >= min && tot < 1.0) {
-          var s1 = bank*(pYesPrice/tot), s2 = bank*(sbProb/tot), profit = ((bank/tot)-bank) - bank*feeDrag;
-          arbs.push({polyTitle:pTitle, game:awayTeam+' @ '+homeTeam, sport:game.sport_title||game._sport, edge:edge, roi:(profit/bank)*100, profit:profit, commenceTime:game.commence_time, polySide:'YES ('+yesTeam+' wins)', polyPrice:pYesPrice, polyToken:pYesToken, polyStake:s1, sbSide:bestNo.name+' ML', sbBook:bestNo.book, sbOdds:bestNo.price, sbStake:s2, sbLink:bestNo.link, sbMarket:'h2h', polySlug:pm.slug||pm.id});
+          var polyDec = 1/leg.price, sbDec = oD(bestOpp.price);
+          var s1 = bank*(1/polyDec)/tot, s2 = bank*(1/sbDec)/tot;
+          var profit = Math.min(s1*polyDec, s2*sbDec) - (s1+s2) - bank*feeDrag;
+          arbs.push({polyTitle:pTitle, game:awayTeam+' @ '+homeTeam, sport:game.sport_title||game._sport, edge:edge, roi:(profit/(s1+s2))*100, profit:profit, commenceTime:game.commence_time, polySide:leg.team+' wins', polyPrice:leg.price, polyToken:leg.token, polyStake:s1, sbSide:bestOpp.name+' ML', sbBook:bestOpp.book, sbOdds:bestOpp.price, sbStake:s2, sbLink:bestOpp.link, sbMarket:'h2h', polySlug:pm.slug||pm.id});
         }
-      }
-      // Arb 2: Poly NO (noTeam wins) + Sportsbook yesTeam ML
-      if (bestYes) {
-        var sbProb2 = oP(bestYes.price);
-        var tot2 = pNoPrice + sbProb2;
-        var edge2 = (1-tot2)*100 - feeDrag*100;
-        if (edge2 >= min && tot2 < 1.0) {
-          var s1b = bank*(pNoPrice/tot2), s2b = bank*(sbProb2/tot2), profit2 = ((bank/tot2)-bank) - bank*feeDrag;
-          arbs.push({polyTitle:pTitle, game:awayTeam+' @ '+homeTeam, sport:game.sport_title||game._sport, edge:edge2, roi:(profit2/bank)*100, profit:profit2, commenceTime:game.commence_time, polySide:'NO ('+noTeam+' wins)', polyPrice:pNoPrice, polyToken:pNoToken, polyStake:s1b, sbSide:bestYes.name+' ML', sbBook:bestYes.book, sbOdds:bestYes.price, sbStake:s2b, sbLink:bestYes.link, sbMarket:'h2h', polySlug:pm.slug||pm.id});
-        }
-      }
+      });
     }
 
     // ── TOTALS matching (Over/Under at SAME point) ──
