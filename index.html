@@ -131,7 +131,7 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
 <div class="tab-bar">
   <button class="tab-btn active" id="tab-scanner" onclick="switchTab('scanner')">🔍 Scanner</button>
   <button class="tab-btn" id="tab-lookup" onclick="switchTab('lookup')">📋 Line Lookup</button>
-  <button class="tab-btn" id="tab-kalshi" onclick="switchTab('kalshi')">📊 Kalshi Arb</button>
+  <button class="tab-btn" id="tab-poly" onclick="switchTab('kalshi')">📊 Poly Arb</button>
   <button class="tab-btn" id="tab-notify" onclick="switchTab('notify')">🔔 Notify</button>
 </div>
 
@@ -245,45 +245,43 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
   <div id="lout"></div>
 </div>
 
-<div id="view-kalshi" class="view">
+<div id="view-poly" class="view">
   <div class="row">
-    <input type="number" id="kbank" value="1000" placeholder="Bankroll $" />
-    <input type="number" id="kmine" value="0.5" placeholder="Min %" step="0.1" />
+    <input type="number" id="pbank" value="1000" placeholder="Bankroll $" />
+    <input type="number" id="pmine" value="0.5" placeholder="Min %" step="0.1" />
   </div>
-  <div class="slabel">Sports (Kalshi)</div>
-  <div class="sports" id="ksports">
-    <div class="sb on" data-ks="KXMLB">⚾ MLB</div>
-    <div class="sb on" data-ks="KXNBA">🏀 NBA</div>
-    <div class="sb on" data-ks="KXNFL">🏈 NFL</div>
-    <div class="sb on" data-ks="KXCFB">🏈 NCAAF</div>
-    <div class="sb on" data-ks="KXCBB">🏀 NCAAB</div>
-    <div class="sb on" data-ks="KXNHL">🏒 NHL</div>
-    <div class="sb on" data-ks="KXMLS">⚽ MLS</div>
-    <div class="sb on" data-ks="KXEPL">⚽ EPL</div>
-    <div class="sb on" data-ks="KXUFC">🥊 UFC</div>
-    <div class="sb on" data-ks="KXWNBA">🏀 WNBA</div>
-    <div class="sb on" data-ks="KXPGA">⛳ Golf</div>
-    <div class="sb on" data-ks="KXWC">🌍 World Cup</div>
+  <div class="slabel">Sportsbooks to compare vs Polymarket</div>
+  <div class="sports" id="pbooks">
+    <div class="sb on" data-pb="fanduel">FanDuel</div>
+    <div class="sb on" data-pb="draftkings">DraftKings</div>
+    <div class="sb on" data-pb="betmgm">BetMGM</div>
+    <div class="sb on" data-pb="williamhill_us">Caesars</div>
+    <div class="sb on" data-pb="fanatics">Fanatics</div>
+    <div class="sb on" data-pb="thescore">theScore</div>
+    <div class="sb on" data-pb="hardrockbet">Hard Rock</div>
+    <div class="sb on" data-pb="ballybet">Bally Bet</div>
+    <div class="sb on" data-pb="espnbet">ESPN Bet</div>
+    <div class="sb on" data-pb="bet365">Bet365</div>
   </div>
-  <div class="slabel">Sportsbooks to compare</div>
-  <div class="sports" id="kbooks">
-    <div class="sb on" data-kb="fanduel">FanDuel</div>
-    <div class="sb on" data-kb="draftkings">DraftKings</div>
-    <div class="sb on" data-kb="betmgm">BetMGM</div>
-    <div class="sb on" data-kb="williamhill_us">Caesars</div>
-    <div class="sb on" data-kb="fanatics">Fanatics</div>
-    <div class="sb on" data-kb="thescore">theScore</div>
-    <div class="sb on" data-kb="hardrockbet">Hard Rock</div>
-    <div class="sb on" data-kb="ballybet">Bally Bet</div>
-    <div class="sb on" data-kb="espnbet">ESPN Bet</div>
-    <div class="sb on" data-kb="bet365">Bet365</div>
+  <div class="slabel">Sports</div>
+  <div class="sports" id="psports">
+    <div class="sb on" data-ps="baseball_mlb">⚾ MLB</div>
+    <div class="sb on" data-ps="basketball_nba">🏀 NBA</div>
+    <div class="sb on" data-ps="americanfootball_nfl">🏈 NFL</div>
+    <div class="sb on" data-ps="americanfootball_ncaaf">🏈 NCAAF</div>
+    <div class="sb on" data-ps="icehockey_nhl">🏒 NHL</div>
+    <div class="sb on" data-ps="soccer_usa_mls">⚽ MLS</div>
+    <div class="sb on" data-ps="basketball_wnba">🏀 WNBA</div>
+    <div class="sb on" data-ps="soccer_epl">⚽ EPL</div>
+    <div class="sb on" data-ps="mma_mixed_martial_arts">🥊 MMA</div>
+    <div class="sb on" data-ps="golf">⛳ Golf</div>
   </div>
-  <button class="scan" onclick="scanKalshi()">📊 Scan Kalshi Arbs</button>
-  <div id="kprog" style="display:none" class="prog">
-    <span id="kprogText">Fetching Kalshi markets...</span>
-    <div class="prog-bar"><div class="prog-fill" id="kprogFill" style="width:0%"></div></div>
+  <button class="scan" onclick="scanPoly()">📊 Scan Poly Arbs</button>
+  <div id="pprog" style="display:none" class="prog">
+    <span id="pprogText">Fetching Polymarket...</span>
+    <div class="prog-bar"><div class="prog-fill" id="pprogFill" style="width:0%"></div></div>
   </div>
-  <div id="kout"></div>
+  <div id="pout"></div>
 </div>
 
 <div id="view-notify" class="view">
@@ -354,7 +352,7 @@ var ARB_CACHE=[];
 
 // ── Tab switching ──────────────────────────────────────────
 function switchTab(tab){
-  ['scanner','lookup','kalshi','notify'].forEach(function(t){
+  ['scanner','lookup','poly','notify'].forEach(function(t){
     document.getElementById('tab-'+t).classList.remove('active');
     document.getElementById('view-'+t).classList.remove('active');
   });
@@ -1084,221 +1082,338 @@ async function fetchEventOdds(eventId,sport,markets,gameLabel,playerFilter,arbLa
 }
 
 // ── Controls ───────────────────────────────────────────────
-// ── Kalshi Arb Scanner ────────────────────────────────────────
-document.getElementById('ksports').addEventListener('click',function(e){var b=e.target.closest('[data-ks]');if(b)b.classList.toggle('on');});
-document.getElementById('kbooks').addEventListener('click',function(e){var b=e.target.closest('[data-kb]');if(b)b.classList.toggle('on');});
+// ── Polymarket Arb Scanner ───────────────────────────────────
+document.getElementById('psports').addEventListener('click',function(e){var b=e.target.closest('[data-ps]');if(b)b.classList.toggle('on');});
+document.getElementById('pbooks').addEventListener('click',function(e){var b=e.target.closest('[data-pb]');if(b)b.classList.toggle('on');});
 
-function getKSports(){return Array.from(document.querySelectorAll('#ksports [data-ks].on')).map(function(b){return b.dataset.ks});}
-function getKBooks(){return Array.from(document.querySelectorAll('#kbooks [data-kb].on')).map(function(b){return b.dataset.kb});}
+function getPSports(){return Array.from(document.querySelectorAll('#psports [data-ps].on')).map(function(b){return b.dataset.ps});}
+function getPBooks(){return Array.from(document.querySelectorAll('#pbooks [data-pb].on')).map(function(b){return b.dataset.pb});}
 
-// Map Kalshi series tickers to Odds API sport keys
-var KALSHI_SPORT_MAP = {
-  'KXMLB':'baseball_mlb',
-  'KXNBA':'basketball_nba',
-  'KXNFL':'americanfootball_nfl',
-  'KXCFB':'americanfootball_ncaaf',
-  'KXCBB':'basketball_ncaab',
-  'KXNHL':'icehockey_nhl',
-  'KXMLS':'soccer_usa_mls',
-  'KXEPL':'soccer_epl',
-  'KXUFC':'mma_mixed_martial_arts',
-  'KXWNBA':'basketball_wnba',
-  'KXPGA':'golf',
-  'KXWC':'soccer_fifa_world_cup'
+function setPProgress(pct,text){document.getElementById('pprogText').textContent=text;document.getElementById('pprogFill').style.width=pct+'%';}
+
+// Map Odds API sport keys to keywords for Polymarket matching
+var SPORT_KEYWORDS = {
+  'baseball_mlb': ['mlb','baseball','yankees','red sox','dodgers','cubs','mets','braves','astros','cardinals','phillies','giants','padres','brewers','twins','blue jays','rays','tigers','royals','athletics','mariners','rangers','angels','rockies','diamondbacks','nationals','reds','pirates','orioles','white sox','guardians'],
+  'basketball_nba': ['nba','basketball','lakers','celtics','warriors','nets','bulls','heat','knicks','suns','bucks','76ers','raptors','nuggets','clippers','mavs','mavericks','grizzlies','jazz','blazers','pacers','hawks','hornets','wizards','pistons','cavaliers','thunder','spurs','rockets','magic','pelicans','kings','timberwolves'],
+  'americanfootball_nfl': ['nfl','football','chiefs','eagles','cowboys','patriots','49ers','packers','steelers','ravens','bills','bengals','rams','buccaneers','chargers','raiders','broncos','saints','bears','colts','titans','falcons','seahawks','cardinals','lions','giants','jets','commanders','jaguars','texans','vikings','dolphins','browns','panthers'],
+  'americanfootball_ncaaf': ['ncaa football','college football','cfb','alabama','georgia','ohio state','michigan','clemson','notre dame','oklahoma','lsu','usc','penn state','florida','texas','baylor'],
+  'icehockey_nhl': ['nhl','hockey','bruins','maple leafs','rangers','penguins','blackhawks','red wings','canadiens','avalanche','lightning','oilers','flames','canucks','wild','kings','ducks','sharks','blues','capitals','flyers','devils','islanders','sabres','senators','hurricanes','blue jackets','predators','jets','stars','coyotes','golden knights','kraken'],
+  'soccer_usa_mls': ['mls','major league soccer','galaxy','sounders','portland','atlanta united','nycfc','red bulls','sporting kc','columbus','seattle'],
+  'basketball_wnba': ['wnba','liberty','aces','mercury','fever','mystics','dream','sky','sparks','storm','wings','sun','lynx','valkyries'],
+  'soccer_epl': ['premier league','epl','arsenal','chelsea','liverpool','manchester','man utd','man city','tottenham','spurs','newcastle','aston villa','everton','brighton','west ham','brentford','fulham','wolves','crystal palace','nottingham','leicester','burnley','sheffield'],
+  'mma_mixed_martial_arts': ['ufc','mma','mixed martial arts','conor','khabib','jones','adesanya','poirier','mcgregor','ngannou','volkanovski'],
+  'golf': ['pga','golf','masters','open championship','us open','ryder cup','tour championship','tiger','mcilroy','spieth','koepka','johnson','thomas','cantlay']
 };
 
-function setKProgress(pct, text){
-  document.getElementById('kprogText').textContent=text;
-  document.getElementById('kprogFill').style.width=pct+'%';
+function normalizePolyTitle(t) {
+  return (t||'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').trim();
 }
 
-// Convert Kalshi yes_bid price (dollars string) to American odds
-function kalshiToAmerican(priceDollars) {
-  var p = parseFloat(priceDollars);
-  if (!p || p <= 0 || p >= 1) return null;
-  if (p >= 0.5) return Math.round(-p/(1-p)*100);
-  return Math.round((1-p)/p*100);
+function matchesGameSport(polyTitle, sportKey) {
+  var title = normalizePolyTitle(polyTitle);
+  var keywords = SPORT_KEYWORDS[sportKey] || [];
+  for (var i=0; i<keywords.length; i++) {
+    if (title.indexOf(keywords[i]) > -1) return true;
+  }
+  return false;
 }
 
-// Fetch Kalshi markets for a series using correct endpoint
-async function fetchKalshiMarkets(seriesTicker) {
-  var baseUrl = 'https://external-api.kalshi.com/trade-api/v2/markets?series_ticker='+seriesTicker+'&status=open&limit=200';
-  var proxies = [
-    'https://corsproxy.io/?'+encodeURIComponent(baseUrl),
-    'https://api.allorigins.win/raw?url='+encodeURIComponent(baseUrl),
-    baseUrl
-  ];
-  for (var i=0; i<proxies.length; i++) {
+// Fetch Polymarket sports markets
+async function fetchPolymarketSports(sportKeys) {
+  var allMarkets = [];
+  var offset = 0;
+  var limit = 500;
+  try {
+    for (var page=0; page<8; page++) {
+      var url = 'https://gamma-api.polymarket.com/markets?closed=false&limit='+limit+'&offset='+offset+'&order=volume&ascending=false';
+      var proxies = [
+        'https://corsproxy.io/?'+encodeURIComponent(url),
+        'https://api.allorigins.win/raw?url='+encodeURIComponent(url),
+        url
+      ];
+      var data = null;
+      for (var pi=0; pi<proxies.length; pi++) {
+        try {
+          var res = await fetch(proxies[pi]);
+          if (res.ok) { data = await res.json(); break; }
+        } catch(e) {}
+      }
+      if (!data || !Array.isArray(data) || !data.length) break;
+      // Filter to sports only
+      var sports = data.filter(function(m) {
+        if (!m.active || m.closed) return false;
+        var title = normalizePolyTitle(m.question||m.title||'');
+        for (var si=0; si<sportKeys.length; si++) {
+          if (matchesGameSport(title, sportKeys[si])) return true;
+        }
+        return false;
+      });
+      allMarkets = allMarkets.concat(sports);
+      offset += limit;
+      setPProgress(10+Math.min(page*8,35), 'Fetching Polymarket... '+allMarkets.length+' sports markets');
+      if (data.length < limit) break;
+    }
+  } catch(e) {}
+  return allMarkets;
+}
+
+// Convert Polymarket price (0-1) to American odds
+function polyPriceToAmerican(price) {
+  if (!price || price <= 0 || price >= 1) return null;
+  if (price >= 0.5) return Math.round(-price/(1-price)*100);
+  return Math.round((1-price)/price*100);
+}
+
+// Try to match a Polymarket market to an Odds API game/outcome
+function findMatchingOdds(polyTitle, allOddsGames) {
+  var pNorm = normalizePolyTitle(polyTitle);
+  var best = null;
+  var bestScore = 0;
+
+  allOddsGames.forEach(function(game) {
+    var home = (game.home_team||'').toLowerCase();
+    var away = (game.away_team||'').toLowerCase();
+    // Check if team names appear in poly title
+    var homeWords = home.split(' ');
+    var awayWords = away.split(' ');
+    var homeHits = homeWords.filter(function(w){return w.length>3&&pNorm.indexOf(w)>-1;}).length;
+    var awayHits = awayWords.filter(function(w){return w.length>3&&pNorm.indexOf(w)>-1;}).length;
+    var score = homeHits + awayHits;
+    if (score > bestScore) { bestScore = score; best = {game:game, score:score}; }
+  });
+
+  return bestScore >= 1 ? best : null;
+}
+
+async function scanPoly() {
+  var key = document.getElementById('key').value.trim();
+  if (!key) { document.getElementById('pout').innerHTML='<div class="err">Paste your Odds API key at the top first.</div>'; return; }
+  var bank = parseFloat(document.getElementById('pbank').value)||1000;
+  var min = parseFloat(document.getElementById('pmine').value)||0.5;
+  var sportKeys = getPSports();
+  var books = getPBooks().join(',');
+  if (!sportKeys.length) { document.getElementById('pout').innerHTML='<div class="err">Select at least one sport.</div>'; return; }
+  if (!books) { document.getElementById('pout').innerHTML='<div class="err">Select at least one sportsbook.</div>'; return; }
+
+  document.getElementById('pprog').style.display='block';
+  setPProgress(0,'Starting...');
+  document.getElementById('pout').innerHTML='';
+
+  // Fetch Polymarket sports markets
+  var polyMarkets = await fetchPolymarketSports(sportKeys);
+  setPProgress(50,'Fetching sportsbook odds...');
+
+  if (!polyMarkets.length) {
+    document.getElementById('pprog').style.display='none';
+    document.getElementById('pout').innerHTML='<div class="err">No Polymarket sports markets found. Try again in a moment.</div>';
+    return;
+  }
+
+  // Fetch Odds API for all selected sports
+  var allOddsGames = [];
+  for (var si=0; si<sportKeys.length; si++) {
     try {
-      var res = await fetch(proxies[i]);
+      var sp = sportKeys[si];
+      // Fetch core markets + props
+      var mkts = 'h2h,spreads,totals';
+      var res = await fetch('https://api.the-odds-api.com/v4/sports/'+sp+'/odds/?apiKey='+key+'&regions=us&markets='+mkts+'&oddsFormat=american&bookmakers='+books+'&includeLinks=true');
       if (res.ok) {
-        var data = await res.json();
-        var markets = data.markets || [];
-        return markets;
+        var games = await res.json();
+        if (Array.isArray(games)) {
+          games.forEach(function(g){g._sport=sp;});
+          // Upcoming only
+          var upcoming = games.filter(function(g){return new Date(g.commence_time).getTime()>Date.now();});
+          allOddsGames = allOddsGames.concat(upcoming);
+        }
       }
     } catch(e) {}
+    setPProgress(50+Math.round(((si+1)/sportKeys.length)*30), 'Fetching odds: '+sportKeys[si]+'...');
   }
-  return [];
-}
 
-// Normalize Kalshi event title to match Odds API game
-function normalizeTeam(name) {
-  return (name||'').toLowerCase().replace(/[^a-z0-9]/g,'');
-}
+  setPProgress(85,'Comparing Polymarket vs sportsbooks...');
 
-async function scanKalshi() {
-  var key = document.getElementById('key').value.trim();
-  if (!key) { document.getElementById('kout').innerHTML='<div class="err">Paste your Odds API key at the top first.</div>'; return; }
-  var bank = parseFloat(document.getElementById('kbank').value)||1000;
-  var min = parseFloat(document.getElementById('kmine').value)||0.5;
-  var kSports = getKSports();
-  var kBooks = getKBooks();
-  if (!kSports.length) { document.getElementById('kout').innerHTML='<div class="err">Select at least one sport.</div>'; return; }
-  if (!kBooks.length) { document.getElementById('kout').innerHTML='<div class="err">Select at least one sportsbook.</div>'; return; }
+  var arbs = [];
 
-  document.getElementById('kprog').style.display='block';
-  setKProgress(0,'Fetching Kalshi markets...');
-  document.getElementById('kout').innerHTML='';
+  // For each Polymarket market, try to match to Odds API outcomes
+  polyMarkets.forEach(function(pm) {
+    var pTitle = (pm.question||pm.title||'').trim();
+    var pPrices = [];
+    var pOutcomes = [];
+    try { pPrices = JSON.parse(pm.outcomePrices||'[]'); } catch(e) {}
+    try { pOutcomes = JSON.parse(pm.outcomes||'[]'); } catch(e) {}
+    if (pPrices.length < 2 || pOutcomes.length < 2) return;
 
-  var allArbs = [];
-  var totalGames = 0;
+    var pYesPrice = parseFloat(pPrices[0]||0);
+    var pNoPrice = parseFloat(pPrices[1]||0);
+    if (!pYesPrice || !pNoPrice || pYesPrice<=0.01 || pYesPrice>=0.99) return;
 
-  var BOOKS = kBooks.join(',');
-  for (var si=0; si<kSports.length; si++) {
-    var seriesTicker = kSports[si];
-    var oddsApiSport = KALSHI_SPORT_MAP[seriesTicker];
-    if (!oddsApiSport) continue;
+    // Find matching Odds API game
+    var match = findMatchingOdds(pTitle, allOddsGames);
+    if (!match) return;
+    var game = match.game;
 
-    setKProgress(Math.round((si/kSports.length)*40), 'Fetching Kalshi: '+seriesTicker+'...');
-
-    // Fetch Kalshi markets for this series
-    var kalshiMarkets = await fetchKalshiMarkets(seriesTicker);
-    if (!kalshiMarkets.length) continue;
-
-    // Fetch Odds API for same sport
-    var oddsRes = await fetch('https://api.the-odds-api.com/v4/sports/'+oddsApiSport+'/odds/?apiKey='+key+'&regions=us&markets=h2h&oddsFormat=american&bookmakers='+BOOKS);
-    if (!oddsRes.ok) continue;
-    var oddsGames = await oddsRes.json();
-    if (!Array.isArray(oddsGames)) continue;
-    totalGames += oddsGames.length;
-
-    // Each Kalshi market is a game-level moneyline (yes_sub_title = team name)
-    kalshiMarkets.forEach(function(km) {
-      if (km.status !== 'active') return;
-      var kalshiYesPrice = parseFloat(km.yes_bid_dollars||0);
-      var kalshiNoPrice = parseFloat(km.no_bid_dollars||0);
-      if (!kalshiYesPrice || !kalshiNoPrice) return;
-
-      var yesTeam = (km.yes_sub_title||'').trim();
-      var noTeam = (km.no_sub_title||'').trim();
-      if (!yesTeam || !noTeam) return;
-
-      // Find matching Odds API game
-      var matchedGame = null;
-      oddsGames.forEach(function(game) {
-        if (new Date(game.commence_time).getTime() <= Date.now()) return;
-        var homeNorm = normalizeTeam(game.home_team);
-        var awayNorm = normalizeTeam(game.away_team);
-        var yesNorm = normalizeTeam(yesTeam);
-        var noNorm = normalizeTeam(noTeam);
-        if ((yesNorm.indexOf(homeNorm.slice(0,5))>-1 || homeNorm.indexOf(yesNorm.slice(0,5))>-1) ||
-            (yesNorm.indexOf(awayNorm.slice(0,5))>-1 || awayNorm.indexOf(yesNorm.slice(0,5))>-1)) {
-          matchedGame = game;
-        }
-      });
-      if (!matchedGame) return;
-
-      // Get best sportsbook odds for each side
-      var bestHome = null, bestAway = null;
-      (matchedGame.bookmakers||[]).forEach(function(book) {
-        (book.markets||[]).forEach(function(mkt) {
-          if (mkt.key !== 'h2h') return;
-          (mkt.outcomes||[]).forEach(function(out) {
-            if (out.name === matchedGame.home_team) {
-              if (!bestHome || out.price > bestHome.price) bestHome={price:out.price, book:book.title};
-            }
-            if (out.name === matchedGame.away_team) {
-              if (!bestAway || out.price > bestAway.price) bestAway={price:out.price, book:book.title};
-            }
+    // Get all outcomes across all markets for this game
+    var allOutcomes = [];
+    (game.bookmakers||[]).forEach(function(book) {
+      (book.markets||[]).forEach(function(mkt) {
+        (mkt.outcomes||[]).forEach(function(out) {
+          allOutcomes.push({
+            name: out.name,
+            price: out.price,
+            point: out.point,
+            book: book.title,
+            market: mkt.key,
+            link: out.link||book.link
           });
         });
       });
-      if (!bestHome || !bestAway) return;
+    });
 
-      // YES side of Kalshi = one team winning
-      // Check arb: Kalshi YES + Sportsbook opposite
-      var yesNorm2 = normalizeTeam(yesTeam);
-      var homeNorm2 = normalizeTeam(matchedGame.home_team);
-      var yesIsHome = yesNorm2.indexOf(homeNorm2.slice(0,5))>-1 || homeNorm2.indexOf(yesNorm2.slice(0,5))>-1;
-      var sbOpp = yesIsHome ? bestAway : bestHome;
-      var sbOppName = yesIsHome ? matchedGame.away_team : matchedGame.home_team;
+    // For YES side of Polymarket, find best opposing odds in sportsbooks
+    // YES = pOutcomes[0] wins (e.g. team A wins)
+    // We need to find if sportsbook has team B (NO side) at good enough odds
+    var pYesTeam = (pOutcomes[0]||'').trim().toLowerCase();
+    var pNoTeam = (pOutcomes[1]||'').trim().toLowerCase();
 
-      // Arb: Kalshi YES + Sportsbook opposite team
-      var kYesProb = kalshiYesPrice;
-      var sbOppProb = oP(sbOpp.price);
-      var tot1 = kYesProb + sbOppProb;
-      var edge1 = (1-tot1)*100;
-      if (edge1 >= min && tot1 < 1.0) {
-        var s1 = bank*(kYesProb/tot1);
-        var s2 = bank*(sbOppProb/tot1);
-        var profit1 = Math.min(s1/kYesProb, s2*oD(sbOpp.price)) - bank;
-        if (profit1 > 0) allArbs.push({game:matchedGame.away_team+' @ '+matchedGame.home_team, sport:matchedGame.sport_title||seriesTicker, edge:edge1, roi:(profit1/bank)*100, profit:profit1, commenceTime:matchedGame.commence_time, side1:{name:'YES — '+yesTeam, book:'Kalshi', odds:kalshiYesPrice, stake:s1, isKalshi:true}, side2:{name:sbOppName, book:sbOpp.book, odds:sbOpp.price, stake:s2, isKalshi:false}});
+    // Find best sportsbook outcome that opposes Polymarket YES
+    var bestSbOpposesYes = null;
+    allOutcomes.forEach(function(out) {
+      var outNorm = (out.name||'').toLowerCase();
+      // Does this outcome name match the NO side?
+      var noWords = pNoTeam.split(' ').filter(function(w){return w.length>3;});
+      var matchNo = noWords.some(function(w){return outNorm.indexOf(w)>-1;});
+      // Or does it match general game outcome (away/home)
+      var homeWords = (game.home_team||'').toLowerCase().split(' ').filter(function(w){return w.length>3;});
+      var awayWords = (game.away_team||'').toLowerCase().split(' ').filter(function(w){return w.length>3;});
+      var matchHome = homeWords.some(function(w){return outNorm.indexOf(w)>-1;});
+      var matchAway = awayWords.some(function(w){return outNorm.indexOf(w)>-1;});
+
+      if (matchNo || matchHome || matchAway) {
+        if (!bestSbOpposesYes || out.price > bestSbOpposesYes.price) {
+          bestSbOpposesYes = out;
+        }
       }
+    });
 
-      // Arb: Kalshi NO + Sportsbook YES team
-      var sbSame = yesIsHome ? bestHome : bestAway;
-      var sbSameName = yesIsHome ? matchedGame.home_team : matchedGame.away_team;
-      var kNoProb = kalshiNoPrice;
-      var sbSameProb = oP(sbSame.price);
-      var tot2 = kNoProb + sbSameProb;
+    if (!bestSbOpposesYes) return;
+
+    // Arb: Poly YES + Sportsbook opposing outcome
+    var sbProb = oP(bestSbOpposesYes.price);
+    var tot = pYesPrice + sbProb;
+    var edge = (1-tot)*100;
+    if (edge >= min && tot < 1.0) {
+      var s1 = bank*(pYesPrice/tot);
+      var s2 = bank*(sbProb/tot);
+      var profit = (bank/tot)-bank;
+      arbs.push({
+        polyTitle: pTitle,
+        game: game.away_team+' @ '+game.home_team,
+        sport: game.sport_title||game._sport,
+        edge: edge,
+        roi: (profit/bank)*100,
+        profit: profit,
+        commenceTime: game.commence_time,
+        polySide: pOutcomes[0]||'YES',
+        polyPrice: pYesPrice,
+        polyStake: s1,
+        sbSide: bestSbOpposesYes.name+(bestSbOpposesYes.point!=null?' '+fmt(bestSbOpposesYes.point):''),
+        sbBook: bestSbOpposesYes.book,
+        sbOdds: bestSbOpposesYes.price,
+        sbStake: s2,
+        sbLink: bestSbOpposesYes.link,
+        sbMarket: bestSbOpposesYes.market,
+        polySlug: pm.slug||pm.id
+      });
+    }
+
+    // Arb: Poly NO + Sportsbook YES side
+    var bestSbYes = null;
+    allOutcomes.forEach(function(out) {
+      var outNorm = (out.name||'').toLowerCase();
+      var yesWords = pYesTeam.split(' ').filter(function(w){return w.length>3;});
+      var matchYes = yesWords.some(function(w){return outNorm.indexOf(w)>-1;});
+      if (matchYes) {
+        if (!bestSbYes || out.price > bestSbYes.price) bestSbYes = out;
+      }
+    });
+
+    if (bestSbYes) {
+      var sbProb2 = oP(bestSbYes.price);
+      var tot2 = pNoPrice + sbProb2;
       var edge2 = (1-tot2)*100;
       if (edge2 >= min && tot2 < 1.0) {
-        var s1b = bank*(kNoProb/tot2);
-        var s2b = bank*(sbSameProb/tot2);
-        var profit2 = Math.min(s1b/kNoProb, s2b*oD(sbSame.price)) - bank;
-        if (profit2 > 0) allArbs.push({game:matchedGame.away_team+' @ '+matchedGame.home_team, sport:matchedGame.sport_title||seriesTicker, edge:edge2, roi:(profit2/bank)*100, profit:profit2, commenceTime:matchedGame.commence_time, side1:{name:'NO — '+noTeam, book:'Kalshi', odds:kalshiNoPrice, stake:s1b, isKalshi:true}, side2:{name:sbSameName, book:sbSame.book, odds:sbSame.price, stake:s2b, isKalshi:false}});
+        var s1b = bank*(pNoPrice/tot2);
+        var s2b = bank*(sbProb2/tot2);
+        var profit2 = (bank/tot2)-bank;
+        arbs.push({
+          polyTitle: pTitle,
+          game: game.away_team+' @ '+game.home_team,
+          sport: game.sport_title||game._sport,
+          edge: edge2,
+          roi: (profit2/bank)*100,
+          profit: profit2,
+          commenceTime: game.commence_time,
+          polySide: pOutcomes[1]||'NO',
+          polyPrice: pNoPrice,
+          polyStake: s1b,
+          sbSide: bestSbYes.name+(bestSbYes.point!=null?' '+fmt(bestSbYes.point):''),
+          sbBook: bestSbYes.book,
+          sbOdds: bestSbYes.price,
+          sbStake: s2b,
+          sbLink: bestSbYes.link,
+          sbMarket: bestSbYes.market,
+          polySlug: pm.slug||pm.id
+        });
       }
-    });
+    }
+  });
 
-    setKProgress(40+Math.round(((si+1)/kSports.length)*55), 'Scanned '+seriesTicker+'...');
-    await new Promise(function(r){setTimeout(r,200);});
-  }
-
-  document.getElementById('kprog').style.display='none';
-  allArbs.sort(function(a,b){return b.edge-a.edge;});
+  arbs.sort(function(a,b){return b.edge-a.edge;});
+  document.getElementById('pprog').style.display='none';
 
   var now = new Date().toLocaleTimeString();
-  var h = '<div class="stats">'+totalGames+' games scanned · '+allArbs.length+' Kalshi arbs · '+now+'</div>';
+  var mktLabels = {'h2h':'Moneyline','spreads':'Spread','totals':'Total','props':'Props'};
+  var h = '<div class="stats">'+polyMarkets.length+' Poly markets · '+allOddsGames.length+' games · '+arbs.length+' arbs · '+now+'</div>';
 
-  if (!allArbs.length) {
-    h += '<div class="msg">No Kalshi arbs found above '+min+'%.<br><br>Try lowering Min % or check back when more markets are open.</div>';
+  if (!arbs.length) {
+    h += '<div class="msg">No Polymarket vs sportsbook arbs above '+min+'% found.<br><br>Try lowering Min % to 0.2% or adding more sports.</div>';
   } else {
-    h += '<div class="alert-bar">📊 '+allArbs.length+' Kalshi arb'+(allArbs.length>1?'s':'')+' found at '+now+'</div>';
-    allArbs.forEach(function(x) {
-      var c = '<div class="card'+(x.edge>2?' hot':'')+'">';
-      c += '<div class="ctop"><div style="flex:1;min-width:0">';
-      c += '<div class="gmeta">'+x.sport+'</div>';
-      c += '<span class="mktag h2h">Kalshi vs Book</span>';
-      c += '<div class="gtitle">'+x.game+'</div>';
-      if (x.commenceTime) c += '<div class="gdate-tag">'+new Date(x.commenceTime).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+'</div>';
-      c += '</div><div style="text-align:right;flex-shrink:0"><div class="roi">+'+x.roi.toFixed(2)+'%</div><div class="psub">$'+x.profit.toFixed(2)+' profit</div></div></div>';
-      c += '<div class="sides">';
-      // Side 1 - Kalshi
-      c += '<div class="side"><div class="book" style="color:#00c896">KALSHI</div>';
-      c += '<div class="team">'+x.side1.name+'</div>';
-      c += '<div class="odds" style="color:#00c896">'+(x.side1.price*100).toFixed(0)+'¢</div>';
-      c += '<div class="stake">Bet $'+x.side1.stake.toFixed(2)+'</div>';
-      c += '<a href="https://kalshi.com/sports" target="_blank" class="open-link">Open Kalshi →</a></div>';
-      // Side 2 - Sportsbook
-      c += '<div class="side"><div class="book">'+x.side2.book+'</div>';
-      c += '<div class="team">'+x.side2.name+'</div>';
-      c += '<div class="odds">'+fmt(x.side2.odds)+'</div>';
-      c += '<div class="stake">Bet $'+x.side2.stake.toFixed(2)+'</div></div>';
-      c += '</div></div>';
-      h += c;
+    h += '<div class="alert-bar">📊 '+arbs.length+' Poly arb'+(arbs.length>1?'s':'')+' found at '+now+'</div>';
+    arbs.forEach(function(x) {
+      var mktLabel = mktLabels[x.sbMarket]||x.sbMarket||'';
+      h += '<div class="card'+(x.edge>2?' hot':'')+'">';
+      h += '<div class="ctop"><div style="flex:1;min-width:0">';
+      h += '<div class="gmeta">'+x.sport+'</div>';
+      h += '<span class="mktag h2h">Poly vs '+x.sbBook+'</span>';
+      if (mktLabel) h += '<span class="mktag totals">'+mktLabel+'</span>';
+      h += '<div class="gtitle">'+x.game+'</div>';
+      h += '<div style="color:#666;font-size:11px;margin-top:2px">Poly: '+x.polyTitle+'</div>';
+      if (x.commenceTime) h += '<div class="gdate-tag">'+new Date(x.commenceTime).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+'</div>';
+      h += '</div><div style="text-align:right;flex-shrink:0">';
+      h += '<div class="roi">+'+x.roi.toFixed(2)+'%</div>';
+      h += '<div class="psub">$'+x.profit.toFixed(2)+' profit</div>';
+      h += '</div></div>';
+      h += '<div class="sides">';
+      // Polymarket side
+      h += '<div class="side">';
+      h += '<div class="book" style="color:#0087ff">POLYMARKET</div>';
+      h += '<div class="team">'+x.polySide+'</div>';
+      h += '<div class="odds" style="color:#0087ff">'+(x.polyPrice*100).toFixed(0)+'¢</div>';
+      h += '<div class="stake">Bet $'+x.polyStake.toFixed(2)+'</div>';
+      if (x.polySlug) h += '<a href="https://polymarket.com/event/'+x.polySlug+'" target="_blank" class="open-link" style="color:#0087ff">Open Polymarket →</a>';
+      h += '</div>';
+      // Sportsbook side
+      h += '<div class="side">';
+      h += '<div class="book">'+x.sbBook+'</div>';
+      h += '<div class="team">'+x.sbSide+'</div>';
+      h += '<div class="odds">'+fmt(x.sbOdds)+'</div>';
+      h += '<div class="stake">Bet $'+x.sbStake.toFixed(2)+'</div>';
+      if (x.sbLink) h += '<a href="'+x.sbLink+'" target="_blank" class="open-link">Open in '+x.sbBook+' →</a>';
+      h += '</div>';
+      h += '</div></div>';
     });
   }
-  document.getElementById('kout').innerHTML = h;
+  document.getElementById('pout').innerHTML = h;
 }
 
 // ── Scheduler ──────────────────────────────────────────────
