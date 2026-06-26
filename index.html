@@ -1129,6 +1129,24 @@ function matchesGameSport(polyTitle, sportKey) {
 }
 
 // Fetch Polymarket sports markets
+function fetchWithTimeout(url, ms) {
+  return new Promise(function(resolve) {
+    var done = false;
+    var timer = setTimeout(function(){ if(!done){done=true; resolve(null);} }, ms);
+    fetch(url).then(function(res){
+      if (done) return;
+      if (!res.ok) { done=true; clearTimeout(timer); resolve(null); return; }
+      return res.json();
+    }).then(function(data){
+      if (done) return;
+      done=true; clearTimeout(timer); resolve(data);
+    }).catch(function(){
+      if (done) return;
+      done=true; clearTimeout(timer); resolve(null);
+    });
+  });
+}
+
 async function pmFetch(url) {
   var proxies = [
     'https://corsproxy.io/?'+encodeURIComponent(url),
@@ -1136,10 +1154,8 @@ async function pmFetch(url) {
     url
   ];
   for (var pi=0; pi<proxies.length; pi++) {
-    try {
-      var res = await fetch(proxies[pi]);
-      if (res.ok) return await res.json();
-    } catch(e) {}
+    var data = await fetchWithTimeout(proxies[pi], 8000); // 8s max per proxy
+    if (data) return data;
   }
   return null;
 }
@@ -1167,32 +1183,36 @@ async function fetchPolymarketSports(sportKeys) {
   }
 
   // Step 2: for each selected sport, fetch its events (events contain markets)
+  var didGenericFallback = false;
   for (var si=0; si<sportKeys.length; si++) {
     var slug = POLY_SPORT_SLUGS[sportKeys[si]];
     if (!slug) continue;
     var tagId = tagIdByLabel[slug];
 
-    setPProgress(10+Math.round((si/sportKeys.length)*30), 'Fetching Polymarket '+slug.toUpperCase()+'...');
+    setPProgress(10+Math.round((si/sportKeys.length)*35), 'Fetching Polymarket '+slug.toUpperCase()+'...');
 
-    var eventsUrl;
+    var events = null;
     if (tagId) {
-      eventsUrl = 'https://gamma-api.polymarket.com/events?tag_id='+tagId+'&active=true&closed=false&limit=200';
+      events = await pmFetch('https://gamma-api.polymarket.com/events?tag_id='+tagId+'&active=true&closed=false&limit=100');
     } else {
-      // Fallback: search by tag slug directly
-      eventsUrl = 'https://gamma-api.polymarket.com/events?active=true&closed=false&limit=200&order=volume24hr&ascending=false';
+      // Try slug-based tag lookup
+      events = await pmFetch('https://gamma-api.polymarket.com/events?tag_slug='+slug+'&active=true&closed=false&limit=100');
     }
 
-    var events = await pmFetch(eventsUrl);
+    // If tag approach yielded nothing, do ONE generic high-volume sweep (not per-sport)
+    if ((!Array.isArray(events) || !events.length) && !didGenericFallback) {
+      didGenericFallback = true;
+      events = await pmFetch('https://gamma-api.polymarket.com/events?active=true&closed=false&limit=300&order=volume24hr&ascending=false');
+    }
+
     if (!Array.isArray(events)) continue;
 
     events.forEach(function(ev){
-      // Each event has nested markets
       var mkts = ev.markets || [];
       mkts.forEach(function(m){
         if (!m || seenIds[m.id]) return;
         if (m.closed) return;
         seenIds[m.id] = true;
-        // Attach event title for context
         m._eventTitle = ev.title || '';
         allMarkets.push(m);
       });
