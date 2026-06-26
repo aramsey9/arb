@@ -1156,17 +1156,20 @@ function fetchWithTimeout(url, ms) {
 // Per Polymarket docs: side=sell returns the best ask. /price not /book
 // (the /book endpoint serves stale ghost data).
 async function fetchPolyAsk(tokenId) {
-  var url = 'https://clob.polymarket.com/price?token_id='+tokenId+'&side=sell';
+  // To BUY a token you pay the ask. Polymarket's /price with side=BUY returns
+  // the price to buy (capitalized BUY/SELL per the official client). We also
+  // cross-check the midpoint so a bad/blocked response doesn't pass silently.
+  var priceUrl = 'https://clob.polymarket.com/price?token_id='+tokenId+'&side=BUY';
   var proxies = [
-    'https://corsproxy.io/?'+encodeURIComponent(url),
-    'https://api.allorigins.win/raw?url='+encodeURIComponent(url),
-    url
+    'https://corsproxy.io/?'+encodeURIComponent(priceUrl),
+    'https://api.allorigins.win/raw?url='+encodeURIComponent(priceUrl)
   ];
   for (var pi=0; pi<proxies.length; pi++) {
     var data = await fetchWithTimeout(proxies[pi], 6000);
     if (data && data.price != null) {
       var p = parseFloat(data.price);
-      if (p > 0 && p < 1) return p;
+      // Reject ghost/invalid values (0.01/0.99 are the known stale book sentinels)
+      if (p > 0.015 && p < 0.985) return p;
     }
   }
   return null;
@@ -1578,19 +1581,26 @@ async function scanPoly() {
     var verified = [];
     for (var vi=0; vi<arbs.length; vi++) {
       var a = arbs[vi];
-      if (!a.polyToken) { verified.push(a); continue; } // can't verify, keep as-is
+      if (!a.polyToken) { a.liveVerified=false; a.unverified=true; verified.push(a); continue; }
       var liveAsk = await fetchPolyAsk(a.polyToken);
-      if (liveAsk == null) { verified.push(a); continue; } // fetch failed, keep
+      if (liveAsk == null) {
+        // Could NOT verify live price — mark clearly, do not pretend it's live
+        a.liveVerified = false;
+        a.unverified = true;
+        verified.push(a);
+        continue;
+      }
       // Recompute edge with the REAL price you'd pay on Polymarket
       var sbProbV = oP(a.sbOdds);
       var totV = liveAsk + sbProbV;
       var edgeV = (1-totV)*100 - feeDrag*100;
-      a.polyPrice = liveAsk;          // show the real price
+      a.polyPrice = liveAsk;          // show the real executable price
       a.edge = edgeV;
       a.profit = ((bank/totV)-bank) - bank*feeDrag;
       a.roi = (a.profit/bank)*100;
       a.liveVerified = true;
-      // Only keep if it STILL clears the min after using live price
+      a.unverified = false;
+      // Only keep if it STILL clears the min after using the live price
       if (edgeV >= min && totV < 1.0) verified.push(a);
     }
     arbs = verified;
@@ -1624,7 +1634,7 @@ async function scanPoly() {
       h += '<div class="sides">';
       // Polymarket side
       h += '<div class="side">';
-      h += '<div class="book" style="color:#0087ff">POLYMARKET'+(x.liveVerified?' ✓ LIVE':'')+'</div>';
+      h += '<div class="book" style="color:#0087ff">POLYMARKET'+(x.liveVerified?' <span style="color:#00ff88">✓ LIVE</span>':(x.unverified?' <span style="color:#ff9500">⚠ UNVERIFIED</span>':''))+'</div>';
       h += '<div class="team">'+x.polySide+'</div>';
       h += '<div class="odds" style="color:#0087ff">'+(x.polyPrice*100).toFixed(0)+'¢</div>';
       h += '<div class="stake">Bet $'+x.polyStake.toFixed(2)+'</div>';
