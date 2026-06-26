@@ -1214,6 +1214,8 @@ async function fetchPolymarketSports(sportKeys) {
         if (m.closed) return;
         seenIds[m.id] = true;
         m._eventTitle = ev.title || '';
+        // Capture event start time for date-matching (try several fields)
+        m._startTime = ev.startDate || ev.startTime || ev.gameStartTime || m.gameStartTime || m.startDate || ev.endDate || m.endDate || null;
         allMarkets.push(m);
       });
     });
@@ -1265,17 +1267,24 @@ function teamFullyPresent(teamName, polyNorm) {
   return true;
 }
 
-// Strict match: BOTH teams' nicknames must appear, exactly one game matches
-function findMatchingGame(polyTitle, allOddsGames) {
+// Strict match: BOTH teams' nicknames must appear AND dates must align
+function findMatchingGame(polyTitle, allOddsGames, polyStartTime) {
   var pNorm = normalizePolyTitle(polyTitle);
+  var polyDate = polyStartTime ? new Date(polyStartTime).getTime() : null;
   var matches = [];
   allOddsGames.forEach(function(game) {
     var homeOk = teamFullyPresent(game.home_team||'', pNorm);
     var awayOk = teamFullyPresent(game.away_team||'', pNorm);
-    // REQUIRE BOTH team nicknames present
-    if (homeOk && awayOk) {
-      matches.push(game);
+    if (!homeOk || !awayOk) return;
+    // DATE CHECK — if we know both dates, require them within 24h of each other.
+    // This prevents matching Friday's Poly market to Saturday's game (same teams,
+    // back-to-back series).
+    if (polyDate && game.commence_time) {
+      var gameDate = new Date(game.commence_time).getTime();
+      var hoursDiff = Math.abs(polyDate - gameDate) / (1000*60*60);
+      if (hoursDiff > 24) return; // different game in the series
     }
+    matches.push(game);
   });
   // Only return if exactly one game matches (avoid ambiguity)
   return matches.length === 1 ? matches[0] : null;
@@ -1385,7 +1394,7 @@ async function scanPoly() {
     }
 
     // Match to a single game (both teams must be present)
-    var game = findMatchingGame(pTitle, allOddsGames);
+    var game = findMatchingGame(pTitle, allOddsGames, pm._startTime);
     if (!game) return;
 
     var homeTeam = game.home_team;
