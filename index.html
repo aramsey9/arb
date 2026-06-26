@@ -1232,8 +1232,12 @@ function polyPriceToAmerican(price) {
 // Classify what type of bet a Polymarket market represents
 function classifyPolyMarket(title, outcomes) {
   var t = (title||'').toLowerCase();
+  // SEASON PROPS / win-totals — reject entirely (can't arb vs single game)
+  if (/win more than|win at least|win fewer than|over \d+\.?\d* (wins|games)|under \d+\.?\d* (wins|games)|\d+\.?\d* (wins|games) in the|regular season|make the playoffs|make the postseason|reach the|qualify for/.test(t)) {
+    return {type:'season_prop', valid:false};
+  }
   // FUTURES — championship/division/award markets (matched separately against SB futures)
-  if (/championship|champion|division title|conference title|win the.*title|mvp|cy young|rookie of the year|award|world series|super bowl winner|stanley cup|nba finals|to win the|pennant|division winner|win the.*east|win the.*west|win the.*central|win the.*conference|win the.*division/.test(t)) {
+  if (/championship|champion|division title|conference title|win the.*title|win the.*cup|mvp|cy young|rookie of the year|award|world series|super bowl|stanley cup|nba finals|to win the|pennant|division winner|win the.*east|win the.*west|win the.*central|win the.*conference|win the.*division|win the \d{4}|\d{4} mls|\d{4} nba|\d{4} nfl|\d{4} mlb/.test(t)) {
     return {type:'futures', valid:true};
   }
   // Totals (Over/Under)
@@ -1241,26 +1245,35 @@ function classifyPolyMarket(title, outcomes) {
     var pointMatch = t.match(/(\d+\.?\d*)/);
     return {type:'totals', valid:true, point: pointMatch?parseFloat(pointMatch[1]):null};
   }
-  // Moneyline — "Will X beat Y" or "X vs Y" head to head for a single game
-  if (/will .* (beat|win|defeat)|vs\.?| @ | v /.test(t)) {
+  // Moneyline — single-game head to head ONLY: "X vs Y" or "X @ Y" or "Will X beat Y"
+  if (/ vs\.? | @ | v |will .* (beat|defeat)/.test(t)) {
     return {type:'h2h', valid:true};
   }
   return {type:'unknown', valid:false};
 }
 
-// Strict match: both team names must appear AND must be a single-game market
+// Build a normalized full-team-name set from a Poly title for strict matching
+function teamFullyPresent(teamName, polyNorm) {
+  // Require the team's DISTINCTIVE word (usually the last word: Yankees, Dodgers, Huskies)
+  // AND at least one more word, OR the full city+team to appear
+  var words = teamName.toLowerCase().split(' ').filter(function(w){return w.length>3;});
+  if (!words.length) return false;
+  // The nickname is typically the last word and is the most distinctive
+  var nickname = words[words.length-1];
+  // Must contain the nickname at minimum
+  if (polyNorm.indexOf(nickname) === -1) return false;
+  return true;
+}
+
+// Strict match: BOTH teams' nicknames must appear, exactly one game matches
 function findMatchingGame(polyTitle, allOddsGames) {
   var pNorm = normalizePolyTitle(polyTitle);
   var matches = [];
   allOddsGames.forEach(function(game) {
-    var home = (game.home_team||'').toLowerCase();
-    var away = (game.away_team||'').toLowerCase();
-    var homeWords = home.split(' ').filter(function(w){return w.length>3;});
-    var awayWords = away.split(' ').filter(function(w){return w.length>3;});
-    var homeHit = homeWords.some(function(w){return pNorm.indexOf(w)>-1;});
-    var awayHit = awayWords.some(function(w){return pNorm.indexOf(w)>-1;});
-    // REQUIRE BOTH teams present — this prevents futures/wrong matches
-    if (homeHit && awayHit) {
+    var homeOk = teamFullyPresent(game.home_team||'', pNorm);
+    var awayOk = teamFullyPresent(game.away_team||'', pNorm);
+    // REQUIRE BOTH team nicknames present
+    if (homeOk && awayOk) {
       matches.push(game);
     }
   });
@@ -1362,31 +1375,12 @@ async function scanPoly() {
     var cls = classifyPolyMarket(pTitle, pOutcomes);
     if (!cls.valid) return;
 
-    // ── FUTURES matching (championship/division winners) ──
+    // ── FUTURES — currently skipped ──
+    // A clean futures arb requires betting opposite sides of the SAME championship
+    // outcome. Sportsbooks only offer "team to win" (YES side), and Polymarket's
+    // YES/NO on the same title can't be safely paired against a single sportsbook
+    // outright without a true opposing line. To avoid false arbs, we skip futures.
     if (cls.type === 'futures') {
-      // Find which team this Poly futures market is about
-      var titleN = normalizePolyTitle(pTitle);
-      var matchedFuture = null;
-      Object.keys(futuresData).forEach(function(teamKey) {
-        var teamWords = teamKey.split(' ').filter(function(w){return w.length>3;});
-        var allPresent = teamWords.length>0 && teamWords.every(function(w){return titleN.indexOf(w)>-1;});
-        if (allPresent) matchedFuture = futuresData[teamKey];
-      });
-      if (!matchedFuture) return;
-
-      // Poly YES = team wins championship. Sportsbook has team at outright odds.
-      // Arb: Poly NO (team does NOT win) + Sportsbook YES (team wins outright)
-      // OR Poly YES (team wins) priced cheaper than sportsbook implied
-      var sbProbF = oP(matchedFuture.price);
-      // Arb: Poly YES + bet against on sportsbook isn't possible (no "field" market)
-      // Real arb: if Poly YES price < sportsbook implied prob, buy Poly YES, but need opposing side
-      // The clean arb: Poly NO + Sportsbook YES(team to win)
-      var totF = pNoPrice + sbProbF;
-      var edgeF = (1-totF)*100;
-      if (edgeF >= min && totF < 1.0) {
-        var sf1 = bank*(pNoPrice/totF), sf2 = bank*(sbProbF/totF), profitF = (bank/totF)-bank;
-        arbs.push({polyTitle:pTitle, game:matchedFuture.name+' (Futures)', sport:matchedFuture.sport, edge:edgeF, roi:(profitF/bank)*100, profit:profitF, commenceTime:null, polySide:'NO ('+matchedFuture.name+' does NOT win)', polyPrice:pNoPrice, polyStake:sf1, sbSide:matchedFuture.name+' to win', sbBook:matchedFuture.book, sbOdds:matchedFuture.price, sbStake:sf2, sbLink:matchedFuture.link, sbMarket:'futures', polySlug:pm.slug||pm.id, isFutures:true});
-      }
       return;
     }
 
@@ -1510,6 +1504,10 @@ async function scanPoly() {
     // and matching them safely requires exact line alignment
   });
 
+    // Sanity filter: real arbs are rarely above 15%. Anything higher is almost
+    // always a bad cross-market match (e.g. season prop matched to a game).
+    var MAX_REALISTIC_EDGE = 15;
+    arbs = arbs.filter(function(x){ return x.edge <= MAX_REALISTIC_EDGE; });
     arbs.sort(function(a,b){return b.edge-a.edge;});
   document.getElementById('pprog').style.display='none';
 
