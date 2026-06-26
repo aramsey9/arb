@@ -1276,18 +1276,35 @@ function findMatchingGame(polyTitle, allOddsGames, polyStartTime) {
     var homeOk = teamFullyPresent(game.home_team||'', pNorm);
     var awayOk = teamFullyPresent(game.away_team||'', pNorm);
     if (!homeOk || !awayOk) return;
-    // DATE CHECK — if we know both dates, require them within 24h of each other.
-    // This prevents matching Friday's Poly market to Saturday's game (same teams,
-    // back-to-back series).
-    if (polyDate && game.commence_time) {
+    // DATE CHECK — only reject if we have a VALID poly date that clearly differs.
+    // Window is 36h to allow for timezone/rounding differences while still
+    // separating back-to-back series games (usually 24h apart).
+    if (polyDate && !isNaN(polyDate) && game.commence_time) {
       var gameDate = new Date(game.commence_time).getTime();
-      var hoursDiff = Math.abs(polyDate - gameDate) / (1000*60*60);
-      if (hoursDiff > 24) return; // different game in the series
+      if (!isNaN(gameDate)) {
+        var hoursDiff = Math.abs(polyDate - gameDate) / (1000*60*60);
+        // Store the diff so we can pick the CLOSEST game if multiple match
+        matches.push({game:game, hoursDiff:hoursDiff});
+        return;
+      }
     }
-    matches.push(game);
+    // No usable date — fall back to name-only match
+    matches.push({game:game, hoursDiff:null});
   });
-  // Only return if exactly one game matches (avoid ambiguity)
-  return matches.length === 1 ? matches[0] : null;
+
+  if (!matches.length) return null;
+  if (matches.length === 1) return matches[0].game;
+
+  // Multiple games with same teams (back-to-back series).
+  // Pick the one closest in time IF we have date info; otherwise ambiguous → skip.
+  var withDates = matches.filter(function(m){return m.hoursDiff != null;});
+  if (withDates.length) {
+    withDates.sort(function(a,b){return a.hoursDiff - b.hoursDiff;});
+    // Only accept if the closest is within 36h AND clearly closer than the next
+    if (withDates[0].hoursDiff <= 36) return withDates[0].game;
+  }
+  // Can't disambiguate safely
+  return null;
 }
 
 async function scanPoly() {
