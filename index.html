@@ -1164,25 +1164,47 @@ function polyPriceToAmerican(price) {
   return Math.round((1-price)/price*100);
 }
 
-// Try to match a Polymarket market to an Odds API game/outcome
-function findMatchingOdds(polyTitle, allOddsGames) {
-  var pNorm = normalizePolyTitle(polyTitle);
-  var best = null;
-  var bestScore = 0;
+// Classify what type of bet a Polymarket market represents
+function classifyPolyMarket(title, outcomes) {
+  var t = (title||'').toLowerCase();
+  // Reject futures / season-long markets — these can't arb against single games
+  if (/title|championship|champion|division|conference|mvp|award|playoff|world series|super bowl|nl east|nl west|nl central|al east|al west|al central|finals|win the|to make|season|standings|playoffs|division winner|pennant/.test(t)) {
+    return {type:'futures', valid:false};
+  }
+  // Totals (Over/Under)
+  if (/o\/u|over\/under|total|combined/.test(t) || (outcomes[0]||'').toLowerCase()==='over') {
+    var pointMatch = t.match(/(\d+\.?\d*)/);
+    return {type:'totals', valid:true, point: pointMatch?parseFloat(pointMatch[1]):null};
+  }
+  // Spread
+  if (/spread|handicap|[-+]\d+\.?\d*/.test(t) && /vs|@|beat/.test(t)) {
+    return {type:'spreads', valid:true};
+  }
+  // Moneyline — "Will X beat Y" or "X vs Y" head to head for a single game
+  if (/will .* (beat|win|defeat)|vs\.?|@| v /.test(t)) {
+    return {type:'h2h', valid:true};
+  }
+  return {type:'unknown', valid:false};
+}
 
+// Strict match: both team names must appear AND must be a single-game market
+function findMatchingGame(polyTitle, allOddsGames) {
+  var pNorm = normalizePolyTitle(polyTitle);
+  var matches = [];
   allOddsGames.forEach(function(game) {
     var home = (game.home_team||'').toLowerCase();
     var away = (game.away_team||'').toLowerCase();
-    // Check if team names appear in poly title
-    var homeWords = home.split(' ');
-    var awayWords = away.split(' ');
-    var homeHits = homeWords.filter(function(w){return w.length>3&&pNorm.indexOf(w)>-1;}).length;
-    var awayHits = awayWords.filter(function(w){return w.length>3&&pNorm.indexOf(w)>-1;}).length;
-    var score = homeHits + awayHits;
-    if (score > bestScore) { bestScore = score; best = {game:game, score:score}; }
+    var homeWords = home.split(' ').filter(function(w){return w.length>3;});
+    var awayWords = away.split(' ').filter(function(w){return w.length>3;});
+    var homeHit = homeWords.some(function(w){return pNorm.indexOf(w)>-1;});
+    var awayHit = awayWords.some(function(w){return pNorm.indexOf(w)>-1;});
+    // REQUIRE BOTH teams present — this prevents futures/wrong matches
+    if (homeHit && awayHit) {
+      matches.push(game);
+    }
   });
-
-  return bestScore >= 1 ? best : null;
+  // Only return if exactly one game matches (avoid ambiguity)
+  return matches.length === 1 ? matches[0] : null;
 }
 
 async function scanPoly() {
@@ -1234,7 +1256,7 @@ async function scanPoly() {
 
   var arbs = [];
 
-  // For each Polymarket market, try to match to Odds API outcomes
+  // For each Polymarket market, classify it then match to same-type sportsbook outcome
   polyMarkets.forEach(function(pm) {
     var pTitle = (pm.question||pm.title||'').trim();
     var pPrices = [];
@@ -1247,128 +1269,131 @@ async function scanPoly() {
     var pNoPrice = parseFloat(pPrices[1]||0);
     if (!pYesPrice || !pNoPrice || pYesPrice<=0.01 || pYesPrice>=0.99) return;
 
-    // Find matching Odds API game
-    var match = findMatchingOdds(pTitle, allOddsGames);
-    if (!match) return;
-    var game = match.game;
+    // Classify the Polymarket market type — reject futures/invalid
+    var cls = classifyPolyMarket(pTitle, pOutcomes);
+    if (!cls.valid) return;
 
-    // Get all outcomes across all markets for this game
-    var allOutcomes = [];
-    (game.bookmakers||[]).forEach(function(book) {
-      (book.markets||[]).forEach(function(mkt) {
-        (mkt.outcomes||[]).forEach(function(out) {
-          allOutcomes.push({
-            name: out.name,
-            price: out.price,
-            point: out.point,
-            book: book.title,
-            market: mkt.key,
-            link: out.link||book.link
+    // Match to a single game (both teams must be present)
+    var game = findMatchingGame(pTitle, allOddsGames);
+    if (!game) return;
+
+    var homeTeam = game.home_team;
+    var awayTeam = game.away_team;
+
+    // Collect sportsbook outcomes BY MARKET TYPE matching the Poly market type
+    function getOutcomesForMarket(mktKey) {
+      var outs = [];
+      (game.bookmakers||[]).forEach(function(book) {
+        (book.markets||[]).forEach(function(mkt) {
+          if (mkt.key !== mktKey) return;
+          (mkt.outcomes||[]).forEach(function(out) {
+            outs.push({name:out.name, price:out.price, point:out.point, book:book.title, market:mkt.key, link:out.link||book.link});
           });
         });
       });
-    });
+      return outs;
+    }
 
-    // For YES side of Polymarket, find best opposing odds in sportsbooks
-    // YES = pOutcomes[0] wins (e.g. team A wins)
-    // We need to find if sportsbook has team B (NO side) at good enough odds
-    var pYesTeam = (pOutcomes[0]||'').trim().toLowerCase();
-    var pNoTeam = (pOutcomes[1]||'').trim().toLowerCase();
+    // ── MONEYLINE matching ──
+    if (cls.type === 'h2h') {
+      var h2hOuts = getOutcomesForMarket('h2h');
+      if (!h2hOuts.length) return;
 
-    // Find best sportsbook outcome that opposes Polymarket YES
-    var bestSbOpposesYes = null;
-    allOutcomes.forEach(function(out) {
-      var outNorm = (out.name||'').toLowerCase();
-      // Does this outcome name match the NO side?
-      var noWords = pNoTeam.split(' ').filter(function(w){return w.length>3;});
-      var matchNo = noWords.some(function(w){return outNorm.indexOf(w)>-1;});
-      // Or does it match general game outcome (away/home)
-      var homeWords = (game.home_team||'').toLowerCase().split(' ').filter(function(w){return w.length>3;});
-      var awayWords = (game.away_team||'').toLowerCase().split(' ').filter(function(w){return w.length>3;});
-      var matchHome = homeWords.some(function(w){return outNorm.indexOf(w)>-1;});
-      var matchAway = awayWords.some(function(w){return outNorm.indexOf(w)>-1;});
+      // Determine which team Poly YES refers to
+      var pYesNorm = normalizePolyTitle(pOutcomes[0]==='Yes'||pOutcomes[0]==='No' ? pTitle : pOutcomes[0]);
+      // For "Will X beat Y" YES=X. Try to detect X from title
+      var homeWords = homeTeam.toLowerCase().split(' ').filter(function(w){return w.length>3;});
+      var awayWords = awayTeam.toLowerCase().split(' ').filter(function(w){return w.length>3;});
 
-      if (matchNo || matchHome || matchAway) {
-        if (!bestSbOpposesYes || out.price > bestSbOpposesYes.price) {
-          bestSbOpposesYes = out;
+      // Find which team appears FIRST in poly title = the YES team
+      var titleLower = pTitle.toLowerCase();
+      var homeIdx = 999, awayIdx = 999;
+      homeWords.forEach(function(w){var i=titleLower.indexOf(w);if(i>-1&&i<homeIdx)homeIdx=i;});
+      awayWords.forEach(function(w){var i=titleLower.indexOf(w);if(i>-1&&i<awayIdx)awayIdx=i;});
+
+      // Detect "beat/win" pattern: "Will [TEAM A] beat [TEAM B]" → YES = team A
+      var yesTeam = homeIdx < awayIdx ? homeTeam : awayTeam;
+      var noTeam = homeIdx < awayIdx ? awayTeam : homeTeam;
+
+      // Best sportsbook ML odds for the NO team (opposing Poly YES)
+      var bestNo = null;
+      h2hOuts.forEach(function(out){
+        if (out.name === noTeam && (!bestNo || out.price > bestNo.price)) bestNo = out;
+      });
+      // Best sportsbook ML odds for the YES team (opposing Poly NO)
+      var bestYes = null;
+      h2hOuts.forEach(function(out){
+        if (out.name === yesTeam && (!bestYes || out.price > bestYes.price)) bestYes = out;
+      });
+
+      // Arb 1: Poly YES (yesTeam wins) + Sportsbook noTeam ML
+      if (bestNo) {
+        var sbProb = oP(bestNo.price);
+        var tot = pYesPrice + sbProb;
+        var edge = (1-tot)*100;
+        if (edge >= min && tot < 1.0) {
+          var s1 = bank*(pYesPrice/tot), s2 = bank*(sbProb/tot), profit = (bank/tot)-bank;
+          arbs.push({polyTitle:pTitle, game:awayTeam+' @ '+homeTeam, sport:game.sport_title||game._sport, edge:edge, roi:(profit/bank)*100, profit:profit, commenceTime:game.commence_time, polySide:'YES ('+yesTeam+' wins)', polyPrice:pYesPrice, polyStake:s1, sbSide:bestNo.name+' ML', sbBook:bestNo.book, sbOdds:bestNo.price, sbStake:s2, sbLink:bestNo.link, sbMarket:'h2h', polySlug:pm.slug||pm.id});
         }
       }
-    });
+      // Arb 2: Poly NO (noTeam wins) + Sportsbook yesTeam ML
+      if (bestYes) {
+        var sbProb2 = oP(bestYes.price);
+        var tot2 = pNoPrice + sbProb2;
+        var edge2 = (1-tot2)*100;
+        if (edge2 >= min && tot2 < 1.0) {
+          var s1b = bank*(pNoPrice/tot2), s2b = bank*(sbProb2/tot2), profit2 = (bank/tot2)-bank;
+          arbs.push({polyTitle:pTitle, game:awayTeam+' @ '+homeTeam, sport:game.sport_title||game._sport, edge:edge2, roi:(profit2/bank)*100, profit:profit2, commenceTime:game.commence_time, polySide:'NO ('+noTeam+' wins)', polyPrice:pNoPrice, polyStake:s1b, sbSide:bestYes.name+' ML', sbBook:bestYes.book, sbOdds:bestYes.price, sbStake:s2b, sbLink:bestYes.link, sbMarket:'h2h', polySlug:pm.slug||pm.id});
+        }
+      }
+    }
 
-    if (!bestSbOpposesYes) return;
+    // ── TOTALS matching (Over/Under at SAME point) ──
+    if (cls.type === 'totals' && cls.point != null) {
+      var totOuts = getOutcomesForMarket('totals');
+      if (!totOuts.length) return;
 
-    // Arb: Poly YES + Sportsbook opposing outcome
-    var sbProb = oP(bestSbOpposesYes.price);
-    var tot = pYesPrice + sbProb;
-    var edge = (1-tot)*100;
-    if (edge >= min && tot < 1.0) {
-      var s1 = bank*(pYesPrice/tot);
-      var s2 = bank*(sbProb/tot);
-      var profit = (bank/tot)-bank;
-      arbs.push({
-        polyTitle: pTitle,
-        game: game.away_team+' @ '+game.home_team,
-        sport: game.sport_title||game._sport,
-        edge: edge,
-        roi: (profit/bank)*100,
-        profit: profit,
-        commenceTime: game.commence_time,
-        polySide: pOutcomes[0]||'YES',
-        polyPrice: pYesPrice,
-        polyStake: s1,
-        sbSide: bestSbOpposesYes.name+(bestSbOpposesYes.point!=null?' '+fmt(bestSbOpposesYes.point):''),
-        sbBook: bestSbOpposesYes.book,
-        sbOdds: bestSbOpposesYes.price,
-        sbStake: s2,
-        sbLink: bestSbOpposesYes.link,
-        sbMarket: bestSbOpposesYes.market,
-        polySlug: pm.slug||pm.id
+      // Poly YES = Over, Poly NO = Under (standard Polymarket O/U format)
+      var polyIsOver = (pOutcomes[0]||'').toLowerCase()==='over' || (pOutcomes[0]||'').toLowerCase()==='yes';
+
+      // Arb: Poly Over + Sportsbook Under at same/higher line  OR  Poly Under + SB Over
+      // Match only EXACT same total point to be safe
+      var bestUnder = null, bestOver = null;
+      totOuts.forEach(function(out){
+        if (out.name==='Under' && Math.abs(out.point - cls.point) < 0.01) {
+          if (!bestUnder || out.price > bestUnder.price) bestUnder = out;
+        }
+        if (out.name==='Over' && Math.abs(out.point - cls.point) < 0.01) {
+          if (!bestOver || out.price > bestOver.price) bestOver = out;
+        }
       });
-    }
 
-    // Arb: Poly NO + Sportsbook YES side
-    var bestSbYes = null;
-    allOutcomes.forEach(function(out) {
-      var outNorm = (out.name||'').toLowerCase();
-      var yesWords = pYesTeam.split(' ').filter(function(w){return w.length>3;});
-      var matchYes = yesWords.some(function(w){return outNorm.indexOf(w)>-1;});
-      if (matchYes) {
-        if (!bestSbYes || out.price > bestSbYes.price) bestSbYes = out;
+      // Poly Over (YES) vs Sportsbook Under
+      if (bestUnder) {
+        var sbP = oP(bestUnder.price);
+        var tt = pYesPrice + sbP;
+        var ed = (1-tt)*100;
+        if (ed >= min && tt < 1.0) {
+          var ss1=bank*(pYesPrice/tt), ss2=bank*(sbP/tt), pr=(bank/tt)-bank;
+          arbs.push({polyTitle:pTitle, game:awayTeam+' @ '+homeTeam, sport:game.sport_title||game._sport, edge:ed, roi:(pr/bank)*100, profit:pr, commenceTime:game.commence_time, polySide:'Over '+cls.point, polyPrice:pYesPrice, polyStake:ss1, sbSide:'Under '+bestUnder.point, sbBook:bestUnder.book, sbOdds:bestUnder.price, sbStake:ss2, sbLink:bestUnder.link, sbMarket:'totals', polySlug:pm.slug||pm.id});
+        }
       }
-    });
-
-    if (bestSbYes) {
-      var sbProb2 = oP(bestSbYes.price);
-      var tot2 = pNoPrice + sbProb2;
-      var edge2 = (1-tot2)*100;
-      if (edge2 >= min && tot2 < 1.0) {
-        var s1b = bank*(pNoPrice/tot2);
-        var s2b = bank*(sbProb2/tot2);
-        var profit2 = (bank/tot2)-bank;
-        arbs.push({
-          polyTitle: pTitle,
-          game: game.away_team+' @ '+game.home_team,
-          sport: game.sport_title||game._sport,
-          edge: edge2,
-          roi: (profit2/bank)*100,
-          profit: profit2,
-          commenceTime: game.commence_time,
-          polySide: pOutcomes[1]||'NO',
-          polyPrice: pNoPrice,
-          polyStake: s1b,
-          sbSide: bestSbYes.name+(bestSbYes.point!=null?' '+fmt(bestSbYes.point):''),
-          sbBook: bestSbYes.book,
-          sbOdds: bestSbYes.price,
-          sbStake: s2b,
-          sbLink: bestSbYes.link,
-          sbMarket: bestSbYes.market,
-          polySlug: pm.slug||pm.id
-        });
+      // Poly Under (NO) vs Sportsbook Over
+      if (bestOver) {
+        var sbP2 = oP(bestOver.price);
+        var tt2 = pNoPrice + sbP2;
+        var ed2 = (1-tt2)*100;
+        if (ed2 >= min && tt2 < 1.0) {
+          var sss1=bank*(pNoPrice/tt2), sss2=bank*(sbP2/tt2), pr2=(bank/tt2)-bank;
+          arbs.push({polyTitle:pTitle, game:awayTeam+' @ '+homeTeam, sport:game.sport_title||game._sport, edge:ed2, roi:(pr2/bank)*100, profit:pr2, commenceTime:game.commence_time, polySide:'Under '+cls.point, polyPrice:pNoPrice, polyStake:sss1, sbSide:'Over '+bestOver.point, sbBook:bestOver.book, sbOdds:bestOver.price, sbStake:sss2, sbLink:bestOver.link, sbMarket:'totals', polySlug:pm.slug||pm.id});
+        }
       }
     }
+    // NOTE: spreads intentionally skipped for now — Polymarket rarely has clean spread markets
+    // and matching them safely requires exact line alignment
   });
 
-  arbs.sort(function(a,b){return b.edge-a.edge;});
+    arbs.sort(function(a,b){return b.edge-a.edge;});
   document.getElementById('pprog').style.display='none';
 
   var now = new Date().toLocaleTimeString();
