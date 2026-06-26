@@ -256,7 +256,7 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
   </div>
   <div class="slabel" style="margin-top:-4px;color:#555">Poly taker fee ≈0.3% (US) to 0.75% (sports). Edges shown are NET of fees.</div>
   <div class="slabel">Cloudflare Worker URL (for live prices)</div>
-  <input type="text" id="pworker" placeholder="https://your-worker.workers.dev" style="font-size:12px" />
+  <input type="text" id="pworker" value="https://poly-relay.andrewramsey14.workers.dev" placeholder="https://your-worker.workers.dev" style="font-size:12px" />
   <div class="slabel" style="margin-top:-4px;color:#555">Paste your Worker URL for accurate live order-book prices. Stored locally.</div>
   <div class="slabel">Sportsbooks to compare vs Polymarket</div>
   <div class="sports" id="pbooks">
@@ -1093,7 +1093,11 @@ async function fetchEventOdds(eventId,sport,markets,gameLabel,playerFilter,arbLa
 // ── Polymarket Arb Scanner ───────────────────────────────────
 document.getElementById('psports').addEventListener('click',function(e){var b=e.target.closest('[data-ps]');if(b)b.classList.toggle('on');});
 (function(){
-  try{ var w=localStorage.getItem('poly_worker'); if(w)document.getElementById('pworker').value=w; }catch(e){}
+  try{
+    var w=localStorage.getItem('poly_worker');
+    if(w){ document.getElementById('pworker').value=w; }
+    else { localStorage.setItem('poly_worker', document.getElementById('pworker').value.trim()); }
+  }catch(e){}
   document.getElementById('pworker').addEventListener('input',function(){
     try{ localStorage.setItem('poly_worker', this.value.trim()); }catch(e){}
   });
@@ -1194,19 +1198,19 @@ async function fetchPolyJson(url) {
 // We read the full order book and take the lowest ask level. The /price endpoint
 // was returning the bid (a few cents low), making arbs look better than reality.
 async function fetchPolyAsk(tokenId) {
-  // Grab the REAL ask = the price you pay to BUY. Polymarket's order book lists
-  // asks as resting sell orders; the BEST (lowest) ask is your buy price.
-  var book = await fetchPolyJson('https://clob.polymarket.com/book?token_id='+tokenId);
-  if (book && book.asks && book.asks.length) {
-    var asks = book.asks.map(function(a){ return parseFloat(a.price); })
-      .filter(function(p){ return p > 0.001 && p < 0.999; });
-    if (asks.length) return Math.min.apply(null, asks); // lowest ask = best buy price
-  }
-  // Fallback: /price?side=BUY returns the buy price directly
+  // Polymarket's /book endpoint is KNOWN to return stale ghost data (0.01/0.99)
+  // for active markets — confirmed in py-clob-client issue #180. The /price
+  // endpoint returns the correct LIVE price. side=BUY = the price to buy (ask).
   var buy = await fetchPolyJson('https://clob.polymarket.com/price?token_id='+tokenId+'&side=BUY');
   if (buy && buy.price != null) {
     var bp = parseFloat(buy.price);
     if (bp > 0.001 && bp < 0.999) return bp;
+  }
+  // Fallback to midpoint if /price BUY is unavailable
+  var mid = await fetchPolyJson('https://clob.polymarket.com/midpoint?token_id='+tokenId);
+  if (mid && mid.mid != null) {
+    var mp = parseFloat(mid.mid);
+    if (mp > 0.001 && mp < 0.999) return mp;
   }
   return null;
 }
