@@ -1156,9 +1156,11 @@ function fetchWithTimeout(url, ms) {
 // Per Polymarket docs: side=sell returns the best ask. /price not /book
 // (the /book endpoint serves stale ghost data).
 async function fetchPolyJson(url) {
+  // Cache-buster: proxies aggressively cache. A unique param forces a fresh pull.
+  var busted = url + (url.indexOf('?')>-1?'&':'?') + '_cb=' + Date.now() + Math.floor(Math.random()*9999);
   var proxies = [
-    'https://corsproxy.io/?'+encodeURIComponent(url),
-    'https://api.allorigins.win/raw?url='+encodeURIComponent(url)
+    'https://corsproxy.io/?'+encodeURIComponent(busted),
+    'https://api.allorigins.win/raw?url='+encodeURIComponent(busted)
   ];
   for (var pi=0; pi<proxies.length; pi++) {
     var data = await fetchWithTimeout(proxies[pi], 6000);
@@ -1288,6 +1290,12 @@ function classifyPolyMarket(title, outcomes) {
   if (/win more than|win at least|win fewer than|over \d+\.?\d* (wins|games)|under \d+\.?\d* (wins|games)|\d+\.?\d* (wins|games) in the|regular season|make the playoffs|make the postseason|reach the|qualify for/.test(t)) {
     return {type:'season_prop', valid:false};
   }
+  // GAME PROPS / micro-markets — reject. These contain question phrasing about
+  // events WITHIN a game (runs, innings, strikeouts, first to score, etc.) and
+  // must never be matched to a moneyline. This was causing 11-13% false arbs.
+  if (/will there be|run scored|first inning|any inning|score in the|first to score|first team to|how many|number of|total (runs|hits|strikeouts|points|goals)|player|home run|grand slam|stolen base|next (team|player)|margin of|exact|race to|reach \d+|by how many|winning margin|method of|both teams|either team|highest scoring|lead after/.test(t)) {
+    return {type:'game_prop', valid:false};
+  }
   // FUTURES — championship/division/award markets (matched separately against SB futures)
   if (/championship|champion|division title|conference title|win the.*title|win the.*cup|mvp|cy young|rookie of the year|award|world series|super bowl|stanley cup|nba finals|to win the|pennant|division winner|win the.*east|win the.*west|win the.*central|win the.*conference|win the.*division|win the \d{4}|\d{4} mls|\d{4} nba|\d{4} nfl|\d{4} mlb/.test(t)) {
     return {type:'futures', valid:true};
@@ -1297,8 +1305,13 @@ function classifyPolyMarket(title, outcomes) {
     var pointMatch = t.match(/(\d+\.?\d*)/);
     return {type:'totals', valid:true, point: pointMatch?parseFloat(pointMatch[1]):null};
   }
-  // Moneyline — single-game head to head ONLY: "X vs Y" or "X @ Y" or "Will X beat Y"
-  if (/ vs\.? | @ | v |will .* (beat|defeat)/.test(t)) {
+  // Moneyline — single-game head to head ONLY, phrased as a clean matchup.
+  // Must contain "vs"/"@" AND must NOT contain a question mark (props are questions).
+  if (/ vs\.? | @ | v /.test(t) && t.indexOf('?') === -1) {
+    return {type:'h2h', valid:true};
+  }
+  // "Will X beat/defeat Y" is a clean moneyline question
+  if (/will .* (beat|defeat) /.test(t)) {
     return {type:'h2h', valid:true};
   }
   return {type:'unknown', valid:false};
@@ -1590,7 +1603,7 @@ async function scanPoly() {
 
     // Sanity filter: real arbs are rarely above 15%. Anything higher is almost
     // always a bad cross-market match (e.g. season prop matched to a game).
-    var MAX_REALISTIC_EDGE = 15;
+    var MAX_REALISTIC_EDGE = 8;
     arbs = arbs.filter(function(x){ return x.edge <= MAX_REALISTIC_EDGE; });
     arbs.sort(function(a,b){return b.edge-a.edge;});
 
