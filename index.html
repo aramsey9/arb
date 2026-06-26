@@ -1194,44 +1194,20 @@ async function fetchPolyJson(url) {
 // We read the full order book and take the lowest ask level. The /price endpoint
 // was returning the bid (a few cents low), making arbs look better than reality.
 async function fetchPolyAsk(tokenId) {
-  // The Polymarket app DISPLAYS the midpoint. To BUY you pay the ask, which is
-  // the midpoint plus half the spread. We anchor to the midpoint (so our number
-  // matches what you see in the app) and read the real spread from the book to
-  // add the correct half-spread on top. This fixes the "always cheaper" bug,
-  // which was caused by reading the bid side of the book.
-  var mid = null, bestBid = null, bestAsk = null;
-
-  // Get the order book to read the true best bid and best ask
+  // Grab the REAL ask = the price you pay to BUY. Polymarket's order book lists
+  // asks as resting sell orders; the BEST (lowest) ask is your buy price.
   var book = await fetchPolyJson('https://clob.polymarket.com/book?token_id='+tokenId);
-  if (book) {
-    if (book.bids && book.bids.length) {
-      var bidPrices = book.bids.map(function(b){return parseFloat(b.price);}).filter(function(p){return p>0.001&&p<0.999;});
-      if (bidPrices.length) bestBid = Math.max.apply(null, bidPrices); // highest bid = best bid
-    }
-    if (book.asks && book.asks.length) {
-      var askPrices = book.asks.map(function(a){return parseFloat(a.price);}).filter(function(p){return p>0.001&&p<0.999;});
-      if (askPrices.length) bestAsk = Math.min.apply(null, askPrices); // lowest ask = best ask
-    }
+  if (book && book.asks && book.asks.length) {
+    var asks = book.asks.map(function(a){ return parseFloat(a.price); })
+      .filter(function(p){ return p > 0.001 && p < 0.999; });
+    if (asks.length) return Math.min.apply(null, asks); // lowest ask = best buy price
   }
-
-  // If we have BOTH sides and they make sense (ask > bid), the ask is what you pay
-  if (bestBid != null && bestAsk != null && bestAsk > bestBid && (bestAsk - bestBid) < 0.15) {
-    return bestAsk;
+  // Fallback: /price?side=BUY returns the buy price directly
+  var buy = await fetchPolyJson('https://clob.polymarket.com/price?token_id='+tokenId+'&side=BUY');
+  if (buy && buy.price != null) {
+    var bp = parseFloat(buy.price);
+    if (bp > 0.001 && bp < 0.999) return bp;
   }
-
-  // Otherwise anchor to the midpoint (matches the app's displayed price)
-  var midData = await fetchPolyJson('https://clob.polymarket.com/midpoint?token_id='+tokenId);
-  if (midData && midData.mid != null) {
-    mid = parseFloat(midData.mid);
-  } else if (bestBid != null && bestAsk != null) {
-    mid = (bestBid + bestAsk) / 2;
-  }
-  if (mid != null && mid > 0.015 && mid < 0.985) {
-    // Add half of a realistic spread (~2c) to approximate the ask you'd pay
-    var halfSpread = (bestBid != null && bestAsk != null) ? (bestAsk - bestBid)/2 : 0.015;
-    return Math.min(mid + halfSpread, 0.985);
-  }
-
   return null;
 }
 
@@ -1655,14 +1631,11 @@ async function scanPoly() {
     var verified = [];
     for (var vi=0; vi<toVerify.length; vi++) {
       var a = toVerify[vi];
-      if (!a.polyToken) { a.liveVerified=false; a.unverified=true; verified.push(a); continue; }
+      if (!a.polyToken) { continue; } // no token = can't verify = drop
       setPProgress(90+Math.round((vi/toVerify.length)*9), 'Verifying live prices '+(vi+1)+'/'+toVerify.length+'...');
       var liveAsk = await fetchPolyAsk(a.polyToken);
       if (liveAsk == null) {
-        // Could NOT verify live price — mark clearly, do not pretend it's live
-        a.liveVerified = false;
-        a.unverified = true;
-        verified.push(a);
+        // Could NOT fetch the real ask — DROP it. Never show a stale-price arb.
         continue;
       }
       // Recompute edge with the REAL price you'd pay on Polymarket
@@ -1686,7 +1659,7 @@ async function scanPoly() {
 
   var now = new Date().toLocaleTimeString();
   var mktLabels = {'h2h':'Moneyline','spreads':'Spread','totals':'Total','props':'Props','futures':'Futures'};
-  var h = '<div class="stats">'+polyMarkets.length+' Poly markets · '+allOddsGames.length+' games · '+arbs.length+' arbs · '+now+'</div>';
+  var h = '<div class="stats">'+polyMarkets.length+' Poly markets · '+allOddsGames.length+' games · '+arbs.length+' verified arbs · '+now+'</div>';
 
   if (!arbs.length) {
     h += '<div class="msg">No Polymarket vs sportsbook arbs above '+min+'% found.<br><br>Try lowering Min % to 0.2% or adding more sports.</div>';
