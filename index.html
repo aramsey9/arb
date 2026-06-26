@@ -1155,24 +1155,40 @@ function fetchWithTimeout(url, ms) {
 // Fetch the LIVE best ask price (what you'd pay to BUY) from CLOB.
 // Per Polymarket docs: side=sell returns the best ask. /price not /book
 // (the /book endpoint serves stale ghost data).
-async function fetchPolyAsk(tokenId) {
-  // To BUY a token you pay the ask. Polymarket's /price with side=BUY returns
-  // the price to buy (capitalized BUY/SELL per the official client). We also
-  // cross-check the midpoint so a bad/blocked response doesn't pass silently.
-  var priceUrl = 'https://clob.polymarket.com/price?token_id='+tokenId+'&side=BUY';
+async function fetchPolyJson(url) {
   var proxies = [
-    'https://corsproxy.io/?'+encodeURIComponent(priceUrl),
-    'https://api.allorigins.win/raw?url='+encodeURIComponent(priceUrl)
+    'https://corsproxy.io/?'+encodeURIComponent(url),
+    'https://api.allorigins.win/raw?url='+encodeURIComponent(url)
   ];
   for (var pi=0; pi<proxies.length; pi++) {
     var data = await fetchWithTimeout(proxies[pi], 6000);
-    if (data && data.price != null) {
-      var p = parseFloat(data.price);
-      // Reject ghost/invalid values (0.01/0.99 are the known stale book sentinels)
-      if (p > 0.015 && p < 0.985) return p;
-    }
+    if (data) return data;
   }
   return null;
+}
+
+// Return the TRUE price you'd pay to BUY this token (the best ask).
+// The site shows the midpoint, but a market buy pays the ask, which is higher.
+// We fetch both side prices and the midpoint, then take the most conservative
+// (highest) sensible value so the arb is never overstated.
+async function fetchPolyAsk(tokenId) {
+  var base = 'https://clob.polymarket.com/price?token_id='+tokenId;
+  var buyData = await fetchPolyJson(base+'&side=BUY');
+  var sellData = await fetchPolyJson(base+'&side=SELL');
+  var midData = await fetchPolyJson('https://clob.polymarket.com/midpoint?token_id='+tokenId);
+
+  var candidates = [];
+  if (buyData && buyData.price != null) candidates.push(parseFloat(buyData.price));
+  if (sellData && sellData.price != null) candidates.push(parseFloat(sellData.price));
+  if (midData && midData.mid != null) candidates.push(parseFloat(midData.mid));
+
+  // Filter out ghost/invalid sentinels
+  candidates = candidates.filter(function(p){ return p > 0.015 && p < 0.985; });
+  if (!candidates.length) return null;
+
+  // The ASK (buy price) is the HIGHEST of the side quotes. Taking the max here
+  // is conservative: it never makes the arb look better than reality.
+  return Math.max.apply(null, candidates);
 }
 
 async function pmFetch(url) {
@@ -1577,11 +1593,14 @@ async function scanPoly() {
   // live CLOB ask (the price you'd actually PAY). side=sell returns best ask.
   // Only keep arbs that still clear after using the real executable price.
   if (arbs.length) {
-    setPProgress(90, 'Verifying live prices on '+arbs.length+' candidates...');
+    // Verify only the top candidates by raw edge (already sorted) to stay fast.
+    var toVerify = arbs.slice(0, 40);
+    setPProgress(90, 'Verifying live prices on '+toVerify.length+' candidates...');
     var verified = [];
-    for (var vi=0; vi<arbs.length; vi++) {
-      var a = arbs[vi];
+    for (var vi=0; vi<toVerify.length; vi++) {
+      var a = toVerify[vi];
       if (!a.polyToken) { a.liveVerified=false; a.unverified=true; verified.push(a); continue; }
+      setPProgress(90+Math.round((vi/toVerify.length)*9), 'Verifying live prices '+(vi+1)+'/'+toVerify.length+'...');
       var liveAsk = await fetchPolyAsk(a.polyToken);
       if (liveAsk == null) {
         // Could NOT verify live price — mark clearly, do not pretend it's live
