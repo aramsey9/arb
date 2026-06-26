@@ -248,8 +248,13 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
 <div id="view-poly" class="view">
   <div class="row">
     <input type="number" id="pbank" value="1000" placeholder="Bankroll $" />
-    <input type="number" id="pmine" value="0.5" placeholder="Min %" step="0.1" />
+    <input type="number" id="pmine" value="0.5" placeholder="Min % (net)" step="0.1" />
   </div>
+  <div class="row">
+    <input type="number" id="pfee" value="0.75" placeholder="Poly fee %" step="0.05" />
+    <input type="number" id="psbfee" value="0" placeholder="Book fee %" step="0.05" />
+  </div>
+  <div class="slabel" style="margin-top:-4px;color:#555">Poly taker fee ≈0.3% (US) to 0.75% (sports). Edges shown are NET of fees.</div>
   <div class="slabel">Sportsbooks to compare vs Polymarket</div>
   <div class="sports" id="pbooks">
     <div class="sb on" data-pb="fanduel">FanDuel</div>
@@ -1312,6 +1317,10 @@ async function scanPoly() {
   if (!key) { document.getElementById('pout').innerHTML='<div class="err">Paste your Odds API key at the top first.</div>'; return; }
   var bank = parseFloat(document.getElementById('pbank').value)||1000;
   var min = parseFloat(document.getElementById('pmine').value)||0.5;
+  var polyFeePct = parseFloat(document.getElementById('pfee').value)||0;
+  var sbFeePct = parseFloat(document.getElementById('psbfee').value)||0;
+  // Total round-trip fee drag (Poly side + optional book side), as a fraction of stake
+  var feeDrag = (polyFeePct + sbFeePct) / 100;
   var sportKeys = getPSports();
   var books = getPBooks().join(',');
   if (!sportKeys.length) { document.getElementById('pout').innerHTML='<div class="err">Select at least one sport.</div>'; return; }
@@ -1467,9 +1476,9 @@ async function scanPoly() {
       if (bestNo) {
         var sbProb = oP(bestNo.price);
         var tot = pYesPrice + sbProb;
-        var edge = (1-tot)*100;
+        var edge = (1-tot)*100 - feeDrag*100;
         if (edge >= min && tot < 1.0) {
-          var s1 = bank*(pYesPrice/tot), s2 = bank*(sbProb/tot), profit = (bank/tot)-bank;
+          var s1 = bank*(pYesPrice/tot), s2 = bank*(sbProb/tot), profit = ((bank/tot)-bank) - bank*feeDrag;
           arbs.push({polyTitle:pTitle, game:awayTeam+' @ '+homeTeam, sport:game.sport_title||game._sport, edge:edge, roi:(profit/bank)*100, profit:profit, commenceTime:game.commence_time, polySide:'YES ('+yesTeam+' wins)', polyPrice:pYesPrice, polyStake:s1, sbSide:bestNo.name+' ML', sbBook:bestNo.book, sbOdds:bestNo.price, sbStake:s2, sbLink:bestNo.link, sbMarket:'h2h', polySlug:pm.slug||pm.id});
         }
       }
@@ -1477,9 +1486,9 @@ async function scanPoly() {
       if (bestYes) {
         var sbProb2 = oP(bestYes.price);
         var tot2 = pNoPrice + sbProb2;
-        var edge2 = (1-tot2)*100;
+        var edge2 = (1-tot2)*100 - feeDrag*100;
         if (edge2 >= min && tot2 < 1.0) {
-          var s1b = bank*(pNoPrice/tot2), s2b = bank*(sbProb2/tot2), profit2 = (bank/tot2)-bank;
+          var s1b = bank*(pNoPrice/tot2), s2b = bank*(sbProb2/tot2), profit2 = ((bank/tot2)-bank) - bank*feeDrag;
           arbs.push({polyTitle:pTitle, game:awayTeam+' @ '+homeTeam, sport:game.sport_title||game._sport, edge:edge2, roi:(profit2/bank)*100, profit:profit2, commenceTime:game.commence_time, polySide:'NO ('+noTeam+' wins)', polyPrice:pNoPrice, polyStake:s1b, sbSide:bestYes.name+' ML', sbBook:bestYes.book, sbOdds:bestYes.price, sbStake:s2b, sbLink:bestYes.link, sbMarket:'h2h', polySlug:pm.slug||pm.id});
         }
       }
@@ -1509,9 +1518,9 @@ async function scanPoly() {
       if (bestUnder) {
         var sbP = oP(bestUnder.price);
         var tt = pYesPrice + sbP;
-        var ed = (1-tt)*100;
+        var ed = (1-tt)*100 - feeDrag*100;
         if (ed >= min && tt < 1.0) {
-          var ss1=bank*(pYesPrice/tt), ss2=bank*(sbP/tt), pr=(bank/tt)-bank;
+          var ss1=bank*(pYesPrice/tt), ss2=bank*(sbP/tt), pr=((bank/tt)-bank) - bank*feeDrag;
           arbs.push({polyTitle:pTitle, game:awayTeam+' @ '+homeTeam, sport:game.sport_title||game._sport, edge:ed, roi:(pr/bank)*100, profit:pr, commenceTime:game.commence_time, polySide:'Over '+cls.point, polyPrice:pYesPrice, polyStake:ss1, sbSide:'Under '+bestUnder.point, sbBook:bestUnder.book, sbOdds:bestUnder.price, sbStake:ss2, sbLink:bestUnder.link, sbMarket:'totals', polySlug:pm.slug||pm.id});
         }
       }
@@ -1519,9 +1528,9 @@ async function scanPoly() {
       if (bestOver) {
         var sbP2 = oP(bestOver.price);
         var tt2 = pNoPrice + sbP2;
-        var ed2 = (1-tt2)*100;
+        var ed2 = (1-tt2)*100 - feeDrag*100;
         if (ed2 >= min && tt2 < 1.0) {
-          var sss1=bank*(pNoPrice/tt2), sss2=bank*(sbP2/tt2), pr2=(bank/tt2)-bank;
+          var sss1=bank*(pNoPrice/tt2), sss2=bank*(sbP2/tt2), pr2=((bank/tt2)-bank) - bank*feeDrag;
           arbs.push({polyTitle:pTitle, game:awayTeam+' @ '+homeTeam, sport:game.sport_title||game._sport, edge:ed2, roi:(pr2/bank)*100, profit:pr2, commenceTime:game.commence_time, polySide:'Under '+cls.point, polyPrice:pNoPrice, polyStake:sss1, sbSide:'Over '+bestOver.point, sbBook:bestOver.book, sbOdds:bestOver.price, sbStake:sss2, sbLink:bestOver.link, sbMarket:'totals', polySlug:pm.slug||pm.id});
         }
       }
@@ -1544,7 +1553,7 @@ async function scanPoly() {
   if (!arbs.length) {
     h += '<div class="msg">No Polymarket vs sportsbook arbs above '+min+'% found.<br><br>Try lowering Min % to 0.2% or adding more sports.</div>';
   } else {
-    h += '<div class="alert-bar">📊 '+arbs.length+' Poly arb'+(arbs.length>1?'s':'')+' found at '+now+'</div>';
+    h += '<div class="alert-bar">📊 '+arbs.length+' Poly arb'+(arbs.length>1?'s':'')+' found at '+now+' · edges NET of '+(polyFeePct+sbFeePct).toFixed(2)+'% fees</div>';
     arbs.forEach(function(x) {
       var mktLabel = mktLabels[x.sbMarket]||x.sbMarket||'';
       h += '<div class="card'+(x.edge>2?' hot':'')+'">';
