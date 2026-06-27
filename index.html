@@ -125,7 +125,7 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
 </head>
 <body>
 <h1>ArbEdge</h1>
-<div class="sub">TN books + 🌊 Bovada · BetOnline · BetUS · LowVig · MyBookie · 🎯 Pinnacle</div>
+<div class="sub">TN books + 🌊 Bovada · BetOnline · BetUS · LowVig · MyBookie · BetAnySports</div>
 <input type="text" id="key" placeholder="Paste Odds API key..." />
 
 <div class="tab-bar">
@@ -185,8 +185,6 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
   <div class="sb on" data-b="williamhill_us">Caesars</div>
   <div class="sb on" data-b="fanatics">Fanatics</div>
   <div class="sb on" data-b="thescore">theScore Bet</div>
-  <div class="sb on" data-b="hardrockbet">Hard Rock</div>
-  <div class="sb on" data-b="ballybet">Bally Bet</div>
   <div class="sb on" data-b="espnbet">ESPN Bet</div>
   <div class="sb on" data-b="bet365">Bet365</div>
   <div class="sb on" data-b="bovada">🌊 Bovada</div>
@@ -195,7 +193,6 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
   <div class="sb on" data-b="lowvig">🌊 LowVig</div>
   <div class="sb on" data-b="mybookieag">🌊 MyBookie</div>
   <div class="sb on" data-b="betanysports">🌊 BetAnySports</div>
-  <div class="sb on" data-b="pinnacle">🎯 Pinnacle</div>
 </div>
 <div class="slabel">Game Status</div>
 <div class="filters" id="filters">
@@ -274,8 +271,6 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
     <div class="sb on" data-pb="williamhill_us">Caesars</div>
     <div class="sb on" data-pb="fanatics">Fanatics</div>
     <div class="sb on" data-pb="thescore">theScore</div>
-    <div class="sb on" data-pb="hardrockbet">Hard Rock</div>
-    <div class="sb on" data-pb="ballybet">Bally Bet</div>
     <div class="sb on" data-pb="espnbet">ESPN Bet</div>
     <div class="sb on" data-pb="bet365">Bet365</div>
   </div>
@@ -523,7 +518,7 @@ function isLive(t){return new Date(t).getTime()<=Date.now()}
 function passesFilter(game,mode){if(mode==='all')return true;var live=isLive(game.commence_time);return mode==='live'?live:!live}
 
 // ── Book risk (lower = place first) ──────────────────────
-var BOOK_RISK={'bally':1,'thescore':2,'hard rock':3,'espn':3,'fanatics':4,'betmgm':5,'caesars':6,'williamhill':6,'bet365':6,'draftkings':7,'fanduel':8};
+var BOOK_RISK={'bovada':1,'betonline':1,'betus':1,'lowvig':1,'mybookie':1,'betany':1,'thescore':2,'espn':3,'fanatics':4,'betmgm':5,'caesars':6,'williamhill':6,'bet365':6,'draftkings':7,'fanduel':8};
 function bookRisk(name){var n=name.toLowerCase();for(var k in BOOK_RISK){if(n.indexOf(k)>-1)return BOOK_RISK[k]}return 5}
 function placeFirstNote(b1,b2){var r1=bookRisk(b1),r2=bookRisk(b2);if(r1===r2)return '';var first=r1<r2?b1:b2;return '<div class="place-first-note">⚠️ Place <strong>'+first+'</strong> first — smaller book, higher limit risk</div>'}
 
@@ -826,7 +821,7 @@ async function scanGolf(key,bank,min,allArbs,filterMode,BOOKS){
     var count=0;
     for(var i=0;i<tours.length;i++){
       var t=tours[i];
-      var res=await fetch('https://api.the-odds-api.com/v4/sports/'+t.key+'/odds/?apiKey='+key+'&regions=us,us2,eu&markets=h2h&oddsFormat=american&bookmakers='+BOOKS+'&includeLinks=true');
+      var res=await fetch('https://api.the-odds-api.com/v4/sports/'+t.key+'/odds/?apiKey='+key+'&regions=us,us2&markets=h2h&oddsFormat=american&bookmakers='+BOOKS+'&includeLinks=true');
       var data=await res.json();
       if(!Array.isArray(data))continue;
       data.forEach(function(matchup){
@@ -882,7 +877,7 @@ async function scanAll(){
   if(stdSports.length){
     var fetchMkts=coreMkts.length?coreMkts:['h2h'];
     await Promise.all(stdSports.map(function(sp){
-      return fetch('https://api.the-odds-api.com/v4/sports/'+sp+'/odds/?apiKey='+key+'&regions=us,us2,eu&markets='+fetchMkts.join(',')+'&oddsFormat=american&bookmakers='+BOOKS+'&includeLinks=true&includeBetLimits=true')
+      return fetch('https://api.the-odds-api.com/v4/sports/'+sp+'/odds/?apiKey='+key+'&regions=us,us2&markets='+fetchMkts.join(',')+'&oddsFormat=american&bookmakers='+BOOKS+'&includeLinks=true&includeBetLimits=true')
       .then(function(r){return r.json()}).then(function(games){
         if(!Array.isArray(games))return;
         games.forEach(function(g){g._sport=sp});
@@ -924,7 +919,7 @@ async function scanAll(){
         var gpKeys=doGameProps?(GAME_PROP_MARKETS[sp]||[]):[];
         var mkts=altMkts.concat(propKeys).concat(gpKeys);
         if(!mkts.length)return Promise.resolve();
-        return fetch('https://api.the-odds-api.com/v4/sports/'+sp+'/events/'+game.id+'/odds?apiKey='+key+'&regions=us,us2,eu&markets='+mkts.join(',')+'&oddsFormat=american&bookmakers='+BOOKS+'&includeLinks=true&includeBetLimits=true')
+        return fetch('https://api.the-odds-api.com/v4/sports/'+sp+'/events/'+game.id+'/odds?apiKey='+key+'&regions=us,us2&markets='+mkts.join(',')+'&oddsFormat=american&bookmakers='+BOOKS+'&includeLinks=true&includeBetLimits=true')
         .then(function(r){return r.json()}).then(function(data){
           if(!data||!data.bookmakers)return;
           var md={};altMkts.forEach(function(m){md[m]=[]});
@@ -1045,7 +1040,7 @@ async function runLookup(){
   out.innerHTML='<div class="msg">Searching...</div>';
   try{
     var BOOKS=getBooks().join(',');
-    var res=await fetch('https://api.the-odds-api.com/v4/sports/'+sport+'/odds/?apiKey='+key+'&regions=us,us2,eu&markets=h2h&oddsFormat=american&bookmakers='+BOOKS);
+    var res=await fetch('https://api.the-odds-api.com/v4/sports/'+sport+'/odds/?apiKey='+key+'&regions=us,us2&markets=h2h&oddsFormat=american&bookmakers='+BOOKS);
     var games=await res.json();
     if(!Array.isArray(games)||!games.length){out.innerHTML='<div class="msg">No games found for this sport.</div>';return}
     var matched=games.filter(function(g){return g.home_team.toLowerCase().includes(query)||g.away_team.toLowerCase().includes(query)});
@@ -1074,7 +1069,7 @@ async function fetchEventOdds(eventId,sport,markets,gameLabel,playerFilter,arbLa
   var out=document.getElementById('lout');
   out.innerHTML='<div class="msg">Loading lines...</div>';
   try{
-    var res=await fetch('https://api.the-odds-api.com/v4/sports/'+sport+'/events/'+eventId+'/odds?apiKey='+key+'&regions=us,us2,eu&markets='+markets+'&oddsFormat=american&bookmakers='+BOOKS+'&includeLinks=true');
+    var res=await fetch('https://api.the-odds-api.com/v4/sports/'+sport+'/events/'+eventId+'/odds?apiKey='+key+'&regions=us,us2&markets='+markets+'&oddsFormat=american&bookmakers='+BOOKS+'&includeLinks=true');
     var data=await res.json();
     if(!data||!data.bookmakers){out.innerHTML='<div class="msg">No lines returned.</div>';return}
     var groups={};
@@ -1525,7 +1520,7 @@ async function scanPoly() {
       var sp = sportKeys[si];
       // Fetch core markets + props
       var mkts = 'h2h,spreads,totals';
-      var res = await fetch('https://api.the-odds-api.com/v4/sports/'+sp+'/odds/?apiKey='+key+'&regions=us,us2,eu&markets='+mkts+'&oddsFormat=american&bookmakers='+books+'&includeLinks=true');
+      var res = await fetch('https://api.the-odds-api.com/v4/sports/'+sp+'/odds/?apiKey='+key+'&regions=us,us2&markets='+mkts+'&oddsFormat=american&bookmakers='+books+'&includeLinks=true');
       if (res.ok) {
         var games = await res.json();
         if (Array.isArray(games)) {
@@ -1546,7 +1541,7 @@ async function scanPoly() {
     var fmkts = FUTURES_MARKETS[fsp];
     if (!fmkts || !fmkts.length) continue;
     try {
-      var fres = await fetch('https://api.the-odds-api.com/v4/sports/'+fsp+'/odds/?apiKey='+key+'&regions=us,us2,eu&markets='+fmkts.join(',')+'&oddsFormat=american&bookmakers='+books+'&includeLinks=true');
+      var fres = await fetch('https://api.the-odds-api.com/v4/sports/'+fsp+'/odds/?apiKey='+key+'&regions=us,us2&markets='+fmkts.join(',')+'&oddsFormat=american&bookmakers='+books+'&includeLinks=true');
       if (fres.ok) {
         var fgames = await fres.json();
         if (Array.isArray(fgames)) {
