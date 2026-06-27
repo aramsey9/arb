@@ -296,7 +296,7 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
 <div id="view-offshore" class="view">
   <div class="slabel">OddsPapi API Key</div>
   <input type="password" id="opkey" placeholder="Paste OddsPapi API key (oddspapi.io)" style="font-size:12px" />
-  <div class="slabel" style="margin-top:-4px;color:#555">Free tier = 250 req/mo. Each scan uses ~2 requests total. Stored locally.</div>
+  <div class="slabel" style="margin-top:-4px;color:#555">Free tier = 250 req/mo. Each scan uses ~6 requests (1 per book). Stored locally.</div>
   <div class="row">
     <input type="number" id="obank" value="1000" placeholder="Bankroll $" />
     <input type="number" id="omine" value="0.5" placeholder="Min %" step="0.1" />
@@ -311,7 +311,7 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
   </select>
   <div class="slabel">Max games to scan (limits API usage)</div>
   <input type="number" id="omax" value="5" min="1" max="30" style="width:100px;margin-bottom:10px" />
-  <div class="slabel" style="color:#555;margin-top:-4px">Bookmaker.eu vs your TN books. ~2 requests per scan.</div>
+  <div class="slabel" style="color:#555;margin-top:-4px">Bookmaker.eu vs DK/MGM/FanDuel/Caesars. ~6 requests per scan.</div>
   <button class="scan" onclick="scanOffshore()" style="background:#38bdf8">🌊 Scan Offshore Arbs</button>
   <div id="oprog" style="display:none" class="prog"><span id="oprogText">...</span></div>
   <div id="oout"></div>
@@ -2030,33 +2030,52 @@ async function scanOffshore(){
 
   // 2) One call gets fixtures + odds across ALL books for these tournaments.
   //    oddsFormat=decimal, no bookmaker filter = all books.
-  oSetProg('Fetching odds across all books...');
-  // Your chosen books. (Fanatics & ESPN Bet are not in OddsPapi's catalog.)
-  // bookmaker.eu = offshore sharp; the rest are your TN-legal soft books.
-  var OFFSHORE_BOOKS = 'bookmaker.eu,draftkings,betmgm,fanduel,caesars';
-  var oUrl = BASE+'/odds-by-tournaments?apiKey='+encodeURIComponent(key)+'&tournamentIds='+tIds+'&bookmakers='+OFFSHORE_BOOKS+'&oddsFormat=decimal';
-  var oddsResp = await opFetchRaw(oUrl);
-  // Response may be an array of fixtures, a single fixture object, or {data:[...]}
-  var fixtures = null;
-  if (Array.isArray(oddsResp)) fixtures = oddsResp;
-  else if (oddsResp && Array.isArray(oddsResp.data)) fixtures = oddsResp.data;
-  else if (oddsResp && oddsResp.fixtureId) fixtures = [oddsResp]; // single fixture
-  else if (oddsResp && oddsResp.fixtures && Array.isArray(oddsResp.fixtures)) fixtures = oddsResp.fixtures;
+  oSetProg('Fetching odds (one book at a time)...');
+  // Free tier allows only ONE bookmaker per odds-by-tournaments call.
+  // So loop each book separately and merge into a combined fixture map.
+  var WANT_BOOKS = ['bookmaker.eu','draftkings','betmgm','fanduel','caesars'];
+  var merged = {}; // fixtureId -> { fixture meta, bookmakerOdds: {book: {...}} }
+  var anyOk = false, lastErr = '';
+  for (var bi=0; bi<WANT_BOOKS.length; bi++){
+    var bk = WANT_BOOKS[bi];
+    oSetProg('Fetching '+bk+' ('+(bi+1)+'/'+WANT_BOOKS.length+')...');
+    var u = BASE+'/odds-by-tournaments?apiKey='+encodeURIComponent(key)+'&tournamentIds='+tIds+'&bookmakers='+encodeURIComponent(bk)+'&oddsFormat=decimal';
+    var resp = await opFetchRaw(u);
+    var arr = null;
+    if (Array.isArray(resp)) arr = resp;
+    else if (resp && Array.isArray(resp.data)) arr = resp.data;
+    else if (resp && resp.fixtureId) arr = [resp];
+    else if (resp && resp.fixtures && Array.isArray(resp.fixtures)) arr = resp.fixtures;
+    if (!arr){
+      if (resp && typeof resp==='object') lastErr = resp.error ? (resp.error.message||resp.error) : (resp.message||JSON.stringify(resp).slice(0,160));
+      continue; // skip this book, try the rest
+    }
+    anyOk = true;
+    arr.forEach(function(fx){
+      if (!fx || !fx.fixtureId) return;
+      if (!merged[fx.fixtureId]){
+        merged[fx.fixtureId] = {
+          fixtureId:fx.fixtureId, participant1Id:fx.participant1Id, participant2Id:fx.participant2Id,
+          participant1Name:fx.participant1Name, participant2Name:fx.participant2Name,
+          startTime:fx.startTime, hasOdds:fx.hasOdds, bookmakerOdds:{}
+        };
+      }
+      if (fx.bookmakerOdds){
+        Object.keys(fx.bookmakerOdds).forEach(function(b){ merged[fx.fixtureId].bookmakerOdds[b] = fx.bookmakerOdds[b]; });
+      }
+    });
+  }
 
-  if(!fixtures){
+  if (!anyOk){
     document.getElementById('oprog').style.display='none';
-    var od='';
-    if(oddsResp && typeof oddsResp==='object') od = oddsResp.error ? (oddsResp.error.message||oddsResp.error) : (oddsResp.message||JSON.stringify(oddsResp).slice(0,200));
-    else if(oddsResp===null) od='no response';
-    out.innerHTML='<div class="err">Could not load odds.<br><br><strong>OddsPapi said:</strong> '+(od||'unexpected format')+'</div>';
+    out.innerHTML='<div class="err">Could not load odds.<br><br><strong>OddsPapi said:</strong> '+(lastErr||'no data')+'</div>';
     return;
   }
 
-  // Only upcoming games with odds, capped to maxGames
   var nowMs = Date.now();
-  var games = fixtures.filter(function(f){
+  var games = Object.keys(merged).map(function(k){ return merged[k]; }).filter(function(f){
     var st = f.startTime ? new Date(f.startTime).getTime() : 0;
-    return f.hasOdds && f.bookmakerOdds && st > nowMs;
+    return f.hasOdds && f.bookmakerOdds && Object.keys(f.bookmakerOdds).length && st > nowMs;
   }).slice(0, maxGames);
 
   if(!games.length){
