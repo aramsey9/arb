@@ -132,6 +132,7 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
   <button class="tab-btn active" id="tab-scanner" onclick="switchTab('scanner')">🔍 Scanner</button>
   <button class="tab-btn" id="tab-lookup" onclick="switchTab('lookup')">📋 Line Lookup</button>
   <button class="tab-btn" id="tab-poly" onclick="switchTab('poly')">📊 Poly Arb</button>
+  <button class="tab-btn" id="tab-offshore" onclick="switchTab('offshore')">🌊 Offshore</button>
   <button class="tab-btn" id="tab-notify" onclick="switchTab('notify')">🔔 Notify</button>
 </div>
 
@@ -292,6 +293,30 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
   <div id="pout"></div>
 </div>
 
+<div id="view-offshore" class="view">
+  <div class="slabel">OddsPapi API Key</div>
+  <input type="password" id="opkey" placeholder="Paste OddsPapi API key (oddspapi.io)" style="font-size:12px" />
+  <div class="slabel" style="margin-top:-4px;color:#555">Free tier = 250 req/mo. Each scan uses ~1 + 1 per game. Stored locally.</div>
+  <div class="row">
+    <input type="number" id="obank" value="1000" placeholder="Bankroll $" />
+    <input type="number" id="omine" value="0.5" placeholder="Min %" step="0.1" />
+  </div>
+  <div class="slabel">Sport</div>
+  <select id="osport" style="margin-bottom:10px">
+    <option value="16">⚾ MLB (Baseball)</option>
+    <option value="11">🏀 NBA (Basketball)</option>
+    <option value="14">🏈 NFL (Am. Football)</option>
+    <option value="17">🏒 NHL (Ice Hockey)</option>
+    <option value="10">⚽ Soccer</option>
+  </select>
+  <div class="slabel">Max games to scan (limits API usage)</div>
+  <input type="number" id="omax" value="5" min="1" max="30" style="width:100px;margin-bottom:10px" />
+  <div class="slabel" style="color:#555;margin-top:-4px">5 games ≈ 6 requests. You have 250/mo on free tier.</div>
+  <button class="scan" onclick="scanOffshore()" style="background:#38bdf8">🌊 Scan Offshore Arbs</button>
+  <div id="oprog" style="display:none" class="prog"><span id="oprogText">...</span></div>
+  <div id="oout"></div>
+</div>
+
 <div id="view-notify" class="view">
   <div class="sch-box" id="schBox">
     <div class="sch-title">⏰ Background Scanner<span class="sch-status off" id="schStatus">OFF</span></div>
@@ -360,7 +385,7 @@ var ARB_CACHE=[];
 
 // ── Tab switching ──────────────────────────────────────────
 function switchTab(tab){
-  ['scanner','lookup','poly','notify'].forEach(function(t){
+  ['scanner','lookup','poly','offshore','notify'].forEach(function(t){
     document.getElementById('tab-'+t).classList.remove('active');
     document.getElementById('view-'+t).classList.remove('active');
   });
@@ -1914,6 +1939,120 @@ async function saveSchedulerSettings(){
 }
 
 function startScan(){scanAll()}
+
+// ── Offshore (OddsPapi) ────────────────────────────────────
+(function(){
+  try{ var k=localStorage.getItem('oddspapi_key'); if(k)document.getElementById('opkey').value=k; }catch(e){}
+  document.getElementById('opkey').addEventListener('input',function(){
+    try{ localStorage.setItem('oddspapi_key', this.value.trim()); }catch(e){}
+  });
+})();
+
+// Fetch through the Cloudflare Worker (reuses poly_worker) to dodge CORS
+async function opFetch(url){
+  var worker = getWorkerUrl();
+  var tries = [];
+  if (worker) tries.push(worker + '/?url=' + encodeURIComponent(url));
+  tries.push(url); // direct (OddsPapi may allow CORS)
+  tries.push('https://corsproxy.io/?'+encodeURIComponent(url));
+  for (var i=0;i<tries.length;i++){
+    var d = await fetchWithTimeout(tries[i], 8000);
+    if (d) return d;
+  }
+  return null;
+}
+
+function oSetProg(t){ document.getElementById('oprog').style.display='block'; document.getElementById('oprogText').textContent=t; }
+
+async function scanOffshore(){
+  var key = document.getElementById('opkey').value.trim();
+  var bank = parseFloat(document.getElementById('obank').value)||1000;
+  var min = parseFloat(document.getElementById('omine').value)||0.5;
+  var sportId = document.getElementById('osport').value;
+  var maxGames = parseInt(document.getElementById('omax').value)||5;
+  var out = document.getElementById('oout');
+  if(!key){ out.innerHTML='<div class="err">Paste your OddsPapi API key first. Get one free at oddspapi.io.</div>'; return; }
+
+  var BASE='https://api.oddspapi.io/v4';
+  oSetProg('Fetching fixtures...');
+  out.innerHTML='';
+
+  // 1) Fixtures for the next 2 days
+  var now=new Date();
+  var to=new Date(now.getTime()+2*24*60*60*1000);
+  function iso(d){ return d.toISOString().split('.')[0]+'Z'; }
+  var fxUrl = BASE+'/fixtures?apiKey='+encodeURIComponent(key)+'&sportId='+sportId+'&from='+encodeURIComponent(iso(now))+'&to='+encodeURIComponent(iso(to));
+  var fixtures = await opFetch(fxUrl);
+  if(!fixtures || !Array.isArray(fixtures)){
+    document.getElementById('oprog').style.display='none';
+    out.innerHTML='<div class="err">Could not load fixtures. Check your API key and that you have requests left.</div>';
+    return;
+  }
+  var withOdds = fixtures.filter(function(f){ return f.hasOdds; }).slice(0, maxGames);
+  if(!withOdds.length){
+    document.getElementById('oprog').style.display='none';
+    out.innerHTML='<div class="msg">No upcoming games with odds for this sport right now.</div>';
+    return;
+  }
+
+  // 2) Odds per fixture, find best home/away across books, detect arb
+  var arbs=[];
+  for(var i=0;i<withOdds.length;i++){
+    var fx=withOdds[i];
+    oSetProg('Scanning game '+(i+1)+'/'+withOdds.length+'...');
+    var odUrl = BASE+'/odds?apiKey='+encodeURIComponent(key)+'&fixtureId='+fx.fixtureId;
+    var od = await opFetch(odUrl);
+    if(!od || !od.bookmakerOdds) continue;
+    var books = od.bookmakerOdds;
+    // moneyline market id differs by sport; gather best home & away decimal odds
+    var bestHome=null, bestAway=null;
+    Object.keys(books).forEach(function(bk){
+      var markets = books[bk].markets||{};
+      Object.keys(markets).forEach(function(mid){
+        var outs = markets[mid].outcomes||{};
+        // outcome "111" = home, "112" = away (per OddsPapi moneyline schema)
+        var h = outs['111'] && outs['111'].players && outs['111'].players['0'] ? parseFloat(outs['111'].players['0'].price) : null;
+        var a = outs['112'] && outs['112'].players && outs['112'].players['0'] ? parseFloat(outs['112'].players['0'].price) : null;
+        if(h && h>1 && (!bestHome || h>bestHome.price)) bestHome={book:bk, price:h};
+        if(a && a>1 && (!bestAway || a>bestAway.price)) bestAway={book:bk, price:a};
+      });
+    });
+    if(!bestHome || !bestAway || bestHome.book===bestAway.book) continue;
+    // Arb check: 1/homeOdds + 1/awayOdds < 1
+    var inv = 1/bestHome.price + 1/bestAway.price;
+    var edge = (1-inv)*100;
+    if(edge >= min && inv < 1){
+      var sH = bank*(1/bestHome.price)/inv, sA = bank*(1/bestAway.price)/inv;
+      var profit = Math.min(sH*bestHome.price, sA*bestAway.price) - (sH+sA);
+      arbs.push({
+        home:fx.participant1Name, away:fx.participant2Name, edge:edge, profit:profit,
+        commence:fx.startTime||fx.startDate,
+        bH:bestHome.book, oH:bestHome.price, sH:sH,
+        bA:bestAway.book, oA:bestAway.price, sA:sA
+      });
+    }
+  }
+
+  document.getElementById('oprog').style.display='none';
+  arbs.sort(function(a,b){ return b.edge-a.edge; });
+
+  function dec2am(d){ if(d>=2) return '+'+Math.round((d-1)*100); return '-'+Math.round(100/(d-1)); }
+  var now2=new Date().toLocaleTimeString();
+  var h='<div class="stats">Scanned '+withOdds.length+' games · '+arbs.length+' arbs · '+now2+'</div>';
+  if(!arbs.length){ h+='<div class="msg">No offshore arbs above '+min+'% right now.</div>'; }
+  else {
+    arbs.forEach(function(x){
+      h+='<div class="card'+(x.edge>2?' hot':'')+'"><div class="ctop"><div style="flex:1;min-width:0"><div class="gmeta">OFFSHORE · MONEYLINE</div><div class="gtitle">'+x.away+' @ '+x.home+'</div>';
+      if(x.commence) h+='<div class="gdate-tag">'+new Date(x.commence).toLocaleString()+'</div>';
+      h+='</div><div style="text-align:right;flex-shrink:0"><div class="roi">+'+x.edge.toFixed(2)+'%</div><div class="psub">$'+x.profit.toFixed(2)+' profit</div></div></div><div class="sides">';
+      h+='<div class="side"><div class="book">'+x.bH+'</div><div class="team">'+x.home+' ML</div><div class="odds">'+dec2am(x.oH)+'</div><div class="stake">Bet $'+x.sH.toFixed(2)+'</div></div>';
+      h+='<div class="side"><div class="book">'+x.bA+'</div><div class="team">'+x.away+' ML</div><div class="odds">'+dec2am(x.oA)+'</div><div class="stake">Bet $'+x.sA.toFixed(2)+'</div></div>';
+      h+='</div></div>';
+    });
+  }
+  out.innerHTML=h;
+}
+
 function toggleAuto(){
   autoOn=!autoOn;var btn=document.getElementById('autoBtn');
   if(autoOn){btn.textContent='⏹ Stop';btn.style.background='#ff4757';btn.style.color='#fff';scanAll();timer=setInterval(scanAll,60000)}
