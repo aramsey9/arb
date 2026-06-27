@@ -1974,79 +1974,104 @@ async function scanOffshore(){
   if(!key){ out.innerHTML='<div class="err">Paste your OddsPapi API key first. Get one free at oddspapi.io.</div>'; return; }
 
   var BASE='https://api.oddspapi.io/v4';
-  oSetProg('Fetching fixtures...');
+  oSetProg('Fetching tournaments...');
   out.innerHTML='';
 
-  // 1) Fixtures for the next 2 days
-  var now=new Date();
-  var to=new Date(now.getTime()+2*24*60*60*1000);
-  function iso(d){ return d.toISOString().split('.')[0]+'Z'; }
-  var fxUrl = BASE+'/fixtures?apiKey='+encodeURIComponent(key)+'&sportId='+sportId+'&from='+encodeURIComponent(iso(now))+'&to='+encodeURIComponent(iso(to));
-  var fixtures = await opFetch(fxUrl);
-  if(!fixtures || !Array.isArray(fixtures)){
+  // 1) Get tournaments for the sport, pick those with upcoming/future fixtures
+  var tUrl = BASE+'/tournaments?apiKey='+encodeURIComponent(key)+'&sportId='+sportId;
+  var tournaments = await opFetch(tUrl);
+  if(!tournaments || !Array.isArray(tournaments)){
     document.getElementById('oprog').style.display='none';
-    out.innerHTML='<div class="err">Could not load fixtures. Check your API key and that you have requests left.</div>';
+    out.innerHTML='<div class="err">Could not load tournaments. Check your API key and remaining quota.</div>';
     return;
   }
-  var withOdds = fixtures.filter(function(f){ return f.hasOdds; }).slice(0, maxGames);
-  if(!withOdds.length){
+  // Pick tournaments that actually have upcoming or live fixtures
+  var active = tournaments.filter(function(t){ return (t.upcomingFixtures||0)>0 || (t.liveFixtures||0)>0 || (t.futureFixtures||0)>0; });
+  if(!active.length){
     document.getElementById('oprog').style.display='none';
-    out.innerHTML='<div class="msg">No upcoming games with odds for this sport right now.</div>';
+    out.innerHTML='<div class="msg">No tournaments with upcoming fixtures for this sport right now.</div>';
+    return;
+  }
+  // Use the top few tournament IDs (most US sports = 1 main league)
+  var tIds = active.slice(0,3).map(function(t){ return t.tournamentId; }).join(',');
+
+  // 2) One call gets fixtures + odds across ALL books for these tournaments.
+  //    oddsFormat=decimal, no bookmaker filter = all books.
+  oSetProg('Fetching odds across all books...');
+  var oUrl = BASE+'/odds-by-tournaments?apiKey='+encodeURIComponent(key)+'&tournamentIds='+tIds+'&oddsFormat=decimal';
+  var fixtures = await opFetch(oUrl);
+  if(!fixtures || !Array.isArray(fixtures)){
+    document.getElementById('oprog').style.display='none';
+    out.innerHTML='<div class="err">Could not load odds. Your plan may not include odds-by-tournaments, or quota is used up.</div>';
     return;
   }
 
-  // 2) Odds per fixture, find best home/away across books, detect arb
+  // Only upcoming games with odds, capped to maxGames
+  var nowMs = Date.now();
+  var games = fixtures.filter(function(f){
+    var st = f.startTime ? new Date(f.startTime).getTime() : 0;
+    return f.hasOdds && f.bookmakerOdds && st > nowMs;
+  }).slice(0, maxGames);
+
+  if(!games.length){
+    document.getElementById('oprog').style.display='none';
+    out.innerHTML='<div class="msg">No upcoming games with odds returned.</div>';
+    return;
+  }
+
+  // 3) For each game, find best home (outcome 101) and away (outcome 103) across books
   var arbs=[];
-  for(var i=0;i<withOdds.length;i++){
-    var fx=withOdds[i];
-    oSetProg('Scanning game '+(i+1)+'/'+withOdds.length+'...');
-    var odUrl = BASE+'/odds?apiKey='+encodeURIComponent(key)+'&fixtureId='+fx.fixtureId;
-    var od = await opFetch(odUrl);
-    if(!od || !od.bookmakerOdds) continue;
-    var books = od.bookmakerOdds;
-    // moneyline market id differs by sport; gather best home & away decimal odds
+  games.forEach(function(fx){
+    var books = fx.bookmakerOdds||{};
     var bestHome=null, bestAway=null;
     Object.keys(books).forEach(function(bk){
-      var markets = books[bk].markets||{};
-      Object.keys(markets).forEach(function(mid){
-        var outs = markets[mid].outcomes||{};
-        // outcome "111" = home, "112" = away (per OddsPapi moneyline schema)
-        var h = outs['111'] && outs['111'].players && outs['111'].players['0'] ? parseFloat(outs['111'].players['0'].price) : null;
-        var a = outs['112'] && outs['112'].players && outs['112'].players['0'] ? parseFloat(outs['112'].players['0'].price) : null;
-        if(h && h>1 && (!bestHome || h>bestHome.price)) bestHome={book:bk, price:h};
-        if(a && a>1 && (!bestAway || a>bestAway.price)) bestAway={book:bk, price:a};
-      });
+      var markets = (books[bk]&&books[bk].markets)||{};
+      var ml = markets['101']; // moneyline market
+      if(!ml || !ml.outcomes) return;
+      function px(outId){
+        var o=ml.outcomes[outId];
+        if(o && o.players && o.players['0'] && o.players['0'].active!==false){
+          var p=parseFloat(o.players['0'].price);
+          return (p && p>1) ? p : null;
+        }
+        return null;
+      }
+      var h=px('101'), a=px('103'); // 101=home, 103=away (102=draw, skip)
+      if(h && (!bestHome || h>bestHome.price)) bestHome={book:bk, price:h};
+      if(a && (!bestAway || a>bestAway.price)) bestAway={book:bk, price:a};
     });
-    if(!bestHome || !bestAway || bestHome.book===bestAway.book) continue;
-    // Arb check: 1/homeOdds + 1/awayOdds < 1
+    if(!bestHome || !bestAway || bestHome.book===bestAway.book) return;
     var inv = 1/bestHome.price + 1/bestAway.price;
     var edge = (1-inv)*100;
     if(edge >= min && inv < 1){
       var sH = bank*(1/bestHome.price)/inv, sA = bank*(1/bestAway.price)/inv;
       var profit = Math.min(sH*bestHome.price, sA*bestAway.price) - (sH+sA);
       arbs.push({
-        home:fx.participant1Name, away:fx.participant2Name, edge:edge, profit:profit,
-        commence:fx.startTime||fx.startDate,
+        home:'Home ('+fx.participant1Id+')', away:'Away ('+fx.participant2Id+')',
+        homeName:fx.participant1Name, awayName:fx.participant2Name,
+        edge:edge, profit:profit, commence:fx.startTime,
         bH:bestHome.book, oH:bestHome.price, sH:sH,
         bA:bestAway.book, oA:bestAway.price, sA:sA
       });
     }
-  }
+  });
 
   document.getElementById('oprog').style.display='none';
   arbs.sort(function(a,b){ return b.edge-a.edge; });
 
   function dec2am(d){ if(d>=2) return '+'+Math.round((d-1)*100); return '-'+Math.round(100/(d-1)); }
   var now2=new Date().toLocaleTimeString();
-  var h='<div class="stats">Scanned '+withOdds.length+' games · '+arbs.length+' arbs · '+now2+'</div>';
-  if(!arbs.length){ h+='<div class="msg">No offshore arbs above '+min+'% right now.</div>'; }
+  var h='<div class="stats">Scanned '+games.length+' games · '+arbs.length+' arbs · '+now2+'</div>';
+  if(!arbs.length){ h+='<div class="msg">No offshore arbs above '+min+'% right now.<br><br>This is normal — try more games or a different sport.</div>'; }
   else {
     arbs.forEach(function(x){
-      h+='<div class="card'+(x.edge>2?' hot':'')+'"><div class="ctop"><div style="flex:1;min-width:0"><div class="gmeta">OFFSHORE · MONEYLINE</div><div class="gtitle">'+x.away+' @ '+x.home+'</div>';
+      var homeLabel = x.homeName || x.home;
+      var awayLabel = x.awayName || x.away;
+      h+='<div class="card'+(x.edge>2?' hot':'')+'"><div class="ctop"><div style="flex:1;min-width:0"><div class="gmeta">OFFSHORE · MONEYLINE</div><div class="gtitle">'+awayLabel+' @ '+homeLabel+'</div>';
       if(x.commence) h+='<div class="gdate-tag">'+new Date(x.commence).toLocaleString()+'</div>';
       h+='</div><div style="text-align:right;flex-shrink:0"><div class="roi">+'+x.edge.toFixed(2)+'%</div><div class="psub">$'+x.profit.toFixed(2)+' profit</div></div></div><div class="sides">';
-      h+='<div class="side"><div class="book">'+x.bH+'</div><div class="team">'+x.home+' ML</div><div class="odds">'+dec2am(x.oH)+'</div><div class="stake">Bet $'+x.sH.toFixed(2)+'</div></div>';
-      h+='<div class="side"><div class="book">'+x.bA+'</div><div class="team">'+x.away+' ML</div><div class="odds">'+dec2am(x.oA)+'</div><div class="stake">Bet $'+x.sA.toFixed(2)+'</div></div>';
+      h+='<div class="side"><div class="book">'+x.bH+'</div><div class="team">'+homeLabel+'</div><div class="odds">'+dec2am(x.oH)+'</div><div class="stake">Bet $'+x.sH.toFixed(2)+'</div></div>';
+      h+='<div class="side"><div class="book">'+x.bA+'</div><div class="team">'+awayLabel+'</div><div class="odds">'+dec2am(x.oA)+'</div><div class="stake">Bet $'+x.sA.toFixed(2)+'</div></div>';
       h+='</div></div>';
     });
   }
