@@ -303,10 +303,10 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
   </div>
   <div class="slabel">Sport</div>
   <select id="osport" style="margin-bottom:10px">
-    <option value="16">⚾ MLB (Baseball)</option>
+    <option value="13">⚾ MLB (Baseball)</option>
     <option value="11">🏀 NBA (Basketball)</option>
     <option value="14">🏈 NFL (Am. Football)</option>
-    <option value="17">🏒 NHL (Ice Hockey)</option>
+    <option value="15">🏒 NHL (Ice Hockey)</option>
     <option value="10">⚽ Soccer</option>
   </select>
   <div class="slabel">Max games to scan (limits API usage)</div>
@@ -1948,18 +1948,27 @@ function startScan(){scanAll()}
   });
 })();
 
-// Fetch through the Cloudflare Worker (reuses poly_worker) to dodge CORS
+// Fetch OddsPapi. Browser-direct works (CORS allowed), so try that FIRST,
+// then fall back to the Worker, then a public proxy. Returns parsed JSON
+// (including error objects) so callers can diagnose.
 async function opFetch(url){
   var worker = getWorkerUrl();
   var tries = [];
+  tries.push(url); // direct first — OddsPapi allows CORS
   if (worker) tries.push(worker + '/?url=' + encodeURIComponent(url));
-  tries.push(url); // direct (OddsPapi may allow CORS)
   tries.push('https://corsproxy.io/?'+encodeURIComponent(url));
+  var lastObj = null;
   for (var i=0;i<tries.length;i++){
-    var d = await fetchWithTimeout(tries[i], 8000);
-    if (d) return d;
+    try {
+      var res = await fetch(tries[i]);
+      var txt = await res.text();
+      var obj = null;
+      try { obj = JSON.parse(txt); } catch(e) { obj = null; }
+      if (Array.isArray(obj)) return obj;           // success
+      if (obj && typeof obj==='object') lastObj = obj; // error obj — keep for diagnosis
+    } catch(e) {}
   }
-  return null;
+  return lastObj; // null if nothing came back, or the error object
 }
 
 function oSetProg(t){ document.getElementById('oprog').style.display='block'; document.getElementById('oprogText').textContent=t; }
@@ -1982,7 +1991,13 @@ async function scanOffshore(){
   var tournaments = await opFetch(tUrl);
   if(!tournaments || !Array.isArray(tournaments)){
     document.getElementById('oprog').style.display='none';
-    out.innerHTML='<div class="err">Could not load tournaments. Check your API key and remaining quota.</div>';
+    var detail = '';
+    if (tournaments && typeof tournaments === 'object') {
+      detail = tournaments.error || tournaments.message || tournaments.detail || JSON.stringify(tournaments).slice(0,200);
+    } else if (tournaments === null) {
+      detail = 'No response (Worker/proxy returned nothing — check Worker is deployed & poly_worker URL is set)';
+    }
+    out.innerHTML='<div class="err">Could not load tournaments.<br><br><strong>OddsPapi said:</strong> '+(detail||'unknown')+'</div>';
     return;
   }
   // Pick tournaments that actually have upcoming or live fixtures
