@@ -1971,6 +1971,24 @@ async function opFetch(url){
   return lastObj; // null if nothing came back, or the error object
 }
 
+// Like opFetch but returns ANY parsed JSON (array OR object), for endpoints
+// whose success response is an object rather than an array.
+async function opFetchRaw(url){
+  var worker = getWorkerUrl();
+  var tries = [];
+  tries.push(url);
+  if (worker) tries.push(worker + '/?url=' + encodeURIComponent(url));
+  tries.push('https://corsproxy.io/?'+encodeURIComponent(url));
+  for (var i=0;i<tries.length;i++){
+    try {
+      var res = await fetch(tries[i]);
+      var txt = await res.text();
+      try { return JSON.parse(txt); } catch(e) {}
+    } catch(e) {}
+  }
+  return null;
+}
+
 function oSetProg(t){ document.getElementById('oprog').style.display='block'; document.getElementById('oprogText').textContent=t; }
 
 async function scanOffshore(){
@@ -2014,10 +2032,20 @@ async function scanOffshore(){
   //    oddsFormat=decimal, no bookmaker filter = all books.
   oSetProg('Fetching odds across all books...');
   var oUrl = BASE+'/odds-by-tournaments?apiKey='+encodeURIComponent(key)+'&tournamentIds='+tIds+'&oddsFormat=decimal';
-  var fixtures = await opFetch(oUrl);
-  if(!fixtures || !Array.isArray(fixtures)){
+  var oddsResp = await opFetchRaw(oUrl);
+  // Response may be an array of fixtures, a single fixture object, or {data:[...]}
+  var fixtures = null;
+  if (Array.isArray(oddsResp)) fixtures = oddsResp;
+  else if (oddsResp && Array.isArray(oddsResp.data)) fixtures = oddsResp.data;
+  else if (oddsResp && oddsResp.fixtureId) fixtures = [oddsResp]; // single fixture
+  else if (oddsResp && oddsResp.fixtures && Array.isArray(oddsResp.fixtures)) fixtures = oddsResp.fixtures;
+
+  if(!fixtures){
     document.getElementById('oprog').style.display='none';
-    out.innerHTML='<div class="err">Could not load odds. Your plan may not include odds-by-tournaments, or quota is used up.</div>';
+    var od='';
+    if(oddsResp && typeof oddsResp==='object') od = oddsResp.error ? (oddsResp.error.message||oddsResp.error) : (oddsResp.message||JSON.stringify(oddsResp).slice(0,200));
+    else if(oddsResp===null) od='no response';
+    out.innerHTML='<div class="err">Could not load odds.<br><br><strong>OddsPapi said:</strong> '+(od||'unexpected format')+'</div>';
     return;
   }
 
