@@ -148,9 +148,9 @@ function processSpreads(oc, gl, allArbs, min) {
 
 // ── Main scan ──────────────────────────────────────────────
 async function scanSport(sport, allArbs, min) {
-  var BOOKS = 'fanduel,draftkings,betmgm,williamhill_us,fanatics,thescore,hardrockbet,ballybet,espnbet,bet365';
+  var BOOKS = 'fanduel,draftkings,betmgm,williamhill_us,fanatics,espnbet,ballybet,bet365,bovada,betonlineag,betus,lowvig,mybookieag,betanysports,pinnacle';
   try {
-    var res = await fetch('https://api.the-odds-api.com/v4/sports/' + sport + '/odds/?apiKey=' + ODDS_API_KEY + '&regions=us&markets=h2h,spreads,totals&oddsFormat=american&bookmakers=' + BOOKS);
+    var res = await fetch('https://api.the-odds-api.com/v4/sports/' + sport + '/odds/?apiKey=' + ODDS_API_KEY + '&regions=us,us2,eu&markets=h2h,spreads,totals&oddsFormat=american&bookmakers=' + BOOKS);
     if (!res.ok) { console.log('API error for', sport, res.status); return; }
     var games = res.json();
     if (!Array.isArray(games)) return;
