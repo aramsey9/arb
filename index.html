@@ -296,7 +296,7 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
 <div id="view-offshore" class="view">
   <div class="slabel">OddsPapi API Key</div>
   <input type="password" id="opkey" placeholder="Paste OddsPapi API key (oddspapi.io)" style="font-size:12px" />
-  <div class="slabel" style="margin-top:-4px;color:#555">Free tier = 250 req/mo. Each scan uses ~1 + 1 per game. Stored locally.</div>
+  <div class="slabel" style="margin-top:-4px;color:#555">Free tier = 250 req/mo. Each scan uses ~2 requests total. Stored locally.</div>
   <div class="row">
     <input type="number" id="obank" value="1000" placeholder="Bankroll $" />
     <input type="number" id="omine" value="0.5" placeholder="Min %" step="0.1" />
@@ -311,7 +311,7 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
   </select>
   <div class="slabel">Max games to scan (limits API usage)</div>
   <input type="number" id="omax" value="5" min="1" max="30" style="width:100px;margin-bottom:10px" />
-  <div class="slabel" style="color:#555;margin-top:-4px">5 games ≈ 6 requests. You have 250/mo on free tier.</div>
+  <div class="slabel" style="color:#555;margin-top:-4px">Bookmaker.eu vs your TN books. ~2 requests per scan.</div>
   <button class="scan" onclick="scanOffshore()" style="background:#38bdf8">🌊 Scan Offshore Arbs</button>
   <div id="oprog" style="display:none" class="prog"><span id="oprogText">...</span></div>
   <div id="oout"></div>
@@ -2031,7 +2031,10 @@ async function scanOffshore(){
   // 2) One call gets fixtures + odds across ALL books for these tournaments.
   //    oddsFormat=decimal, no bookmaker filter = all books.
   oSetProg('Fetching odds across all books...');
-  var oUrl = BASE+'/odds-by-tournaments?apiKey='+encodeURIComponent(key)+'&tournamentIds='+tIds+'&oddsFormat=decimal';
+  // Your chosen books. (Fanatics & ESPN Bet are not in OddsPapi's catalog.)
+  // bookmaker.eu = offshore sharp; the rest are your TN-legal soft books.
+  var OFFSHORE_BOOKS = 'bookmaker.eu,draftkings,betmgm,fanduel,caesars';
+  var oUrl = BASE+'/odds-by-tournaments?apiKey='+encodeURIComponent(key)+'&tournamentIds='+tIds+'&bookmakers='+OFFSHORE_BOOKS+'&oddsFormat=decimal';
   var oddsResp = await opFetchRaw(oUrl);
   // Response may be an array of fixtures, a single fixture object, or {data:[...]}
   var fixtures = null;
