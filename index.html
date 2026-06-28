@@ -348,7 +348,8 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
     <div class="fb" data-of="live">🔴 Live</div>
   </div>
   <div class="slabel">Max games to scan</div>
-  <input type="number" id="omax" value="25" min="1" max="100" style="width:100px;margin-bottom:10px" />
+  <input type="number" id="omax" value="50" min="1" max="150" style="width:100px;margin-bottom:4px" />
+  <div class="slabel" style="color:#555;margin-top:0">Higher = more coverage but more objects used. Keep low (15-25) if running Auto, since Auto re-scans every 60s and multiplies the cost.</div>
   <div class="slabel" style="color:#555;margin-top:-4px">🌊 BookMaker.eu vs FanDuel · DraftKings · BetMGM · Caesars · ESPN Bet · theScore. Live bet-slip links included.</div>
   <button class="scan" onclick="scanOffshore()" style="background:#38bdf8">🔒 Scan BookMaker Arbs</button>
   <button onclick="checkSgoUsage()" style="background:#1a1a26;color:#38bdf8;border:1px solid #38bdf8;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;width:100%;margin-bottom:12px">📊 Check API Usage</button>
@@ -2026,7 +2027,7 @@ async function checkSgoUsage(){
   var box=document.getElementById('ousage');
   if(!key){ box.innerHTML='<div class="err">Paste your SportsGameOdds API key first.</div>'; return; }
   box.innerHTML='<div class="prog">Checking usage...</div>';
-  var url='https://api.sportsgameodds.com/v1/account/usage?apiKey='+encodeURIComponent(key);
+  var url='https://api.sportsgameodds.com/v2/account/usage?apiKey='+encodeURIComponent(key);
   var resp=await sgoFetch(url, key);
   if(!resp){ box.innerHTML='<div class="err">Could not reach usage endpoint. Check key / Worker.</div>'; return; }
   // SGO returns usage data; structure can be {success,data:{...}} or {...}
