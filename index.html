@@ -125,7 +125,7 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
 </head>
 <body>
 <h1>ArbEdge</h1>
-<div class="sub">TN books + 🌊 Bovada · BetOnline · BetUS · LowVig · MyBookie · BetAnySports</div>
+<div class="sub">FanDuel · DraftKings · BetMGM · Caesars · Fanatics · theScore · ESPN Bet · Bet365</div>
 <input type="text" id="key" placeholder="Paste Odds API key..." />
 
 <div class="tab-bar">
@@ -187,12 +187,6 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
   <div class="sb on" data-b="thescore">theScore Bet</div>
   <div class="sb on" data-b="espnbet">ESPN Bet</div>
   <div class="sb on" data-b="bet365">Bet365</div>
-  <div class="sb on" data-b="bovada">🌊 Bovada</div>
-  <div class="sb on" data-b="betonlineag">🌊 BetOnline</div>
-  <div class="sb on" data-b="betus">🌊 BetUS</div>
-  <div class="sb on" data-b="lowvig">🌊 LowVig</div>
-  <div class="sb on" data-b="mybookieag">🌊 MyBookie</div>
-  <div class="sb on" data-b="betanysports">🌊 BetAnySports</div>
 </div>
 <div class="slabel">Game Status</div>
 <div class="filters" id="filters">
@@ -298,7 +292,7 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
 <div id="view-offshore" class="view">
   <div class="slabel">SportsGameOdds API Key</div>
   <input type="password" id="opkey" placeholder="Paste SportsGameOdds API key (sportsgameodds.com)" style="font-size:12px" />
-  <div class="slabel" style="margin-top:-4px;color:#555">Free tier = 9 books + ~10-min delay (good for testing the pipeline, not live arbs). Paid $99/mo = real-time + BookMaker.eu. Stored locally.</div>
+  <div class="slabel" style="margin-top:-4px;color:#38bdf8">🔒 BookMaker.eu is locked as one leg of every arb — hedged against your domestic books. Paid tier = real-time.</div>
   <div class="row">
     <input type="number" id="obank" value="1000" placeholder="Bankroll $" />
     <input type="number" id="omine" value="0.5" placeholder="Min %" step="0.1" />
@@ -319,11 +313,18 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
     <div class="mb on" data-om="ml">💰 Moneyline</div>
     <div class="mb on" data-om="sp">📊 Spreads</div>
     <div class="mb on" data-om="ou">🔢 Totals</div>
+    <div class="mb on" data-om="props">🎯 Player Props</div>
+  </div>
+  <div class="slabel">Game Status</div>
+  <div class="filters" id="ofilters">
+    <div class="fb on" data-of="all">🌐 All Games</div>
+    <div class="fb" data-of="upcoming">📅 Upcoming</div>
+    <div class="fb" data-of="live">🔴 Live</div>
   </div>
   <div class="slabel">Max games to scan</div>
-  <input type="number" id="omax" value="15" min="1" max="50" style="width:100px;margin-bottom:10px" />
-  <div class="slabel" style="color:#555;margin-top:-4px">Books: 🌊 BookMaker.eu · BetOnline · Bovada · BetUS · LowVig · MyBookie + TN books. 1 request per scan (+pagination).</div>
-  <button class="scan" onclick="scanOffshore()" style="background:#38bdf8">🌊 Scan Offshore Arbs</button>
+  <input type="number" id="omax" value="25" min="1" max="100" style="width:100px;margin-bottom:10px" />
+  <div class="slabel" style="color:#555;margin-top:-4px">🌊 BookMaker.eu vs FanDuel · DraftKings · BetMGM · Caesars · ESPN Bet · theScore · Fanatics · Bet365. Live bet-slip links included.</div>
+  <button class="scan" onclick="scanOffshore()" style="background:#38bdf8">🔒 Scan BookMaker Arbs</button>
   <div id="oprog" style="display:none" class="prog"><span id="oprogText">...</span></div>
   <div id="oout"></div>
 </div>
@@ -1951,7 +1952,7 @@ async function saveSchedulerSettings(){
 
 function startScan(){scanAll()}
 
-// ── Offshore (SportsGameOdds) ──────────────────────────────
+// ── Offshore (SportsGameOdds) — BookMaker.eu LOCKED as one leg ──
 (function(){
   try{ var k=localStorage.getItem('sgo_key'); if(k)document.getElementById('opkey').value=k; }catch(e){}
   document.getElementById('opkey').addEventListener('input',function(){
@@ -1959,52 +1960,35 @@ function startScan(){scanAll()}
   });
   var lc=document.getElementById('oleagues'); if(lc) lc.addEventListener('click',function(e){var b=e.target.closest('[data-l]');if(b)b.classList.toggle('on');});
   var mc=document.getElementById('omarkets'); if(mc) mc.addEventListener('click',function(e){var b=e.target.closest('[data-om]');if(b)b.classList.toggle('on');});
+  var fc=document.getElementById('ofilters'); if(fc) fc.addEventListener('click',function(e){var b=e.target.closest('[data-of]');if(!b)return;document.querySelectorAll('#ofilters [data-of]').forEach(function(x){x.classList.remove('on')});b.classList.add('on');});
 })();
 
-// SGO books we care about: offshore (incl BookMaker.eu) + TN softs.
-var SGO_OFFSHORE = ['bookmakereu','betonline','bovada','betus','lowvig','mybookie','sportsbetting_ag','bodog'];
-var SGO_TN = ['draftkings','fanduel','betmgm','caesars','espnbet','fanatics','thescorebet','bet365'];
-var SGO_BOOKS = SGO_OFFSHORE.concat(SGO_TN);
-// Pretty display names
-var SGO_NAMES = {bookmakereu:'BookMaker.eu',betonline:'BetOnline',bovada:'Bovada',betus:'BetUS',lowvig:'LowVig',mybookie:'MyBookie',sportsbetting_ag:'SportsBetting.ag',bodog:'Bodog',draftkings:'DraftKings',fanduel:'FanDuel',betmgm:'BetMGM',caesars:'Caesars',espnbet:'ESPN Bet',fanatics:'Fanatics',thescorebet:'theScore',bet365:'Bet365'};
+var SGO_BOOKMAKER = 'bookmakereu';
+var SGO_DOMESTIC = ['draftkings','fanduel','betmgm','caesars','espnbet','thescorebet','fanatics','bet365'];
+var SGO_NAMES = {bookmakereu:'BookMaker.eu',draftkings:'DraftKings',fanduel:'FanDuel',betmgm:'BetMGM',caesars:'Caesars',espnbet:'ESPN Bet',thescorebet:'theScore',fanatics:'Fanatics',bet365:'Bet365'};
 function sgoName(b){ return SGO_NAMES[b]||b; }
-function isOffshore(b){ return SGO_OFFSHORE.indexOf(b)>-1; }
 
-// Fetch SGO. Direct first (sends x-api-key header), then Worker, then corsproxy.
-// Returns parsed JSON object {success,data,...} or null.
 async function sgoFetch(url, key){
   var worker = getWorkerUrl();
-  // direct (with header)
   try{
     var res = await fetch(url, { headers: { 'x-api-key': key } });
-    var txt = await res.text();
-    var obj = JSON.parse(txt);
+    var txt = await res.text(); var obj = JSON.parse(txt);
     if (obj && typeof obj==='object') return obj;
   }catch(e){}
-  // worker relay (key already in query string as apiKey=)
   if (worker){
-    try{
-      var r2 = await fetch(worker + '/?url=' + encodeURIComponent(url));
-      var t2 = await r2.text();
-      return JSON.parse(t2);
-    }catch(e){}
+    try{ var r2 = await fetch(worker + '/?url=' + encodeURIComponent(url)); return JSON.parse(await r2.text()); }catch(e){}
   }
-  // public proxy
-  try{
-    var r3 = await fetch('https://corsproxy.io/?'+encodeURIComponent(url));
-    var t3 = await r3.text();
-    return JSON.parse(t3);
-  }catch(e){}
+  try{ var r3 = await fetch('https://corsproxy.io/?'+encodeURIComponent(url)); return JSON.parse(await r3.text()); }catch(e){}
   return null;
 }
 
 function oSetProg(t){ document.getElementById('oprog').style.display='block'; document.getElementById('oprogText').textContent=t; }
 function oGetLeagues(){ return Array.from(document.querySelectorAll('#oleagues [data-l].on')).map(function(b){return b.dataset.l;}); }
 function oGetMarkets(){ return Array.from(document.querySelectorAll('#omarkets [data-om].on')).map(function(b){return b.dataset.om;}); }
+function oGetFilter(){ var el=document.querySelector('#ofilters [data-of].on'); return el?el.dataset.of:'all'; }
 
-// American odds → implied prob and decimal
-function amPx(o){ o=parseFloat(o); if(!o) return null; return o>0 ? 100/(o+100) : Math.abs(o)/(Math.abs(o)+100); }
 function amDec(o){ o=parseFloat(o); if(!o) return null; return o>0 ? o/100+1 : 100/Math.abs(o)+1; }
+function amFmt(o){ o=parseFloat(o); return o>0?'+'+o:''+o; }
 
 async function scanOffshore(){
   var key = document.getElementById('opkey').value.trim();
@@ -2012,156 +1996,148 @@ async function scanOffshore(){
   var min = parseFloat(document.getElementById('omine').value)||0.5;
   var leagues = oGetLeagues();
   var wantM = oGetMarkets();
-  var maxGames = parseInt(document.getElementById('omax').value)||15;
+  var filt = oGetFilter();
+  var maxGames = parseInt(document.getElementById('omax').value)||25;
   var out = document.getElementById('oout');
-  if(!key){ out.innerHTML='<div class="err">Paste your SportsGameOdds API key first. Get one free at sportsgameodds.com.</div>'; return; }
+  if(!key){ out.innerHTML='<div class="err">Paste your SportsGameOdds API key first.</div>'; return; }
   if(!leagues.length){ out.innerHTML='<div class="err">Select at least one league.</div>'; return; }
   if(!wantM.length){ out.innerHTML='<div class="err">Select at least one market.</div>'; return; }
 
-  out.innerHTML='';
-  oSetProg('Fetching events from SportsGameOdds...');
+  out.innerHTML=''; oSetProg('Fetching events from SportsGameOdds...');
 
-  // One call: all selected leagues, only events with odds available.
+  var books = [SGO_BOOKMAKER].concat(SGO_DOMESTIC).join(',');
   var base = 'https://api.sportsgameodds.com/v2/events';
-  var url = base+'?apiKey='+encodeURIComponent(key)+'&leagueID='+encodeURIComponent(leagues.join(','))+'&oddsAvailable=true&limit='+maxGames;
+  var collected=[], cursor=null, pages=0;
+  do{
+    var url = base+'?apiKey='+encodeURIComponent(key)+'&leagueID='+encodeURIComponent(leagues.join(','))
+            +'&oddsAvailable=true&bookmakerID='+encodeURIComponent(books)+'&limit='+Math.min(maxGames,50);
+    if(cursor) url += '&cursor='+encodeURIComponent(cursor);
+    var resp = await sgoFetch(url, key);
+    if(!resp || typeof resp!=='object'){ document.getElementById('oprog').style.display='none'; out.innerHTML='<div class="err">No response from SportsGameOdds. Check your key / Worker relay.</div>'; return; }
+    if(resp.success===false){ document.getElementById('oprog').style.display='none'; out.innerHTML='<div class="err"><strong>SGO said:</strong> '+(resp.error||'unknown')+'</div>'; return; }
+    var batch = Array.isArray(resp.data)?resp.data:[];
+    collected = collected.concat(batch);
+    cursor = resp.nextCursor || null; pages++;
+    oSetProg('Fetched '+collected.length+' events...');
+  } while(cursor && collected.length<maxGames && pages<5);
 
-  var resp = await sgoFetch(url, key);
-  if(!resp || typeof resp!=='object'){
-    document.getElementById('oprog').style.display='none';
-    out.innerHTML='<div class="err">No response from SportsGameOdds. Check your key, or that the Worker relay URL is set (Poly tab).</div>';
-    return;
-  }
-  if(resp.success===false){
-    document.getElementById('oprog').style.display='none';
-    out.innerHTML='<div class="err"><strong>SportsGameOdds said:</strong> '+(resp.error||'unknown error')+'</div>';
-    return;
-  }
-  var events = Array.isArray(resp.data)?resp.data:[];
-  if(!events.length){
-    document.getElementById('oprog').style.display='none';
-    out.innerHTML='<div class="msg">No events with odds returned for the selected leagues right now.</div>';
-    return;
-  }
+  var events = collected.slice(0, maxGames);
+  if(!events.length){ document.getElementById('oprog').style.display='none'; out.innerHTML='<div class="msg">No events with odds for the selected leagues.</div>'; return; }
 
-  oSetProg('Analyzing '+events.length+' events...');
-  var arbs=[];
+  oSetProg('Analyzing '+events.length+' events (BookMaker vs domestic)...');
+  var arbs=[]; var sawBookmaker=false;
 
-  // helper: pull best price for a given oddID across our book set
-  // returns {book, am (american string), dec, line} or null
-  function bestFor(oddsObj, oddID, lineField){
-    var node = oddsObj[oddID];
+  function bestDomestic(node){
     if(!node || !node.byBookmaker) return null;
     var best=null;
-    SGO_BOOKS.forEach(function(bk){
-      var bb = node.byBookmaker[bk];
-      if(!bb || bb.available===false) return;
-      var am = bb.odds; if(am==null) return;
-      var d = amDec(am); if(!d || d<=1) return;
-      var line = lineField ? bb[lineField] : null;
-      if(!best || d>best.dec) best={book:bk, am:am, dec:d, line:line};
+    SGO_DOMESTIC.forEach(function(bk){
+      var bb=node.byBookmaker[bk]; if(!bb||bb.available===false||bb.odds==null) return;
+      var d=amDec(bb.odds); if(!d||d<=1) return;
+      if(!best||d>best.dec) best={book:bk,am:bb.odds,dec:d,line:(bb.overUnder!=null?bb.overUnder:bb.spread),link:bb.deepLink||bb.link};
     });
     return best;
   }
+  function bookmakerSide(node){
+    if(!node||!node.byBookmaker) return null;
+    var bb=node.byBookmaker[SGO_BOOKMAKER]; if(!bb||bb.available===false||bb.odds==null) return null;
+    var d=amDec(bb.odds); if(!d||d<=1) return null;
+    return {book:SGO_BOOKMAKER,am:bb.odds,dec:d,line:(bb.overUnder!=null?bb.overUnder:bb.spread),link:bb.deepLink||bb.link};
+  }
 
   events.forEach(function(ev){
-    var odds = ev.odds||{};
-    var home = (ev.teams&&ev.teams.home&&(ev.teams.home.names&&ev.teams.home.names.short||ev.teams.home.name))||ev.teams&&ev.teams.home||'Home';
-    var away = (ev.teams&&ev.teams.away&&(ev.teams.away.names&&ev.teams.away.names.short||ev.teams.away.name))||ev.teams&&ev.teams.away||'Away';
-    if(typeof home==='object') home=home.name||home.short||'Home';
-    if(typeof away==='object') away=away.name||away.short||'Away';
-    var start = ev.status&&(ev.status.startsAt||ev.status.startTime) || ev.scheduled || null;
-    var gl = away+' @ '+home;
+    var odds=ev.odds||{}; if(!odds) return;
+    var live = ev.status&&(ev.status.started===true||ev.status.live===true);
+    var ended = ev.status&&(ev.status.ended===true||ev.status.completed===true);
+    if(ended) return;
+    if(filt==='live'&&!live) return;
+    if(filt==='upcoming'&&live) return;
+    var home=ev.teams&&ev.teams.home, away=ev.teams&&ev.teams.away;
+    function tn(t){ if(!t)return ''; if(typeof t==='string')return t; return (t.names&&(t.names.short||t.names.long))||t.name||t.shortName||''; }
+    var homeName=tn(home)||'Home', awayName=tn(away)||'Away';
+    var start=ev.status&&(ev.status.startsAt||ev.status.startTime)||ev.scheduled||null;
+    var gl=awayName+' @ '+homeName;
 
-    // ── Moneyline (2-way): points-home-game-ml-home vs points-away-game-ml-away
-    if(wantM.indexOf('ml')>-1){
-      var bh = bestFor(odds,'points-home-game-ml-home');
-      var ba = bestFor(odds,'points-away-game-ml-away');
-      if(bh && ba && bh.book!==ba.book){
-        var inv = (1/bh.dec)+(1/ba.dec);
-        var edge = (1-inv)*100;
-        if(inv<1 && edge>=min){
-          var sH=bank*(1/bh.dec)/inv, sA=bank*(1/ba.dec)/inv;
-          var profit=Math.min(sH*bh.dec, sA*ba.dec)-(sH+sA);
-          arbs.push({game:gl, mkt:'Moneyline', start:start, edge:edge, profit:profit,
-            s1:{book:bh.book, name:home, am:bh.am, stake:sH}, s2:{book:ba.book, name:away, am:ba.am, stake:sA}});
+    Object.keys(odds).forEach(function(oddID){
+      var od=odds[oddID]; if(!od) return;
+      var bt=od.betTypeID, side=od.sideID;
+      var primarySides={ml:'home',sp:'home',ou:'over',yn:'yes'};
+      var isProp = !!od.playerID;
+      if(bt==='ml'&&wantM.indexOf('ml')<0) return;
+      if(bt==='sp'&&wantM.indexOf('sp')<0) return;
+      if(bt==='ou'&&!isProp&&wantM.indexOf('ou')<0) return;
+      if(isProp&&wantM.indexOf('props')<0) return;
+      if(['ml','sp','ou','yn'].indexOf(bt)<0) return;
+      if(side!==primarySides[bt]) return;
+
+      var oppID = od.opposingOddID; if(!oppID) return;
+      var opp = odds[oppID]; if(!opp) return;
+
+      var bmHere=bookmakerSide(od), domOpp=bestDomestic(opp);
+      var domHere=bestDomestic(od), bmOpp=bookmakerSide(opp);
+      if(bmHere||bmOpp) sawBookmaker=true;
+
+      function consider(legBM, legDOM, bmIsSideA, nameA, nameB){
+        if(!legBM||!legDOM) return;
+        var inv=(1/legBM.dec)+(1/legDOM.dec);
+        var edge=(1-inv)*100;
+        if(inv>=1||edge<min) return;
+        if((bt==='ou')&&legBM.line!=null&&legDOM.line!=null){
+          var overLine = bmIsSideA?legBM.line:legDOM.line;
+          var underLine= bmIsSideA?legDOM.line:legBM.line;
+          if(parseFloat(underLine)<parseFloat(overLine)) return;
         }
-      }
-    }
-
-    // ── Totals: points-all-game-ou-over vs points-all-game-ou-under (lines must cross)
-    if(wantM.indexOf('ou')>-1){
-      var ov = odds['points-all-game-ou-over'];
-      var un = odds['points-all-game-ou-under'];
-      if(ov&&ov.byBookmaker&&un&&un.byBookmaker){
-        var bOver=null, bUnder=null;
-        SGO_BOOKS.forEach(function(bk){
-          var o=ov.byBookmaker[bk]; if(o&&o.available!==false&&o.odds!=null){var d=amDec(o.odds); if(d>1&&(!bOver||d>bOver.dec))bOver={book:bk,am:o.odds,dec:d,line:parseFloat(o.overUnder)};}
-          var u=un.byBookmaker[bk]; if(u&&u.available!==false&&u.odds!=null){var d2=amDec(u.odds); if(d2>1&&(!bUnder||d2>bUnder.dec))bUnder={book:bk,am:u.odds,dec:d2,line:parseFloat(u.overUnder)};}
+        if(bt==='sp'&&legBM.line!=null&&legDOM.line!=null){
+          if((parseFloat(legBM.line)+parseFloat(legDOM.line))<0) return;
+        }
+        var sBM=bank*(1/legBM.dec)/inv, sDOM=bank*(1/legDOM.dec)/inv;
+        var profit=Math.min(sBM*legBM.dec, sDOM*legDOM.dec)-(sBM+sDOM);
+        var mLabel = od.marketName || (od.statID? (od.statID.replace(/_/g,' ')) : bt.toUpperCase());
+        arbs.push({
+          game:gl, label:mLabel, isProp:isProp, live:!!live, start:start, edge:edge, profit:profit,
+          bmLeg:{book:legBM.book,am:legBM.am,stake:sBM,line:legBM.line,link:legBM.link,name:nameA},
+          domLeg:{book:legDOM.book,am:legDOM.am,stake:sDOM,line:legDOM.line,link:legDOM.link,name:nameB}
         });
-        // valid arb only if under line >= over line (no gap that breaks the hedge)
-        if(bOver&&bUnder&&bOver.book!==bUnder.book&&(!bOver.line||!bUnder.line||bUnder.line>=bOver.line)){
-          var inv2=(1/bOver.dec)+(1/bUnder.dec);
-          var edge2=(1-inv2)*100;
-          if(inv2<1&&edge2>=min){
-            var sO=bank*(1/bOver.dec)/inv2, sU=bank*(1/bUnder.dec)/inv2;
-            var pf2=Math.min(sO*bOver.dec, sU*bUnder.dec)-(sO+sU);
-            arbs.push({game:gl, mkt:'Total', start:start, edge:edge2, profit:pf2,
-              s1:{book:bOver.book, name:'Over '+(bOver.line!=null?bOver.line:''), am:bOver.am, stake:sO},
-              s2:{book:bUnder.book, name:'Under '+(bUnder.line!=null?bUnder.line:''), am:bUnder.am, stake:sU}});
-          }
-        }
       }
-    }
 
-    // ── Spreads: points-home-game-sp-home vs points-away-game-sp-away (lines must be mirror/cross)
-    if(wantM.indexOf('sp')>-1){
-      var sph = odds['points-home-game-sp-home'];
-      var spa = odds['points-away-game-sp-away'];
-      if(sph&&sph.byBookmaker&&spa&&spa.byBookmaker){
-        var bHs=null,bAs=null;
-        SGO_BOOKS.forEach(function(bk){
-          var h=sph.byBookmaker[bk]; if(h&&h.available!==false&&h.odds!=null){var d=amDec(h.odds); if(d>1&&(!bHs||d>bHs.dec))bHs={book:bk,am:h.odds,dec:d,line:parseFloat(h.spread)};}
-          var a=spa.byBookmaker[bk]; if(a&&a.available!==false&&a.odds!=null){var d2=amDec(a.odds); if(d2>1&&(!bAs||d2>bAs.dec))bAs={book:bk,am:a.odds,dec:d2,line:parseFloat(a.spread)};}
-        });
-        // valid hedge if the two handicaps sum to >= 0 (lines cross or meet)
-        if(bHs&&bAs&&bHs.book!==bAs.book&&(isNaN(bHs.line)||isNaN(bAs.line)||(bHs.line+bAs.line)>=0)){
-          var inv3=(1/bHs.dec)+(1/bAs.dec);
-          var edge3=(1-inv3)*100;
-          if(inv3<1&&edge3>=min){
-            var sHs=bank*(1/bHs.dec)/inv3, sAs=bank*(1/bAs.dec)/inv3;
-            var pf3=Math.min(sHs*bHs.dec, sAs*bAs.dec)-(sHs+sAs);
-            arbs.push({game:gl, mkt:'Spread', start:start, edge:edge3, profit:pf3,
-              s1:{book:bHs.book, name:home+' '+(bHs.line>0?'+':'')+(isNaN(bHs.line)?'':bHs.line), am:bHs.am, stake:sHs},
-              s2:{book:bAs.book, name:away+' '+(bAs.line>0?'+':'')+(isNaN(bAs.line)?'':bAs.line), am:bAs.am, stake:sAs}});
-          }
-        }
+      function sideName(which){
+        if(bt==='ml') return which==='primary'?homeName:awayName;
+        if(bt==='sp') return which==='primary'?homeName:awayName;
+        if(bt==='ou') return which==='primary'?'Over':'Under';
+        if(bt==='yn') return which==='primary'?'Yes':'No';
+        return which;
       }
-    }
+      var nmPrimary=sideName('primary'), nmOpp=sideName('opp');
+      function withLine(nm, leg){ if(leg&&leg.line!=null&&(bt==='ou'||bt==='sp')) return nm+' '+(parseFloat(leg.line)>0&&bt==='sp'?'+':'')+leg.line; return nm; }
+
+      consider(bmHere, domOpp, true, withLine(nmPrimary,bmHere), withLine(nmOpp,domOpp));
+      consider(bmOpp, domHere, false, withLine(nmOpp,bmOpp), withLine(nmPrimary,domHere));
+    });
   });
 
   document.getElementById('oprog').style.display='none';
+  var seen={}; arbs=arbs.filter(function(a){var k=a.game+'|'+a.label+'|'+a.bmLeg.am+'|'+a.domLeg.book; if(seen[k])return false; seen[k]=1; return true;});
   arbs.sort(function(a,b){ return b.edge-a.edge; });
+
   var now2=new Date().toLocaleTimeString();
-  var h='<div class="stats">Scanned '+events.length+' events · '+arbs.length+' arbs · '+now2+'</div>';
+  var h='<div class="stats">Scanned '+events.length+' events · '+arbs.length+' BookMaker arbs · '+now2+'</div>';
+  h+='<div class="alert-bar" style="background:rgba(56,189,248,.1);border-color:rgba(56,189,248,.3);color:#38bdf8">'+(sawBookmaker?'✓ BookMaker.eu present — locked as one leg of every arb below':'⚠️ No BookMaker.eu odds in feed (check plan/leagues)')+'</div>';
 
-  // surface whether BookMaker.eu actually appeared (key diagnostic on free tier)
-  var sawBookmaker=false;
-  events.forEach(function(ev){var o=ev.odds||{};Object.keys(o).forEach(function(k){var n=o[k];if(n&&n.byBookmaker&&n.byBookmaker['bookmakereu'])sawBookmaker=true;});});
-  h+='<div class="alert-bar" style="background:rgba(56,189,248,.1);border-color:rgba(56,189,248,.3);color:#38bdf8">'+(sawBookmaker?'✓ BookMaker.eu odds present in feed':'⚠️ No BookMaker.eu odds in this feed (likely not in free-tier books — needs $99 plan)')+'</div>';
-
-  if(!arbs.length){ h+='<div class="msg">No offshore arbs above '+min+'% right now.<br><br>On the free tier this is expected — the 10-min delay erases real arbs. This view confirms the pipeline works; flip to the paid tier for live arbs.</div>'; }
+  if(!arbs.length){ h+='<div class="msg">No BookMaker arbs above '+min+'% right now.<br><br>BookMaker is sharp, so edges are rare and small — try lowering Min % to 0.2, enabling props, or adding leagues.</div>'; }
   else {
     arbs.forEach(function(x){
-      h+='<div class="card'+(x.edge>2?' hot':'')+'"><div class="ctop"><div style="flex:1;min-width:0"><div class="gmeta">🌊 OFFSHORE · '+x.mkt.toUpperCase()+'</div><div class="gtitle">'+x.game+'</div>';
+      h+='<div class="card'+(x.edge>2?' hot':x.live?' live':'')+'"><div class="ctop"><div style="flex:1;min-width:0"><div class="gmeta">🔒 BOOKMAKER'+(x.isProp?' · PROP':'')+'</div><span class="mktag '+(x.isProp?'props':'h2h')+'">'+x.label+'</span>';
+      if(x.live) h+='<span class="mktag live">🔴 LIVE</span>';
+      h+='<div class="gtitle">'+x.game+'</div>';
       if(x.start) h+='<div class="gdate-tag">'+new Date(x.start).toLocaleString()+'</div>';
       h+='</div><div style="text-align:right;flex-shrink:0"><div class="roi">+'+x.edge.toFixed(2)+'%</div><div class="psub">$'+x.profit.toFixed(2)+' profit</div></div></div><div class="sides">';
-      [x.s1,x.s2].forEach(function(s){
-        h+='<div class="side"><div class="book"'+(isOffshore(s.book)?' style="color:#38bdf8"':'')+'>'+(isOffshore(s.book)?'🌊 ':'')+sgoName(s.book)+'</div><div class="team">'+s.name+'</div><div class="odds">'+(parseFloat(s.am)>0?'+':'')+s.am+'</div><div class="stake">Bet $'+s.stake.toFixed(2)+'</div></div>';
-      });
+      h+='<div class="side"><div class="book" style="color:#38bdf8">🌊 BookMaker.eu</div><div class="team">'+x.bmLeg.name+'</div><div class="odds">'+amFmt(x.bmLeg.am)+'</div><div class="stake">Bet $'+x.bmLeg.stake.toFixed(2)+'</div>';
+      if(x.bmLeg.link) h+='<a href="'+x.bmLeg.link+'" target="_blank" class="open-link">Open BookMaker →</a>';
       h+='</div>';
-      // place-offshore-first reminder
-      var off = isOffshore(x.s1.book)?x.s1:(isOffshore(x.s2.book)?x.s2:null);
-      if(off) h+='<div class="place-first-note">⚠️ Place <strong>'+sgoName(off.book)+'</strong> first — offshore, higher limits, won\'t gub you</div>';
+      h+='<div class="side"><div class="book">'+sgoName(x.domLeg.book)+'</div><div class="team">'+x.domLeg.name+'</div><div class="odds">'+amFmt(x.domLeg.am)+'</div><div class="stake">Bet $'+x.domLeg.stake.toFixed(2)+'</div>';
+      if(x.domLeg.link) h+='<a href="'+x.domLeg.link+'" target="_blank" class="open-link">Open in '+sgoName(x.domLeg.book)+' →</a>';
+      h+='</div>';
+      h+='</div>';
+      h+='<div class="place-first-note">⚠️ Place <strong>BookMaker.eu</strong> first — sharp line moves fast; lock it, then hit '+sgoName(x.domLeg.book)+'</div>';
       h+='</div>';
     });
   }
