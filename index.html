@@ -336,7 +336,7 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
   </div>
   <div class="slabel">Max games to scan</div>
   <input type="number" id="omax" value="25" min="1" max="100" style="width:100px;margin-bottom:10px" />
-  <div class="slabel" style="color:#555;margin-top:-4px">🌊 BookMaker.eu vs FanDuel · DraftKings · BetMGM · Caesars · ESPN Bet · theScore · Bet365. Live bet-slip links included.</div>
+  <div class="slabel" style="color:#555;margin-top:-4px">🌊 BookMaker.eu vs FanDuel · DraftKings · BetMGM · Caesars · ESPN Bet · theScore. Live bet-slip links included.</div>
   <button class="scan" onclick="scanOffshore()" style="background:#38bdf8">🔒 Scan BookMaker Arbs</button>
   <div id="oprog" style="display:none" class="prog"><span id="oprogText">...</span></div>
   <div id="oout"></div>
@@ -1977,8 +1977,8 @@ function startScan(){scanAll()}
 })();
 
 var SGO_BOOKMAKER = 'bookmakereu';
-var SGO_DOMESTIC = ['draftkings','fanduel','betmgm','caesars','espnbet','thescorebet','bet365'];
-var SGO_NAMES = {bookmakereu:'BookMaker.eu',draftkings:'DraftKings',fanduel:'FanDuel',betmgm:'BetMGM',caesars:'Caesars',espnbet:'ESPN Bet',thescorebet:'theScore',bet365:'Bet365'};
+var SGO_DOMESTIC = ['draftkings','fanduel','betmgm','caesars','espnbet','thescorebet'];
+var SGO_NAMES = {bookmakereu:'BookMaker.eu',draftkings:'DraftKings',fanduel:'FanDuel',betmgm:'BetMGM',caesars:'Caesars',espnbet:'ESPN Bet',thescorebet:'theScore'};
 function sgoName(b){ return SGO_NAMES[b]||b; }
 
 async function sgoFetch(url, key){
@@ -2018,23 +2018,36 @@ async function scanOffshore(){
 
   out.innerHTML=''; oSetProg('Fetching events from SportsGameOdds...');
 
-  var books = [SGO_BOOKMAKER].concat(SGO_DOMESTIC).join(',');
+  var books = [SGO_BOOKMAKER].concat(SGO_DOMESTIC);
   var wantAlt = wantM.indexOf('alt')>-1;
   var base = 'https://api.sportsgameodds.com/v2/events';
-  var collected=[], cursor=null, pages=0;
+  var collected=[], cursor=null, pages=0, droppedBooks=[];
   do{
     var url = base+'?apiKey='+encodeURIComponent(key)+'&leagueID='+encodeURIComponent(leagues.join(','))
-            +'&oddsAvailable=true&bookmakerID='+encodeURIComponent(books)+'&limit='+Math.min(maxGames,50)
+            +'&oddsAvailable=true&bookmakerID='+encodeURIComponent(books.join(','))+'&limit='+Math.min(maxGames,50)
             +(wantAlt?'&includeAltLines=true':'');
     if(cursor) url += '&cursor='+encodeURIComponent(cursor);
     var resp = await sgoFetch(url, key);
     if(!resp || typeof resp!=='object'){ document.getElementById('oprog').style.display='none'; out.innerHTML='<div class="err">No response from SportsGameOdds. Check your key / Worker relay.</div>'; return; }
-    if(resp.success===false){ document.getElementById('oprog').style.display='none'; out.innerHTML='<div class="err"><strong>SGO said:</strong> '+(resp.error||'unknown')+'</div>'; return; }
+    if(resp.success===false){
+      var em = (resp.error||'')+'';
+      // If a specific bookmaker is gated, drop it and retry automatically.
+      var m = em.match(/bookmakerID\s+(\S+)\s+is unavailable/i);
+      if(m && books.indexOf(m[1])>-1 && m[1]!==SGO_BOOKMAKER){
+        droppedBooks.push(m[1]);
+        books = books.filter(function(b){ return b!==m[1]; });
+        oSetProg('Dropped '+m[1]+' (not in your tier), retrying...');
+        continue; // retry same cursor with reduced book list
+      }
+      document.getElementById('oprog').style.display='none';
+      out.innerHTML='<div class="err"><strong>SGO said:</strong> '+em+'</div>';
+      return;
+    }
     var batch = Array.isArray(resp.data)?resp.data:[];
     collected = collected.concat(batch);
     cursor = resp.nextCursor || null; pages++;
     oSetProg('Fetched '+collected.length+' events...');
-  } while(cursor && collected.length<maxGames && pages<5);
+  } while(cursor && collected.length<maxGames && pages<8);
 
   var events = collected.slice(0, maxGames);
   if(!events.length){ document.getElementById('oprog').style.display='none'; out.innerHTML='<div class="msg">No events with odds for the selected leagues.</div>'; return; }
@@ -2141,6 +2154,7 @@ async function scanOffshore(){
 
   var now2=new Date().toLocaleTimeString();
   var h='<div class="stats">Scanned '+events.length+' events · '+arbs.length+' BookMaker arbs · '+now2+'</div>';
+  if(droppedBooks.length) h+='<div class="alert-bar" style="background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.3);color:#f59e0b">⚠️ Skipped (not in your tier): '+droppedBooks.join(', ')+'</div>';
   h+='<div class="alert-bar" style="background:rgba(56,189,248,.1);border-color:rgba(56,189,248,.3);color:#38bdf8">'+(sawBookmaker?'✓ BookMaker.eu present — locked as one leg of every arb below':'⚠️ No BookMaker.eu odds in feed (check plan/leagues)')+'</div>';
 
   if(!arbs.length){ h+='<div class="msg">No BookMaker arbs above '+min+'% right now.<br><br>BookMaker is sharp, so edges are rare and small — try lowering Min % to 0.2, enabling props, or adding leagues.</div>'; }
