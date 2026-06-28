@@ -1979,6 +1979,8 @@ function startScan(){scanAll()}
 var SGO_BOOKMAKER = 'bookmakereu';
 var SGO_DOMESTIC = ['draftkings','fanduel','betmgm','caesars','espnbet','thescorebet'];
 var SGO_NAMES = {bookmakereu:'BookMaker.eu',draftkings:'DraftKings',fanduel:'FanDuel',betmgm:'BetMGM',caesars:'Caesars',espnbet:'ESPN Bet',thescorebet:'theScore'};
+var SGO_HOME = {bookmakereu:'https://www.bookmaker.eu',draftkings:'https://sportsbook.draftkings.com',fanduel:'https://sportsbook.fanduel.com',betmgm:'https://sports.betmgm.com',caesars:'https://sportsbook.caesars.com',espnbet:'https://espnbet.com',thescorebet:'https://www.thescore.bet'};
+function sgoHome(b){ return SGO_HOME[b]||null; }
 function sgoName(b){ return SGO_NAMES[b]||b; }
 
 async function sgoFetch(url, key){
@@ -2061,7 +2063,7 @@ async function scanOffshore(){
     SGO_DOMESTIC.forEach(function(bk){
       var bb=node.byBookmaker[bk]; if(!bb||bb.available===false||bb.odds==null) return;
       var d=amDec(bb.odds); if(!d||d<=1) return;
-      if(!best||d>best.dec) best={book:bk,am:bb.odds,dec:d,line:(bb.overUnder!=null?bb.overUnder:bb.spread),link:bb.deepLink||bb.link};
+      if(!best||d>best.dec) best={book:bk,am:bb.odds,dec:d,line:(bb.overUnder!=null?bb.overUnder:bb.spread),link:bb.deeplink||bb.deepLink||bb.link||null};
     });
     return best;
   }
@@ -2069,7 +2071,7 @@ async function scanOffshore(){
     if(!node||!node.byBookmaker) return null;
     var bb=node.byBookmaker[SGO_BOOKMAKER]; if(!bb||bb.available===false||bb.odds==null) return null;
     var d=amDec(bb.odds); if(!d||d<=1) return null;
-    return {book:SGO_BOOKMAKER,am:bb.odds,dec:d,line:(bb.overUnder!=null?bb.overUnder:bb.spread),link:bb.deepLink||bb.link};
+    return {book:SGO_BOOKMAKER,am:bb.odds,dec:d,line:(bb.overUnder!=null?bb.overUnder:bb.spread),link:bb.deeplink||bb.deepLink||bb.link||null};
   }
 
   events.forEach(function(ev){
@@ -2166,10 +2168,12 @@ async function scanOffshore(){
       if(x.start) h+='<div class="gdate-tag">'+new Date(x.start).toLocaleString()+'</div>';
       h+='</div><div style="text-align:right;flex-shrink:0"><div class="roi">+'+x.edge.toFixed(2)+'%</div><div class="psub">$'+x.profit.toFixed(2)+' profit</div></div></div><div class="sides">';
       h+='<div class="side"><div class="book" style="color:#38bdf8">🌊 BookMaker.eu</div><div class="team">'+x.bmLeg.name+'</div><div class="odds">'+amFmt(x.bmLeg.am)+'</div><div class="stake">Bet $'+x.bmLeg.stake.toFixed(2)+'</div>';
-      if(x.bmLeg.link) h+='<a href="'+x.bmLeg.link+'" target="_blank" class="open-link">Open BookMaker →</a>';
+      if(x.bmLeg.link) h+='<a href="'+x.bmLeg.link+'" target="_blank" class="open-link">Open bet slip →</a>';
+      else h+='<a href="'+sgoHome('bookmakereu')+'" target="_blank" class="open-link">Open BookMaker.eu →</a>';
       h+='</div>';
       h+='<div class="side"><div class="book">'+sgoName(x.domLeg.book)+'</div><div class="team">'+x.domLeg.name+'</div><div class="odds">'+amFmt(x.domLeg.am)+'</div><div class="stake">Bet $'+x.domLeg.stake.toFixed(2)+'</div>';
-      if(x.domLeg.link) h+='<a href="'+x.domLeg.link+'" target="_blank" class="open-link">Open in '+sgoName(x.domLeg.book)+' →</a>';
+      if(x.domLeg.link) h+='<a href="'+x.domLeg.link+'" target="_blank" class="open-link">Open bet slip →</a>';
+      else if(sgoHome(x.domLeg.book)) h+='<a href="'+sgoHome(x.domLeg.book)+'" target="_blank" class="open-link">Open '+sgoName(x.domLeg.book)+' →</a>';
       h+='</div>';
       h+='</div>';
       h+='<div class="place-first-note">⚠️ Place <strong>BookMaker.eu</strong> first — sharp line moves fast; lock it, then hit '+sgoName(x.domLeg.book)+'</div>';
