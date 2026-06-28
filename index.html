@@ -294,8 +294,21 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
   <input type="password" id="opkey" placeholder="Paste SportsGameOdds API key (sportsgameodds.com)" style="font-size:12px" />
   <div class="slabel" style="margin-top:-4px;color:#38bdf8">🔒 BookMaker.eu is locked as one leg of every arb — hedged against your domestic books. Paid tier = real-time.</div>
   <div class="row">
-    <input type="number" id="obank" value="1000" placeholder="Bankroll $" />
+    <input type="number" id="obank" value="300" placeholder="US stake $" />
     <input type="number" id="omine" value="0.5" placeholder="Min %" step="0.1" />
+  </div>
+  <div class="slabel">Round US (domestic) stake to nearest</div>
+  <div class="filters" id="oround">
+    <div class="fb" data-r="50">$50</div>
+    <div class="fb on" data-r="100">$100</div>
+    <div class="fb" data-r="200">$200</div>
+    <div class="fb" data-r="0">Exact</div>
+  </div>
+  <div class="slabel">BookMaker.eu max bet (flags when hedge exceeds)</div>
+  <div class="row" style="gap:6px">
+    <div style="flex:1"><div style="font-size:10px;color:#666;margin-bottom:2px">ML / Spreads</div><input type="number" id="omaxML" value="1000" placeholder="ML max" style="margin-bottom:0"/></div>
+    <div style="flex:1"><div style="font-size:10px;color:#666;margin-bottom:2px">Totals</div><input type="number" id="omaxTot" value="1000" placeholder="Totals max" style="margin-bottom:0"/></div>
+    <div style="flex:1"><div style="font-size:10px;color:#666;margin-bottom:2px">Props</div><input type="number" id="omaxProp" value="655" placeholder="Props max" style="margin-bottom:0"/></div>
   </div>
   <div class="slabel">Leagues (one call covers all selected)</div>
   <div class="sports" id="oleagues">
@@ -338,6 +351,8 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
   <input type="number" id="omax" value="25" min="1" max="100" style="width:100px;margin-bottom:10px" />
   <div class="slabel" style="color:#555;margin-top:-4px">🌊 BookMaker.eu vs FanDuel · DraftKings · BetMGM · Caesars · ESPN Bet · theScore. Live bet-slip links included.</div>
   <button class="scan" onclick="scanOffshore()" style="background:#38bdf8">🔒 Scan BookMaker Arbs</button>
+  <button onclick="checkSgoUsage()" style="background:#1a1a26;color:#38bdf8;border:1px solid #38bdf8;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;width:100%;margin-bottom:12px">📊 Check API Usage</button>
+  <div id="ousage"></div>
   <div id="oprog" style="display:none" class="prog"><span id="oprogText">...</span></div>
   <div id="oout"></div>
 </div>
@@ -1974,6 +1989,7 @@ function startScan(){scanAll()}
   var lc=document.getElementById('oleagues'); if(lc) lc.addEventListener('click',function(e){var b=e.target.closest('[data-l]');if(b)b.classList.toggle('on');});
   var mc=document.getElementById('omarkets'); if(mc) mc.addEventListener('click',function(e){var b=e.target.closest('[data-om]');if(b)b.classList.toggle('on');});
   var fc=document.getElementById('ofilters'); if(fc) fc.addEventListener('click',function(e){var b=e.target.closest('[data-of]');if(!b)return;document.querySelectorAll('#ofilters [data-of]').forEach(function(x){x.classList.remove('on')});b.classList.add('on');});
+  var rc=document.getElementById('oround'); if(rc) rc.addEventListener('click',function(e){var b=e.target.closest('[data-r]');if(!b)return;document.querySelectorAll('#oround [data-r]').forEach(function(x){x.classList.remove('on')});b.classList.add('on');});
 })();
 
 var SGO_BOOKMAKER = 'bookmakereu';
@@ -2005,10 +2021,54 @@ function oGetFilter(){ var el=document.querySelector('#ofilters [data-of].on'); 
 function amDec(o){ o=parseFloat(o); if(!o) return null; return o>0 ? o/100+1 : 100/Math.abs(o)+1; }
 function amFmt(o){ o=parseFloat(o); return o>0?'+'+o:''+o; }
 
+async function checkSgoUsage(){
+  var key=document.getElementById('opkey').value.trim();
+  var box=document.getElementById('ousage');
+  if(!key){ box.innerHTML='<div class="err">Paste your SportsGameOdds API key first.</div>'; return; }
+  box.innerHTML='<div class="prog">Checking usage...</div>';
+  var url='https://api.sportsgameodds.com/v1/account/usage?apiKey='+encodeURIComponent(key);
+  var resp=await sgoFetch(url, key);
+  if(!resp){ box.innerHTML='<div class="err">Could not reach usage endpoint. Check key / Worker.</div>'; return; }
+  // SGO returns usage data; structure can be {success,data:{...}} or {...}
+  var d = resp.data || resp;
+  function pick(){ for(var i=0;i<arguments.length;i++){ var path=arguments[i].split('.'); var v=d; var ok=true; for(var j=0;j<path.length;j++){ if(v&&typeof v==='object'&&path[j] in v){ v=v[path[j]]; } else { ok=false; break; } } if(ok&&v!=null&&typeof v!=='object') return v; } return null; }
+  // Try common field names for requests + objects
+  var reqUsed = pick('requests.used','rateLimits.perMonth.requests.used','requestsUsed','monthlyRequestsUsed');
+  var reqLimit= pick('requests.max','requests.limit','rateLimits.perMonth.requests.max','requestsMax','monthlyRequestLimit');
+  var objUsed = pick('objects.used','rateLimits.perMonth.objects.used','objectsUsed','monthlyObjectsUsed');
+  var objLimit= pick('objects.max','objects.limit','rateLimits.perMonth.objects.max','objectsMax','monthlyObjectLimit');
+  var tier = pick('tier','plan','planName','subscription.tier','subscription.plan');
+
+  var h='<div class="po-box connected" style="margin-top:6px"><div class="po-title">📊 SportsGameOdds Usage'+(tier?' · '+tier:'')+'<span class="po-status ok">live</span></div>';
+  function bar(label,used,limit){
+    if(used==null) return '';
+    var pct = (limit&&limit>0)? Math.min(100,Math.round(used/limit*100)) : null;
+    var color = pct==null?'#38bdf8':(pct>=90?'#ff4757':pct>=70?'#f59e0b':'#00ff88');
+    var s='<div style="margin:8px 0"><div style="font-size:12px;color:#888;display:flex;justify-content:space-between"><span>'+label+'</span><span style="color:'+color+'">'+used.toLocaleString()+(limit?' / '+limit.toLocaleString():'')+(pct!=null?' ('+pct+'%)':'')+'</span></div>';
+    if(pct!=null) s+='<div class="prog-bar" style="margin-top:4px"><div class="prog-fill" style="width:'+pct+'%;background:'+color+'"></div></div>';
+    s+='</div>'; return s;
+  }
+  var body='';
+  body+=bar('Requests this month', reqUsed, reqLimit);
+  body+=bar('Objects this month', objUsed, objLimit);
+  if(!body){
+    // Fallback: show whatever fields came back
+    body='<div style="font-size:11px;color:#888;font-family:monospace;white-space:pre-wrap;word-break:break-all">'+JSON.stringify(d,null,2).slice(0,800)+'</div>';
+  }
+  h+=body;
+  h+='<div style="font-size:11px;color:#555;margin-top:8px">Resets monthly. Checking usage is free (doesn\'t count against quota).</div></div>';
+  box.innerHTML=h;
+}
+
 async function scanOffshore(){
   var key = document.getElementById('opkey').value.trim();
-  var bank = parseFloat(document.getElementById('obank').value)||1000;
+  var usStake = parseFloat(document.getElementById('obank').value)||300;
+  var roundEl = document.querySelector('#oround [data-r].on');
+  var roundTo = roundEl ? parseInt(roundEl.dataset.r) : 100;
   var min = parseFloat(document.getElementById('omine').value)||0.5;
+  var maxML = parseFloat(document.getElementById('omaxML').value)||0;
+  var maxTot = parseFloat(document.getElementById('omaxTot').value)||0;
+  var maxProp = parseFloat(document.getElementById('omaxProp').value)||0;
   var leagues = oGetLeagues();
   var wantM = oGetMarkets();
   var filt = oGetFilter();
@@ -2124,12 +2184,33 @@ async function scanOffshore(){
         if(bt==='sp'&&legBM.line!=null&&legDOM.line!=null){
           if((parseFloat(legBM.line)+parseFloat(legDOM.line))<0) return;
         }
-        var sBM=bank*(1/legBM.dec)/inv, sDOM=bank*(1/legDOM.dec)/inv;
-        var profit=Math.min(sBM*legBM.dec, sDOM*legDOM.dec)-(sBM+sDOM);
+        // Fix the DOMESTIC stake at a round number; size BookMaker to balance.
+        var sDOM = usStake;
+        if(roundTo>0) sDOM = Math.round(usStake/roundTo)*roundTo;
+        if(sDOM<=0) sDOM = roundTo>0?roundTo:usStake;
+        // Equal-payout hedge: sBM * decBM = sDOM * decDOM
+        var sBM = sDOM*legDOM.dec/legBM.dec;
+        var payout = sDOM*legDOM.dec; // == sBM*legBM.dec
+        var totalStaked = sDOM + sBM;
+        var profit = payout - totalStaked;
+        var roi = (profit/totalStaked)*100;
+        // Which BookMaker max applies to this market?
+        var cap = isProp ? maxProp : (bt==='ou' ? maxTot : maxML);
+        var overMax = (cap>0 && sBM>cap);
+        // If over the cap, compute the largest arb that FITS: cap BookMaker, shrink domestic.
+        var fit=null;
+        if(overMax){
+          var fitBM = cap;
+          var fitDOM = fitBM*legBM.dec/legDOM.dec; // balance back to domestic
+          var fitPayout = fitBM*legBM.dec;
+          var fitTotal = fitDOM+fitBM;
+          fit={ bm:fitBM, dom:fitDOM, profit:fitPayout-fitTotal, total:fitTotal };
+        }
         var mLabel = od.marketName || (od.statID? (od.statID.replace(/_/g,' ')) : bt.toUpperCase());
         if(isGameProp && od.periodID){ mLabel = (od.periodID).toUpperCase()+' '+mLabel; }
         arbs.push({
-          game:gl, label:mLabel, isProp:isProp, isGameProp:isGameProp, live:!!live, start:start, edge:edge, profit:profit,
+          game:gl, label:mLabel, isProp:isProp, isGameProp:isGameProp, live:!!live, start:start, edge:edge, profit:profit, roi:roi, totalStaked:totalStaked,
+          cap:cap, overMax:overMax, fit:fit,
           bmLeg:{book:legBM.book,am:legBM.am,stake:sBM,line:legBM.line,link:legBM.link,name:nameA},
           domLeg:{book:legDOM.book,am:legDOM.am,stake:sDOM,line:legDOM.line,link:legDOM.link,name:nameB}
         });
@@ -2162,21 +2243,28 @@ async function scanOffshore(){
   if(!arbs.length){ h+='<div class="msg">No BookMaker arbs above '+min+'% right now.<br><br>BookMaker is sharp, so edges are rare and small — try lowering Min % to 0.2, enabling props, or adding leagues.</div>'; }
   else {
     arbs.forEach(function(x){
-      h+='<div class="card'+(x.edge>2?' hot':x.live?' live':'')+'"><div class="ctop"><div style="flex:1;min-width:0"><div class="gmeta">🔒 BOOKMAKER'+(x.isProp?' · PROP':x.isGameProp?' · GAME PROP':'')+'</div><span class="mktag '+(x.isProp?'props':x.isGameProp?'gameprops':'h2h')+'">'+x.label+'</span>';
+      h+='<div class="card'+(x.overMax?' live':x.edge>2?' hot':x.live?' live':'')+'"><div class="ctop"><div style="flex:1;min-width:0"><div class="gmeta">🔒 BOOKMAKER'+(x.isProp?' · PROP':x.isGameProp?' · GAME PROP':'')+'</div><span class="mktag '+(x.isProp?'props':x.isGameProp?'gameprops':'h2h')+'">'+x.label+'</span>';
+      if(x.overMax) h+='<span class="mktag live">🚫 OVER MAX</span>';
       if(x.live) h+='<span class="mktag live">🔴 LIVE</span>';
       h+='<div class="gtitle">'+x.game+'</div>';
       if(x.start) h+='<div class="gdate-tag">'+new Date(x.start).toLocaleString()+'</div>';
-      h+='</div><div style="text-align:right;flex-shrink:0"><div class="roi">+'+x.edge.toFixed(2)+'%</div><div class="psub">$'+x.profit.toFixed(2)+' profit</div></div></div><div class="sides">';
+      h+='</div><div style="text-align:right;flex-shrink:0"><div class="roi">+'+x.edge.toFixed(2)+'%</div><div class="psub">$'+x.profit.toFixed(2)+' profit</div><div class="psub">on $'+x.totalStaked.toFixed(0)+' staked</div></div></div><div class="sides">';
+      // BookMaker leg (exact hedge), then domestic leg (round stake)
       h+='<div class="side"><div class="book" style="color:#38bdf8">🌊 BookMaker.eu</div><div class="team">'+x.bmLeg.name+'</div><div class="odds">'+amFmt(x.bmLeg.am)+'</div><div class="stake">Bet $'+x.bmLeg.stake.toFixed(2)+'</div>';
       if(x.bmLeg.link) h+='<a href="'+x.bmLeg.link+'" target="_blank" class="open-link">Open bet slip →</a>';
       else h+='<a href="'+sgoHome('bookmakereu')+'" target="_blank" class="open-link">Open BookMaker.eu →</a>';
       h+='</div>';
-      h+='<div class="side"><div class="book">'+sgoName(x.domLeg.book)+'</div><div class="team">'+x.domLeg.name+'</div><div class="odds">'+amFmt(x.domLeg.am)+'</div><div class="stake">Bet $'+x.domLeg.stake.toFixed(2)+'</div>';
+      h+='<div class="side"><div class="book">'+sgoName(x.domLeg.book)+'</div><div class="team">'+x.domLeg.name+'</div><div class="odds">'+amFmt(x.domLeg.am)+'</div><div class="stake" style="color:#fbbf24;font-weight:700">Bet $'+x.domLeg.stake.toFixed(0)+'</div>';
       if(x.domLeg.link) h+='<a href="'+x.domLeg.link+'" target="_blank" class="open-link">Open bet slip →</a>';
       else if(sgoHome(x.domLeg.book)) h+='<a href="'+sgoHome(x.domLeg.book)+'" target="_blank" class="open-link">Open '+sgoName(x.domLeg.book)+' →</a>';
       h+='</div>';
       h+='</div>';
-      h+='<div class="place-first-note">⚠️ Place <strong>BookMaker.eu</strong> first — sharp line moves fast; lock it, then hit '+sgoName(x.domLeg.book)+'</div>';
+      h+='<div class="place-first-note">⚠️ '+sgoName(x.domLeg.book)+' is your fixed $'+x.domLeg.stake.toFixed(0)+' leg. Place <strong>BookMaker.eu first</strong> ($'+x.bmLeg.stake.toFixed(2)+') — sharp side moves fastest — then lock '+sgoName(x.domLeg.book)+'.</div>';
+      if(x.overMax){
+        h+='<div class="middle-note" style="background:rgba(255,71,87,.12);border-top:1px solid rgba(255,71,87,.4);color:#ff6b6b">🚫 BookMaker hedge $'+x.bmLeg.stake.toFixed(2)+' exceeds your max ($'+x.cap.toFixed(0)+').';
+        if(x.fit) h+=' To fit: bet <strong>$'+x.fit.bm.toFixed(2)+'</strong> on BookMaker + <strong>$'+x.fit.dom.toFixed(2)+'</strong> on '+sgoName(x.domLeg.book)+' → $'+x.fit.profit.toFixed(2)+' profit.';
+        h+='</div>';
+      }
       h+='</div>';
     });
   }
