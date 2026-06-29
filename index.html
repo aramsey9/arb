@@ -368,7 +368,7 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
     <div class="big-toggle" onclick="toggleScheduler()">
       <div>
         <div class="big-toggle-label" id="schToggleLabel">Scanner is OFF</div>
-        <div class="big-toggle-sub">Tap to turn on — runs every 10 min, 6am–10pm ET</div>
+        <div class="big-toggle-sub">Tap to turn on — set your scan interval below, 6am–10pm ET</div>
       </div>
       <label class="switch-lg" onclick="event.stopPropagation()"><input type="checkbox" id="schEnabled" onchange="toggleScheduler()" /><span class="slider-lg"></span></label>
     </div>
@@ -389,7 +389,10 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
     </div>
     <div class="slabel" style="margin-top:14px">Min edge % to notify</div>
     <input type="number" id="schMinEdge" value="0.5" step="0.1" min="0" placeholder="%" style="width:100px;margin-bottom:0" />
-    <div class="sch-note">⏰ Runs every 10 min between 6am–10pm Eastern — upcoming games only.<br>🔕 Automatically pauses overnight so you sleep undisturbed.<br>🔔 Pushover credentials are pulled from the Notifications panel.</div>
+    <div class="slabel" style="margin-top:14px">Scan interval (minutes)</div>
+    <input type="number" id="schInterval" value="10" step="1" min="5" placeholder="min" style="width:100px;margin-bottom:0" />
+    <div class="sch-note" style="margin-top:6px">⚡ Type how often to scan, then Save. <b>Minimum is 5 min</b> — GitHub Actions can't reliably run faster than that, so 1-minute scanning isn't possible here. Lower = fresher arbs but more API usage; raise it to conserve quota.</div>
+    <div class="sch-note">⏰ Active 6am–10pm Eastern — upcoming games only.<br>🔕 Automatically pauses overnight so you sleep undisturbed.<br>🔔 Pushover credentials are pulled from the Notifications panel.<br>🔁 You'll be notified at most twice about the exact same bet, then it goes quiet while new arbs still alert.</div>
     <button class="sch-save" id="schSaveBtn" onclick="saveSchedulerSettings()">💾 Save Settings to GitHub</button>
     <div class="sch-log" id="schLog">Not saved yet — tap Save Settings to activate.</div>
   </div>
@@ -1925,6 +1928,7 @@ async function loadSchedulerSettings(){
     var cfg=await res.json();
     document.getElementById('schEnabled').checked=!!cfg.enabled;
     if(cfg.minEdge)document.getElementById('schMinEdge').value=cfg.minEdge;
+    if(cfg.intervalMinutes)document.getElementById('schInterval').value=cfg.intervalMinutes;
     if(cfg.sports){
       document.querySelectorAll('[data-ss]').forEach(function(b){
         b.classList.toggle('on',cfg.sports.indexOf(b.dataset.ss)>-1);
@@ -1959,7 +1963,10 @@ async function saveSchedulerSettings(){
   var enabled=document.getElementById('schEnabled').checked;
   var sports=Array.from(document.querySelectorAll('[data-ss].on')).map(function(b){return b.dataset.ss});
   var minEdge=parseFloat(document.getElementById('schMinEdge').value)||0.5;
-  var cfg={enabled:enabled,sports:sports,minEdge:minEdge,lastSaved:new Date().toISOString()};
+  var intervalMinutes=parseInt(document.getElementById('schInterval').value,10)||10;
+  if(intervalMinutes<5)intervalMinutes=5;
+  document.getElementById('schInterval').value=intervalMinutes;
+  var cfg={enabled:enabled,sports:sports,minEdge:minEdge,intervalMinutes:intervalMinutes,lastSaved:new Date().toISOString()};
   try{
     var shaRes=await fetch('https://api.github.com/repos/aramsey9/arb/contents/scheduler-config.json',{headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json'}});
     var sha=null;
@@ -1969,7 +1976,7 @@ async function saveSchedulerSettings(){
     var res=await fetch('https://api.github.com/repos/aramsey9/arb/contents/scheduler-config.json',{method:'PUT',headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'},body:JSON.stringify(body)});
     if(res.ok){
       btn.textContent='✓ Saved!';btn.style.background='#7c3aed';btn.style.color='#fff';
-      document.getElementById('schLog').textContent='Saved at '+new Date().toLocaleTimeString()+' — Scanner is '+(enabled?'ACTIVE — runs every 10 min 6am-10pm ET':'PAUSED');
+      document.getElementById('schLog').textContent='Saved at '+new Date().toLocaleTimeString()+' — Scanner is '+(enabled?'ACTIVE — every '+intervalMinutes+' min, 6am-10pm ET':'PAUSED');
       updateSchStatus(enabled);
       try{localStorage.setItem('gh_token',token);}catch(e){}
     }else{
