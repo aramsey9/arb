@@ -2,10 +2,6 @@
   "enabled": true,
   "sports": [
     "baseball_mlb",
-    "basketball_nba",
-    "americanfootball_nfl",
-    "americanfootball_ncaaf",
-    "icehockey_nhl",
     "soccer_usa_mls",
     "tennis_atp_french_open",
     "mma_mixed_martial_arts",
@@ -16,5 +12,5 @@
   ],
   "minEdge": 0.1,
   "intervalMinutes": 5,
-  "lastSaved": "2026-06-29T21:39:46.591Z"
+  "lastSaved": "2026-06-29T21:40:28.024Z"
 }
