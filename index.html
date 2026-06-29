@@ -423,6 +423,7 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
 <script>
 var timer=null,autoOn=false,scanCount=0;
 var ARB_CACHE=[];
+var OARB_CACHE=[]; var OEVENTS_CACHE={};
 
 // ── Tab switching ──────────────────────────────────────────
 function switchTab(tab){
@@ -2022,6 +2023,55 @@ function oGetFilter(){ var el=document.querySelector('#ofilters [data-of].on'); 
 function amDec(o){ o=parseFloat(o); if(!o) return null; return o>0 ? o/100+1 : 100/Math.abs(o)+1; }
 function amFmt(o){ o=parseFloat(o); return o>0?'+'+o:''+o; }
 
+// Show every book's price for the specific market of an offshore arb (no extra API call — uses cached event).
+function showOffshoreLines(idx){
+  var x = OARB_CACHE[idx]; if(!x){ return; }
+  var box = document.getElementById('olines-'+idx);
+  if(box.innerHTML){ box.innerHTML=''; return; } // toggle off
+  var ev = OEVENTS_CACHE[x.eventID];
+  if(!ev||!ev.odds){ box.innerHTML='<div class="msg" style="padding:12px">Run a fresh scan to load lines.</div>'; return; }
+  var od = ev.odds[x.oddID];
+  if(!od){ box.innerHTML='<div class="msg" style="padding:12px">Market no longer in feed.</div>'; return; }
+  var oppID = od.opposingOddID;
+  var opp = oppID? ev.odds[oppID] : null;
+
+  function collect(node){
+    if(!node||!node.byBookmaker) return [];
+    var rows=[];
+    Object.keys(node.byBookmaker).forEach(function(bk){
+      var bb=node.byBookmaker[bk]; if(!bb||bb.available===false||bb.odds==null) return;
+      rows.push({book:bk, am:bb.odds, dec:amDec(bb.odds), link:bb.deeplink||bb.deepLink||bb.link||null, line:(bb.overUnder!=null?bb.overUnder:bb.spread)});
+    });
+    rows.sort(function(a,b){ return b.dec-a.dec; });
+    return rows;
+  }
+  function sideName(node, isOpp){
+    var bt=od.betTypeID;
+    if(bt==='ml') return isOpp? (x.domLeg&&x.game.split(' @ ')[0]||'Away') : (x.game.split(' @ ')[1]||'Home');
+    if(bt==='ou') return isOpp?'Under':'Over';
+    if(bt==='yn') return isOpp?'No':'Yes';
+    return isOpp?'Side B':'Side A';
+  }
+  function render(node, isOpp){
+    var rows=collect(node); if(!rows.length) return '';
+    var h='<div style="color:#666;font-size:11px;margin:8px 0 4px">'+(node.sideID||sideName(node,isOpp))+(node.fairOddsAvailable?'':'')+'</div>';
+    rows.forEach(function(l,i){
+      var isBM = l.book==='bookmakereu';
+      h+='<div class="lcard'+(i===0?' best':'')+'" style="padding:8px 12px"><div><div class="lbook"'+(isBM?' style="color:#38bdf8"':'')+'>'+(isBM?'🌊 ':'')+sgoName(l.book)+(SGO_NAMES[l.book]?'':' ('+l.book+')')+'</div>';
+      if(i===0) h+='<div class="lbest">★ Best</div>';
+      if(l.link) h+='<a href="'+l.link+'" target="_blank" class="llink">Open bet slip →</a>';
+      h+='</div><div class="lodds" style="color:'+(parseFloat(l.am)>0?'#00ff88':'#e8e8f0')+'">'+amFmt(l.am)+(l.line!=null?' <span style="font-size:11px;color:#666">@'+l.line+'</span>':'')+'</div></div>';
+    });
+    return h;
+  }
+  var html='<div style="padding:10px 12px;background:#0d0d14;border-top:1px solid #2a2a3d">';
+  html+='<div class="stats" style="margin-bottom:8px">All books · '+(x.label||'')+'</div>';
+  html+=render(od,false);
+  if(opp) html+=render(opp,true);
+  html+='<div style="font-size:10px;color:#555;margin-top:8px">Sorted best price first. 🌊 = BookMaker.eu. Same feed as the scan (no extra API cost).</div></div>';
+  box.innerHTML=html;
+}
+
 async function checkSgoUsage(){
   var key=document.getElementById('opkey').value.trim();
   var box=document.getElementById('ousage');
@@ -2117,6 +2167,7 @@ async function scanOffshore(){
 
   oSetProg('Analyzing '+events.length+' events (BookMaker vs domestic)...');
   var arbs=[]; var sawBookmaker=false;
+  OEVENTS_CACHE={}; events.forEach(function(ev){ if(ev&&(ev.eventID||ev.id)) OEVENTS_CACHE[ev.eventID||ev.id]=ev; });
 
   function bestDomestic(node){
     if(!node || !node.byBookmaker) return null;
@@ -2146,6 +2197,7 @@ async function scanOffshore(){
     function tn(t){ if(!t)return ''; if(typeof t==='string')return t; return (t.names&&(t.names.short||t.names.long))||t.name||t.shortName||''; }
     var homeName=tn(home)||'Home', awayName=tn(away)||'Away';
     var start=ev.status&&(ev.status.startsAt||ev.status.startTime)||ev.scheduled||null;
+    var leagueName = ev.leagueID || (ev.league&&(ev.league.name||ev.league.shortName)) || ev.sportID || '';
     var gl=awayName+' @ '+homeName;
 
     Object.keys(odds).forEach(function(oddID){
@@ -2210,8 +2262,8 @@ async function scanOffshore(){
         var mLabel = od.marketName || (od.statID? (od.statID.replace(/_/g,' ')) : bt.toUpperCase());
         if(isGameProp && od.periodID){ mLabel = (od.periodID).toUpperCase()+' '+mLabel; }
         arbs.push({
-          game:gl, label:mLabel, isProp:isProp, isGameProp:isGameProp, live:!!live, start:start, edge:edge, profit:profit, roi:roi, totalStaked:totalStaked,
-          cap:cap, overMax:overMax, fit:fit,
+          game:gl, league:leagueName, eventID:ev.eventID||ev.id, oddID:oddID, isProp:isProp, isGameProp:isGameProp, live:!!live, start:start, edge:edge, profit:profit, roi:roi, totalStaked:totalStaked,
+          cap:cap, overMax:overMax, fit:fit, label:mLabel,
           bmLeg:{book:legBM.book,am:legBM.am,stake:sBM,line:legBM.line,link:legBM.link,name:nameA},
           domLeg:{book:legDOM.book,am:legDOM.am,stake:sDOM,line:legDOM.line,link:legDOM.link,name:nameB}
         });
@@ -2235,6 +2287,7 @@ async function scanOffshore(){
   document.getElementById('oprog').style.display='none';
   var seen={}; arbs=arbs.filter(function(a){var k=a.game+'|'+a.label+'|'+a.bmLeg.am+'|'+a.domLeg.book; if(seen[k])return false; seen[k]=1; return true;});
   arbs.sort(function(a,b){ return b.edge-a.edge; });
+  OARB_CACHE=arbs;
 
   var now2=new Date().toLocaleTimeString();
   var h='<div class="stats">Scanned '+events.length+' events · '+arbs.length+' BookMaker arbs · '+now2+'</div>';
@@ -2243,8 +2296,8 @@ async function scanOffshore(){
 
   if(!arbs.length){ h+='<div class="msg">No BookMaker arbs above '+min+'% right now.<br><br>BookMaker is sharp, so edges are rare and small — try lowering Min % to 0.2, enabling props, or adding leagues.</div>'; }
   else {
-    arbs.forEach(function(x){
-      h+='<div class="card'+(x.overMax?' live':x.edge>2?' hot':x.live?' live':'')+'"><div class="ctop"><div style="flex:1;min-width:0"><div class="gmeta">🔒 BOOKMAKER'+(x.isProp?' · PROP':x.isGameProp?' · GAME PROP':'')+'</div><span class="mktag '+(x.isProp?'props':x.isGameProp?'gameprops':'h2h')+'">'+x.label+'</span>';
+    arbs.forEach(function(x,idx){
+      h+='<div class="card'+(x.overMax?' live':x.edge>2?' hot':x.live?' live':'')+'"><div class="ctop"><div style="flex:1;min-width:0"><div class="gmeta">🔒 '+(x.league?x.league+' · ':'')+'BOOKMAKER'+(x.isProp?' · PROP':x.isGameProp?' · GAME PROP':'')+'</div><span class="mktag '+(x.isProp?'props':x.isGameProp?'gameprops':'h2h')+'">'+x.label+'</span>';
       if(x.overMax) h+='<span class="mktag live">🚫 OVER MAX</span>';
       if(x.live) h+='<span class="mktag live">🔴 LIVE</span>';
       h+='<div class="gtitle">'+x.game+'</div>';
@@ -2266,6 +2319,8 @@ async function scanOffshore(){
         if(x.fit) h+=' To fit: bet <strong>$'+x.fit.bm.toFixed(2)+'</strong> on BookMaker + <strong>$'+x.fit.dom.toFixed(2)+'</strong> on '+sgoName(x.domLeg.book)+' → $'+x.fit.profit.toFixed(2)+' profit.';
         h+='</div>';
       }
+      h+='<div style="padding:8px 12px;border-top:1px solid #2a2a3d"><button class="lookup-btn" onclick="showOffshoreLines('+idx+')">📋 Show all book lines for this market</button></div>';
+      h+='<div id="olines-'+idx+'"></div>';
       h+='</div>';
     });
   }
