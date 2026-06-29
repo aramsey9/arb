@@ -2309,12 +2309,23 @@ async function scanOffshore(){
 
   function bestDomestic(node){
     if(!node || !node.byBookmaker) return null;
-    var best=null;
+    var best=null, decs=[];
     SGO_DOMESTIC.forEach(function(bk){
       var bb=node.byBookmaker[bk]; if(!bb||bb.available===false||bb.odds==null) return;
       var d=amDec(bb.odds); if(!d||d<=1) return;
+      decs.push(d);
       if(!best||d>best.dec) best={book:bk,am:bb.odds,dec:d,line:(bb.overUnder!=null?bb.overUnder:bb.spread),link:bb.deeplink||bb.deepLink||bb.link||null};
     });
+    if(best){
+      // Stale-line detector: how far the winning price sits above the next
+      // domestic book on the SAME outcome. A book that's 5%+ longer than its
+      // peers is usually a stale/error quote, not a real edge.
+      decs.sort(function(a,b){return b-a;});
+      best.nBooks=decs.length;
+      best.second=decs.length>1?decs[1]:null;
+      best.outlier=best.second?(best.dec>=best.second*1.05):false;
+      best.outlierPct=best.second?((best.dec/best.second-1)*100):0;
+    }
     return best;
   }
   function bookmakerSide(node){
@@ -2402,6 +2413,7 @@ async function scanOffshore(){
         arbs.push({
           game:gl, league:leagueName, eventID:ev.eventID||ev.id, oddID:oddID, isProp:isProp, isGameProp:isGameProp, live:!!live, start:start, edge:edge, profit:profit, roi:roi, totalStaked:totalStaked,
           cap:cap, overMax:overMax, fit:fit, label:mLabel,
+          domOutlier:!!legDOM.outlier, domOutlierPct:legDOM.outlierPct||0, domNBooks:legDOM.nBooks||1,
           bmLeg:{book:legBM.book,am:legBM.am,stake:sBM,line:legBM.line,link:legBM.link,name:nameA},
           domLeg:{book:legDOM.book,am:legDOM.am,stake:sDOM,line:legDOM.line,link:legDOM.link,name:nameB}
         });
@@ -2451,6 +2463,7 @@ async function scanOffshore(){
       h+='<div class="card'+(x.overMax?' live':x.edge>2?' hot':x.live?' live':'')+'"><div class="ctop"><div style="flex:1;min-width:0"><div class="gmeta">🔒 '+(x.league?x.league+' · ':'')+'BOOKMAKER'+(x.isProp?' · PROP':x.isGameProp?' · GAME PROP':'')+'</div><span class="mktag '+(x.isProp?'props':x.isGameProp?'gameprops':'h2h')+'">'+x.label+'</span>';
       if(x.overMax) h+='<span class="mktag live">🚫 OVER MAX</span>';
       if(x.live) h+='<span class="mktag live">🔴 LIVE</span>';
+      if(x.domOutlier) h+='<span class="mktag live">⚠️ STALE? '+sgoName(x.domLeg.book)+' +'+x.domOutlierPct.toFixed(0)+'% vs other books</span>';
       h+='<div class="gtitle">'+x.game+'</div>';
       if(x.start) h+='<div class="gdate-tag">'+new Date(x.start).toLocaleString()+'</div>';
       h+='</div><div style="text-align:right;flex-shrink:0"><div class="roi">+'+x.edge.toFixed(2)+'%</div><div class="psub">$'+x.profit.toFixed(2)+' profit</div><div class="psub">on $'+x.totalStaked.toFixed(0)+' staked</div></div></div><div class="sides">';
@@ -2469,6 +2482,9 @@ async function scanOffshore(){
         h+='<div class="middle-note" style="background:rgba(255,71,87,.12);border-top:1px solid rgba(255,71,87,.4);color:#ff6b6b">🚫 BookMaker hedge $'+x.bmLeg.stake.toFixed(2)+' exceeds your max ($'+x.cap.toFixed(0)+').';
         if(x.fit) h+=' To fit: bet <strong>$'+x.fit.bm.toFixed(2)+'</strong> on BookMaker + <strong>$'+x.fit.dom.toFixed(2)+'</strong> on '+sgoName(x.domLeg.book)+' → $'+x.fit.profit.toFixed(2)+' profit.';
         h+='</div>';
+      }
+      if(x.domOutlier){
+        h+='<div class="middle-note" style="background:rgba(245,158,11,.12);border-top:1px solid rgba(245,158,11,.4);color:#fbbf24">⚠️ '+sgoName(x.domLeg.book)+'\u2019s price is '+x.domOutlierPct.toFixed(0)+'% longer than the next domestic book on this exact outcome — that\u2019s often a stale/error line, not a real edge. Tap \u201cShow all book lines\u201d below and confirm '+sgoName(x.domLeg.book)+' is actually offering it before betting.</div>';
       }
       h+='<div style="padding:8px 12px;border-top:1px solid #2a2a3d"><button class="lookup-btn" onclick="showOffshoreLines('+idx+')">📋 Show all book lines for this market</button></div>';
       h+='<div id="olines-'+idx+'"></div>';
