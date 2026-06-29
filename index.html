@@ -116,7 +116,7 @@ input:checked+.slider:before{transform:translateX(18px);background:#000}
 .slider-lg:before{position:absolute;content:"";height:20px;width:20px;left:4px;bottom:4px;background:#666;border-radius:50%;transition:.3s}
 input:checked+.slider-lg{background:#00ff88}
 input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
-.sch-sports,.sch-markets{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px}
+.sch-sports{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px}
 .sch-save{background:#00ff88;color:#000;border:none;border-radius:8px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;width:100%;margin-top:12px}
 .sch-save:disabled{opacity:.5;cursor:not-allowed}
 .sch-log{background:#1a1a26;border-radius:8px;padding:10px 12px;font-size:11px;color:#666;font-family:monospace;margin-top:10px;line-height:1.8}
@@ -354,7 +354,9 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
   <div class="slabel" style="color:#555;margin-top:0">Higher = more coverage but more objects used. Keep low (15-25) if running Auto, since Auto re-scans every 60s and multiplies the cost.</div>
   <div class="slabel" style="color:#555;margin-top:-4px">🌊 BookMaker.eu vs FanDuel · DraftKings · BetMGM · Caesars · ESPN Bet · theScore · 📈 Kalshi · Polymarket. Live bet-slip links included.</div>
   <button class="scan" onclick="scanOffshore()" style="background:#38bdf8">🔒 Scan BookMaker Arbs</button>
-  <button onclick="checkSgoUsage()" style="background:#1a1a26;color:#38bdf8;border:1px solid #38bdf8;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;width:100%;margin-bottom:12px">📊 Check API Usage</button>
+  <button onclick="checkSgoUsage()" style="background:#1a1a26;color:#38bdf8;border:1px solid #38bdf8;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;width:100%;margin-bottom:8px">📊 Check API Usage</button>
+  <button onclick="checkSgoBooks()" style="background:#1a1a26;color:#a78bfa;border:1px solid #a78bfa;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;width:100%;margin-bottom:12px">📋 Check my books (which slugs my key can access)</button>
+  <div id="obooks"></div>
   <div id="ousage"></div>
   <div id="oprog" style="display:none" class="prog"><span id="oprogText">...</span></div>
   <div id="oout"></div>
@@ -370,44 +372,24 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
       </div>
       <label class="switch-lg" onclick="event.stopPropagation()"><input type="checkbox" id="schEnabled" onchange="toggleScheduler()" /><span class="slider-lg"></span></label>
     </div>
-    <div class="slabel">Leagues to scan <span style="color:#38bdf8">(BookMaker.eu hedged vs domestic)</span></div>
+    <div class="slabel">Sports to scan</div>
     <div class="sch-sports">
-      <div class="sb on" data-ss="MLB">⚾ MLB</div>
-      <div class="sb on" data-ss="NBA">🏀 NBA</div>
-      <div class="sb on" data-ss="NFL">🏈 NFL</div>
-      <div class="sb on" data-ss="NHL">🏒 NHL</div>
-      <div class="sb on" data-ss="WNBA">🏀 WNBA</div>
-      <div class="sb on" data-ss="UFC">🥊 UFC</div>
-      <div class="sb" data-ss="NCAAF">🏈 NCAAF</div>
-      <div class="sb" data-ss="NCAAB">🏀 NCAAB</div>
-      <div class="sb" data-ss="MLS">⚽ MLS</div>
-      <div class="sb" data-ss="ATP">🎾 ATP</div>
-      <div class="sb" data-ss="WTA">🎾 WTA</div>
-      <div class="sb" data-ss="EPL">⚽ EPL</div>
+      <div class="sb on" data-ss="baseball_mlb">⚾ MLB</div>
+      <div class="sb on" data-ss="basketball_nba">🏀 NBA</div>
+      <div class="sb on" data-ss="americanfootball_nfl">🏈 NFL</div>
+      <div class="sb on" data-ss="americanfootball_ncaaf">🏈 NCAAF</div>
+      <div class="sb on" data-ss="icehockey_nhl">🏒 NHL</div>
+      <div class="sb on" data-ss="soccer_usa_mls">⚽ MLS</div>
+      <div class="sb on" data-ss="tennis_atp_french_open">🎾 Tennis</div>
+      <div class="sb on" data-ss="mma_mixed_martial_arts">🥊 MMA</div>
+      <div class="sb on" data-ss="golf">⛳ Golf</div>
+      <div class="sb on" data-ss="basketball_wnba">🏀 WNBA</div>
+      <div class="sb on" data-ss="soccer_epl">⚽ EPL</div>
+      <div class="sb on" data-ss="boxing_boxing">🥊 Boxing</div>
     </div>
-    <div class="slabel" style="margin-top:14px">Markets to scan</div>
-    <div class="sch-markets">
-      <div class="sb on" data-sm="ml">💰 Moneyline</div>
-      <div class="sb on" data-sm="sp">📊 Spreads</div>
-      <div class="sb on" data-sm="ou">🔢 Totals</div>
-      <div class="sb on" data-sm="props">🎯 Player Props</div>
-      <div class="sb on" data-sm="gameprops">🏟️ Game Props</div>
-    </div>
-    <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:14px">
-      <div>
-        <div class="slabel">Min edge % to notify</div>
-        <input type="number" id="schMinEdge" value="0.5" step="0.1" min="0" placeholder="%" style="width:110px;margin-bottom:0" />
-      </div>
-      <div>
-        <div class="slabel">Flag stale above %</div>
-        <input type="number" id="schStaleFlag" value="8" step="0.5" min="0" placeholder="%" style="width:110px;margin-bottom:0" />
-      </div>
-      <div>
-        <div class="slabel">Max games / league</div>
-        <input type="number" id="schMaxGames" value="25" step="5" min="5" placeholder="#" style="width:110px;margin-bottom:0" />
-      </div>
-    </div>
-    <div class="sch-note">⏰ Runs every 10 min between 6am–10pm Eastern — upcoming games only.<br>🌊 BookMaker.eu is locked as one leg, hedged vs your domestic books + exchanges (same SGO feed as the Offshore tab).<br>⚠️ Arbs above the stale threshold get a "verify" flag (not hidden) — real BookMaker arbs cluster 0.5–2%.<br>🔔 Pushover credentials are pulled from the Notifications panel.</div>
+    <div class="slabel" style="margin-top:14px">Min edge % to notify</div>
+    <input type="number" id="schMinEdge" value="0.5" step="0.1" min="0" placeholder="%" style="width:100px;margin-bottom:0" />
+    <div class="sch-note">⏰ Runs every 10 min between 6am–10pm Eastern — upcoming games only.<br>🔕 Automatically pauses overnight so you sleep undisturbed.<br>🔔 Pushover credentials are pulled from the Notifications panel.</div>
     <button class="sch-save" id="schSaveBtn" onclick="saveSchedulerSettings()">💾 Save Settings to GitHub</button>
     <div class="sch-log" id="schLog">Not saved yet — tap Save Settings to activate.</div>
   </div>
@@ -415,8 +397,8 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
     <div class="sch-title">📋 How it works</div>
     <div style="font-size:12px;color:#888;line-height:1.8">
       1. Enter your GitHub token below (stored locally only)<br>
-      2. Toggle ON, pick leagues + markets, set min edge<br>
-      3. Hit Save — GitHub Actions reads this and scans BookMaker arbs automatically<br>
+      2. Toggle ON and pick your sports<br>
+      3. Hit Save — GitHub Actions reads this and scans automatically<br>
       4. You get a Pushover alert when arbs are found<br>
       5. Toggle OFF anytime — scanner stops immediately
     </div>
@@ -1933,7 +1915,6 @@ async function scanPoly() {
     try{localStorage.setItem('po_manual',this.checked?'1':'0');document.getElementById('poEnabled').checked=this.checked;}catch(e){}
   });
   document.querySelector('.sch-sports').addEventListener('click',function(e){var b=e.target.closest('[data-ss]');if(b)b.classList.toggle('on');});
-  document.querySelector('.sch-markets').addEventListener('click',function(e){var b=e.target.closest('[data-sm]');if(b)b.classList.toggle('on');});
   loadSchedulerSettings();
 })();
 
@@ -1944,16 +1925,9 @@ async function loadSchedulerSettings(){
     var cfg=await res.json();
     document.getElementById('schEnabled').checked=!!cfg.enabled;
     if(cfg.minEdge)document.getElementById('schMinEdge').value=cfg.minEdge;
-    if(cfg.staleFlagEdge)document.getElementById('schStaleFlag').value=cfg.staleFlagEdge;
-    if(cfg.maxGames)document.getElementById('schMaxGames').value=cfg.maxGames;
-    if(cfg.offshoreLeagues){
-      document.querySelectorAll('.sch-sports [data-ss]').forEach(function(b){
-        b.classList.toggle('on',cfg.offshoreLeagues.indexOf(b.dataset.ss)>-1);
-      });
-    }
-    if(cfg.offshoreMarkets){
-      document.querySelectorAll('.sch-markets [data-sm]').forEach(function(b){
-        b.classList.toggle('on',cfg.offshoreMarkets.indexOf(b.dataset.sm)>-1);
+    if(cfg.sports){
+      document.querySelectorAll('[data-ss]').forEach(function(b){
+        b.classList.toggle('on',cfg.sports.indexOf(b.dataset.ss)>-1);
       });
     }
     updateSchStatus(!!cfg.enabled);
@@ -1983,14 +1957,9 @@ async function saveSchedulerSettings(){
   var btn=document.getElementById('schSaveBtn');
   btn.textContent='Saving...';btn.disabled=true;
   var enabled=document.getElementById('schEnabled').checked;
-  var offshoreLeagues=Array.from(document.querySelectorAll('.sch-sports [data-ss].on')).map(function(b){return b.dataset.ss});
-  var offshoreMarkets=Array.from(document.querySelectorAll('.sch-markets [data-sm].on')).map(function(b){return b.dataset.sm});
-  if(enabled&&!offshoreLeagues.length){alert('Pick at least one league to scan.');btn.textContent='💾 Save Settings to GitHub';btn.disabled=false;return;}
-  if(enabled&&!offshoreMarkets.length){alert('Pick at least one market to scan.');btn.textContent='💾 Save Settings to GitHub';btn.disabled=false;return;}
+  var sports=Array.from(document.querySelectorAll('[data-ss].on')).map(function(b){return b.dataset.ss});
   var minEdge=parseFloat(document.getElementById('schMinEdge').value)||0.5;
-  var staleFlagEdge=parseFloat(document.getElementById('schStaleFlag').value)||8;
-  var maxGames=parseInt(document.getElementById('schMaxGames').value,10)||25;
-  var cfg={enabled:enabled,offshoreLeagues:offshoreLeagues,offshoreMarkets:offshoreMarkets,minEdge:minEdge,staleFlagEdge:staleFlagEdge,maxGames:maxGames,lastSaved:new Date().toISOString()};
+  var cfg={enabled:enabled,sports:sports,minEdge:minEdge,lastSaved:new Date().toISOString()};
   try{
     var shaRes=await fetch('https://api.github.com/repos/aramsey9/arb/contents/scheduler-config.json',{headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json'}});
     var sha=null;
@@ -2175,6 +2144,86 @@ async function checkSgoUsage(){
   box.innerHTML=h;
 }
 
+// ── Check which bookmaker slugs THIS key can access ───────────────
+// SGO has no "list my bookmakers" endpoint, so we probe empirically:
+// one tiny /v2/events request per candidate slug. SGO either (a) rejects
+// it as not-in-tier ("bookmakerID X is unavailable"), proving it's gated,
+// or (b) accepts it — proving your plan allows it. If accepted AND prices
+// come back, we also show a live count. Probes in-season major leagues so
+// gating is detected regardless of what's on the board today.
+async function checkSgoBooks(){
+  var key=document.getElementById('opkey').value.trim();
+  var box=document.getElementById('obooks');
+  if(!key){ box.innerHTML='<div class="err">Paste your SportsGameOdds API key first.</div>'; return; }
+
+  // Candidates: BookMaker + your domestic set + the two prediction markets
+  // + known premium books as tier markers so you can see where the wall is.
+  var targets=['bookmakereu','draftkings','fanduel','betmgm','caesars','espnbet','thescorebet','kalshi','polymarket'];
+  var premiumProbe=['pinnacle','bet365','fanatics','prizepicks','circa'];
+  var candidates=targets.concat(premiumProbe).filter(function(v,i,a){return a.indexOf(v)===i;});
+  var probeLeagues='NFL,NBA,MLB,NHL,UFC,EPL'; // whatever's in season returns events
+
+  var NICE={bookmakereu:'BookMaker.eu',draftkings:'DraftKings',fanduel:'FanDuel',betmgm:'BetMGM',caesars:'Caesars',espnbet:'ESPN Bet',thescorebet:'theScore',kalshi:'Kalshi',polymarket:'Polymarket',pinnacle:'Pinnacle',bet365:'Bet365',fanatics:'Fanatics',prizepicks:'PrizePicks',circa:'Circa'};
+  function nm(b){ return NICE[b]||b; }
+
+  var results={}; var done=0;
+  box.innerHTML='<div class="prog">Probing '+candidates.length+' bookmakers (one tiny request each)...</div>';
+
+  for(var ci=0; ci<candidates.length; ci++){
+    var b=candidates[ci];
+    box.querySelector('.prog') && (box.querySelector('.prog').textContent='Probing '+nm(b)+' ('+(ci+1)+'/'+candidates.length+')...');
+    var url='https://api.sportsgameodds.com/v2/events?apiKey='+encodeURIComponent(key)
+            +'&leagueID='+encodeURIComponent(probeLeagues)
+            +'&oddsAvailable=true&bookmakerID='+encodeURIComponent(b)+'&limit=2';
+    var resp=await sgoFetch(url, key);
+    if(!resp){ results[b]={state:'error',note:'no response'}; done++; continue; }
+    if(resp.success===false){
+      var em=(resp.error||'')+'';
+      if(/unavailable|not\s+available|not\s+included|upgrade|tier|plan/i.test(em)) results[b]={state:'gated',note:em};
+      else if(/unknown|invalid|not\s+found|no\s+such/i.test(em)) results[b]={state:'unknown',note:em};
+      else results[b]={state:'error',note:em};
+      done++; continue;
+    }
+    // Accepted by the plan. Now count usable prices for this slug.
+    var evs=Array.isArray(resp.data)?resp.data:[];
+    var cnt=0;
+    evs.forEach(function(ev){
+      var odds=ev.odds||{};
+      Object.keys(odds).forEach(function(oid){
+        var node=odds[oid]; if(!node||!node.byBookmaker) return;
+        var bb=node.byBookmaker[b];
+        if(bb&&bb.available!==false&&bb.odds!=null) cnt++;
+      });
+    });
+    results[b]={state:'ok',count:cnt};
+    done++;
+  }
+
+  // Render
+  function row(b){
+    var r=results[b]||{state:'?'};
+    var col,tag,sub;
+    if(r.state==='ok'&&r.count>0){ col='#00ff88'; tag='✅ Available'; sub=r.count+' live prices now'; }
+    else if(r.state==='ok'){ col='#9aa'; tag='✅ Available'; sub='allowed by your plan · 0 markets on board right now'; }
+    else if(r.state==='gated'){ col='#f59e0b'; tag='🚫 Not in your tier'; sub='upgrade to access'; }
+    else if(r.state==='unknown'){ col='#ff6b6b'; tag='⚠️ Slug not recognized'; sub='SGO didn\'t know this ID — name may differ'; }
+    else { col='#ff6b6b'; tag='❔ Couldn\'t check'; sub=(r.note||'error').slice(0,60); }
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #20202c">'
+      +'<div><div style="font-weight:700;color:'+(b==='bookmakereu'?'#38bdf8':'#e8e8f0')+'">'+(b==='bookmakereu'?'🌊 ':'')+nm(b)+' <span style="color:#555;font-weight:400;font-size:11px">'+b+'</span></div>'
+      +'<div style="font-size:11px;color:#777">'+sub+'</div></div>'
+      +'<div style="color:'+col+';font-size:12px;font-weight:700;text-align:right;flex-shrink:0;margin-left:10px">'+tag+'</div></div>';
+  }
+  var h='<div class="po-box connected" style="margin-top:6px"><div class="po-title">📋 Your accessible books<span class="po-status ok">probed</span></div>';
+  h+='<div style="font-size:11px;color:#a78bfa;margin:4px 0 8px">Your two prediction-market targets:</div>';
+  h+=row('kalshi')+row('polymarket');
+  h+='<div style="font-size:11px;color:#888;margin:10px 0 4px">Your hedge books:</div>';
+  ['bookmakereu','draftkings','fanduel','betmgm','caesars','espnbet','thescorebet'].forEach(function(b){ h+=row(b); });
+  h+='<div style="font-size:11px;color:#888;margin:10px 0 4px">Premium books (tier markers):</div>';
+  premiumProbe.forEach(function(b){ h+=row(b); });
+  h+='<div style="font-size:11px;color:#555;margin-top:10px">🚫 = your plan blocks it (Pro/All-Star only). ✅ grey = allowed but nothing on the board this moment (try during NFL/NBA hours). This probe used '+candidates.length+' small requests.</div></div>';
+  box.innerHTML=h;
+}
+
 async function scanOffshore(){
   var key = document.getElementById('opkey').value.trim();
   var usStake = parseFloat(document.getElementById('obank').value)||300;
@@ -2232,6 +2281,24 @@ async function scanOffshore(){
   oSetProg('Analyzing '+events.length+' events (BookMaker vs domestic)...');
   var arbs=[]; var sawBookmaker=false;
   OEVENTS_CACHE={}; events.forEach(function(ev){ if(ev&&(ev.eventID||ev.id)) OEVENTS_CACHE[ev.eventID||ev.id]=ev; });
+
+  // ── Per-book coverage diagnostic ──────────────────────────────
+  // Counts every bookmaker SGO actually returned a usable price for,
+  // across the whole feed. This is the only reliable way to know if
+  // Kalshi / Polymarket (or any book) are really coming back vs. being
+  // silently absent. Counts raw slugs so unexpected SGO IDs are exposed.
+  var bookCoverage={};
+  events.forEach(function(ev){
+    var odds=ev.odds||{};
+    Object.keys(odds).forEach(function(oid){
+      var node=odds[oid]; if(!node||!node.byBookmaker) return;
+      Object.keys(node.byBookmaker).forEach(function(bk){
+        var bb=node.byBookmaker[bk];
+        if(!bb||bb.available===false||bb.odds==null) return;
+        bookCoverage[bk]=(bookCoverage[bk]||0)+1;
+      });
+    });
+  });
 
   function bestDomestic(node){
     if(!node || !node.byBookmaker) return null;
@@ -2355,6 +2422,19 @@ async function scanOffshore(){
 
   var now2=new Date().toLocaleTimeString();
   var h='<div class="stats">Scanned '+events.length+' events · '+arbs.length+' BookMaker arbs · '+now2+'</div>';
+
+  // Coverage strip: green = book returned prices, red = requested but 0.
+  var reqBooks=[SGO_BOOKMAKER].concat(SGO_DOMESTIC);
+  var covParts=reqBooks.map(function(b){
+    if(droppedBooks.indexOf(b)>-1) return '<span style="color:#f59e0b">'+sgoName(b)+' dropped</span>';
+    var n=bookCoverage[b]||0;
+    return '<span style="color:'+(n>0?'#00ff88':'#ff4757')+'">'+sgoName(b)+' '+n+'</span>';
+  });
+  var extra=Object.keys(bookCoverage).filter(function(b){return reqBooks.indexOf(b)<0;});
+  h+='<div class="stats" style="font-size:11px;line-height:1.8;text-align:left">📡 Book coverage (usable prices this scan): '+covParts.join(' · ')
+    +(extra.length?'<br><span style="color:#888">Other slugs SGO returned: '+extra.map(function(b){return b+' ('+bookCoverage[b]+')';}).join(', ')+'</span>':'')
+    +'<br><span style="color:#666">Red = 0 prices returned. If Kalshi/Polymarket show 0 with no amber "dropped" tag, SGO has no overlapping markets in these leagues right now (or the slug differs — check "Other slugs" above).</span></div>';
+
   if(droppedBooks.length) h+='<div class="alert-bar" style="background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.3);color:#f59e0b">⚠️ Skipped (not in your tier): '+droppedBooks.join(', ')+'</div>';
   h+='<div class="alert-bar" style="background:rgba(56,189,248,.1);border-color:rgba(56,189,248,.3);color:#38bdf8">'+(sawBookmaker?'✓ BookMaker.eu present — locked as one leg of every arb below':'⚠️ No BookMaker.eu odds in feed (check plan/leagues)')+'</div>';
 
