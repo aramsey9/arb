@@ -116,7 +116,7 @@ input:checked+.slider:before{transform:translateX(18px);background:#000}
 .slider-lg:before{position:absolute;content:"";height:20px;width:20px;left:4px;bottom:4px;background:#666;border-radius:50%;transition:.3s}
 input:checked+.slider-lg{background:#00ff88}
 input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
-.sch-sports{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px}
+.sch-sports,.sch-markets{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px}
 .sch-save{background:#00ff88;color:#000;border:none;border-radius:8px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;width:100%;margin-top:12px}
 .sch-save:disabled{opacity:.5;cursor:not-allowed}
 .sch-log{background:#1a1a26;border-radius:8px;padding:10px 12px;font-size:11px;color:#666;font-family:monospace;margin-top:10px;line-height:1.8}
@@ -125,15 +125,15 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
 </head>
 <body>
 <h1>ArbEdge</h1>
-<div class="sub">FanDuel · DraftKings · BetMGM · Caesars · Fanatics · theScore · ESPN Bet · Bet365</div>
+<div class="sub">FanDuel Â· DraftKings Â· BetMGM Â· Caesars Â· Fanatics Â· theScore Â· ESPN Bet Â· Bet365</div>
 <input type="text" id="key" placeholder="Paste Odds API key..." />
 
 <div class="tab-bar">
-  <button class="tab-btn active" id="tab-scanner" onclick="switchTab('scanner')">🔍 Scanner</button>
-  <button class="tab-btn" id="tab-lookup" onclick="switchTab('lookup')">📋 Line Lookup</button>
-  <button class="tab-btn" id="tab-poly" onclick="switchTab('poly')">📊 Poly Arb</button>
-  <button class="tab-btn" id="tab-offshore" onclick="switchTab('offshore')">🌊 Offshore</button>
-  <button class="tab-btn" id="tab-notify" onclick="switchTab('notify')">🔔 Notify</button>
+  <button class="tab-btn active" id="tab-scanner" onclick="switchTab('scanner')">ð Scanner</button>
+  <button class="tab-btn" id="tab-lookup" onclick="switchTab('lookup')">ð Line Lookup</button>
+  <button class="tab-btn" id="tab-poly" onclick="switchTab('poly')">ð Poly Arb</button>
+  <button class="tab-btn" id="tab-offshore" onclick="switchTab('offshore')">ð Offshore</button>
+  <button class="tab-btn" id="tab-notify" onclick="switchTab('notify')">ð Notify</button>
 </div>
 
 <div id="view-scanner" class="view active">
@@ -143,39 +143,39 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
 </div>
 <div class="slabel">Sports</div>
 <div class="sports" id="sports">
-  <div class="sb on" data-s="baseball_mlb">⚾ MLB</div>
-  <div class="sb on" data-s="basketball_nba">🏀 NBA</div>
-  <div class="sb on" data-s="americanfootball_nfl">🏈 NFL</div>
-  <div class="sb on" data-s="americanfootball_ncaaf">🏈 NCAAF</div>
-  <div class="sb on" data-s="icehockey_nhl">🏒 NHL</div>
-  <div class="sb on" data-s="soccer_usa_mls">⚽ MLS</div>
-  <div class="sb on" data-s="soccer_fifa_world_cup">🌍 World Cup</div>
-  <div class="sb on" data-s="tennis_atp_french_open">🎾 Tennis</div>
-  <div class="sb on" data-s="mma_mixed_martial_arts">🥊 MMA</div>
-  <div class="sb on" data-s="golf">⛳ Golf</div>
-  <div class="sb on" data-s="basketball_wnba">🏀 WNBA</div>
-  <div class="sb on" data-s="basketball_ncaab">🏀 NCAAB</div>
-  <div class="sb on" data-s="soccer_epl">⚽ EPL</div>
-  <div class="sb on" data-s="soccer_uefa_champs_league">⚽ UCL</div>
-  <div class="sb on" data-s="soccer_spain_la_liga">⚽ La Liga</div>
-  <div class="sb on" data-s="soccer_germany_bundesliga">⚽ Bundesliga</div>
-  <div class="sb on" data-s="soccer_italy_serie_a">⚽ Serie A</div>
-  <div class="sb on" data-s="soccer_france_ligue_1">⚽ Ligue 1</div>
-  <div class="sb on" data-s="soccer_mexico_ligamx">⚽ Liga MX</div>
-  <div class="sb on" data-s="soccer_uefa_europa_league">⚽ Europa</div>
-  <div class="sb on" data-s="boxing_boxing">🥊 Boxing</div>
-  <div class="sb on" data-s="lacrosse_pll">🥍 PLL</div>
-  <div class="sb on" data-s="lacrosse_ncaa">🥍 NCAA Lax</div>
+  <div class="sb on" data-s="baseball_mlb">â¾ MLB</div>
+  <div class="sb on" data-s="basketball_nba">ð NBA</div>
+  <div class="sb on" data-s="americanfootball_nfl">ð NFL</div>
+  <div class="sb on" data-s="americanfootball_ncaaf">ð NCAAF</div>
+  <div class="sb on" data-s="icehockey_nhl">ð NHL</div>
+  <div class="sb on" data-s="soccer_usa_mls">â½ MLS</div>
+  <div class="sb on" data-s="soccer_fifa_world_cup">ð World Cup</div>
+  <div class="sb on" data-s="tennis_atp_french_open">ð¾ Tennis</div>
+  <div class="sb on" data-s="mma_mixed_martial_arts">ð¥ MMA</div>
+  <div class="sb on" data-s="golf">â³ Golf</div>
+  <div class="sb on" data-s="basketball_wnba">ð WNBA</div>
+  <div class="sb on" data-s="basketball_ncaab">ð NCAAB</div>
+  <div class="sb on" data-s="soccer_epl">â½ EPL</div>
+  <div class="sb on" data-s="soccer_uefa_champs_league">â½ UCL</div>
+  <div class="sb on" data-s="soccer_spain_la_liga">â½ La Liga</div>
+  <div class="sb on" data-s="soccer_germany_bundesliga">â½ Bundesliga</div>
+  <div class="sb on" data-s="soccer_italy_serie_a">â½ Serie A</div>
+  <div class="sb on" data-s="soccer_france_ligue_1">â½ Ligue 1</div>
+  <div class="sb on" data-s="soccer_mexico_ligamx">â½ Liga MX</div>
+  <div class="sb on" data-s="soccer_uefa_europa_league">â½ Europa</div>
+  <div class="sb on" data-s="boxing_boxing">ð¥ Boxing</div>
+  <div class="sb on" data-s="lacrosse_pll">ð¥ PLL</div>
+  <div class="sb on" data-s="lacrosse_ncaa">ð¥ NCAA Lax</div>
 </div>
 <div class="slabel">Markets</div>
 <div class="markets" id="markets">
-  <div class="mb on" data-m="h2h">💰 Moneyline</div>
-  <div class="mb on" data-m="spreads">📊 Spreads</div>
-  <div class="mb on" data-m="totals">🔢 Totals</div>
-  <div class="mb on" data-m="alternate_spreads">📈 Alt Spreads</div>
-  <div class="mb on" data-m="alternate_totals">📉 Alt Totals</div>
-  <div class="mb on" data-m="props">🎯 Player Props</div>
-  <div class="mb on" data-m="gameprops">🏟️ Game Props</div>
+  <div class="mb on" data-m="h2h">ð° Moneyline</div>
+  <div class="mb on" data-m="spreads">ð Spreads</div>
+  <div class="mb on" data-m="totals">ð¢ Totals</div>
+  <div class="mb on" data-m="alternate_spreads">ð Alt Spreads</div>
+  <div class="mb on" data-m="alternate_totals">ð Alt Totals</div>
+  <div class="mb on" data-m="props">ð¯ Player Props</div>
+  <div class="mb on" data-m="gameprops">ðï¸ Game Props</div>
 </div>
 <div class="slabel">Sportsbooks</div>
 <div class="sports" id="books">
@@ -190,11 +190,11 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
 </div>
 <div class="slabel">Game Status</div>
 <div class="filters" id="filters">
-  <div class="fb on" data-f="all">🌐 All Games</div>
-  <div class="fb" data-f="live">🔴 Live Only</div>
-  <div class="fb" data-f="upcoming">📅 Upcoming Only</div>
+  <div class="fb on" data-f="all">ð All Games</div>
+  <div class="fb" data-f="live">ð´ Live Only</div>
+  <div class="fb" data-f="upcoming">ð Upcoming Only</div>
 </div>
-<!-- ── Pushover Notifications ── -->
+<!-- ââ Pushover Notifications ââ -->
 <div id="poToken" style="display:none"></div>
 <div id="poUser" style="display:none"></div>
 <div id="poStatus" style="display:none"></div>
@@ -203,7 +203,7 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
 <input type="number" id="poMinEdge" value="0.5" style="display:none" />
 <button id="poTestBtn" style="display:none"></button>
 
-<button class="scan" onclick="startScan()">🔍 Scan Now</button>
+<button class="scan" onclick="startScan()">ð Scan Now</button>
 <div id="prog" style="display:none" class="prog">
   <span id="progText">Initializing...</span>
   <div class="prog-bar"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
@@ -214,27 +214,27 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
 <div id="view-lookup" class="view">
   <div class="slabel">Sport</div>
   <select id="lsport" style="margin-bottom:10px">
-    <option value="baseball_mlb">⚾ MLB</option>
-    <option value="basketball_nba">🏀 NBA</option>
-    <option value="americanfootball_nfl">🏈 NFL</option>
-    <option value="americanfootball_ncaaf">🏈 NCAAF</option>
-    <option value="icehockey_nhl">🏒 NHL</option>
-    <option value="soccer_usa_mls">⚽ MLS</option>
-    <option value="soccer_fifa_world_cup">🌍 World Cup</option>
-    <option value="mma_mixed_martial_arts">🥊 MMA</option>
-    <option value="basketball_wnba">🏀 WNBA</option>
-    <option value="basketball_ncaab">🏀 NCAAB</option>
-    <option value="soccer_epl">⚽ EPL</option>
-    <option value="soccer_uefa_champs_league">⚽ Champions League</option>
-    <option value="soccer_spain_la_liga">⚽ La Liga</option>
-    <option value="soccer_germany_bundesliga">⚽ Bundesliga</option>
-    <option value="soccer_italy_serie_a">⚽ Serie A</option>
-    <option value="soccer_france_ligue_1">⚽ Ligue 1</option>
-    <option value="soccer_mexico_ligamx">⚽ Liga MX</option>
-    <option value="soccer_uefa_europa_league">⚽ Europa League</option>
-    <option value="boxing_boxing">🥊 Boxing</option>
-    <option value="lacrosse_pll">🥍 PLL</option>
-    <option value="lacrosse_ncaa">🥍 NCAA Lacrosse</option>
+    <option value="baseball_mlb">â¾ MLB</option>
+    <option value="basketball_nba">ð NBA</option>
+    <option value="americanfootball_nfl">ð NFL</option>
+    <option value="americanfootball_ncaaf">ð NCAAF</option>
+    <option value="icehockey_nhl">ð NHL</option>
+    <option value="soccer_usa_mls">â½ MLS</option>
+    <option value="soccer_fifa_world_cup">ð World Cup</option>
+    <option value="mma_mixed_martial_arts">ð¥ MMA</option>
+    <option value="basketball_wnba">ð WNBA</option>
+    <option value="basketball_ncaab">ð NCAAB</option>
+    <option value="soccer_epl">â½ EPL</option>
+    <option value="soccer_uefa_champs_league">â½ Champions League</option>
+    <option value="soccer_spain_la_liga">â½ La Liga</option>
+    <option value="soccer_germany_bundesliga">â½ Bundesliga</option>
+    <option value="soccer_italy_serie_a">â½ Serie A</option>
+    <option value="soccer_france_ligue_1">â½ Ligue 1</option>
+    <option value="soccer_mexico_ligamx">â½ Liga MX</option>
+    <option value="soccer_uefa_europa_league">â½ Europa League</option>
+    <option value="boxing_boxing">ð¥ Boxing</option>
+    <option value="lacrosse_pll">ð¥ PLL</option>
+    <option value="lacrosse_ncaa">ð¥ NCAA Lacrosse</option>
   </select>
   <div class="slabel">Team or player name</div>
   <div class="row" style="margin-bottom:14px">
@@ -253,7 +253,7 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
     <input type="number" id="pfee" value="0.75" placeholder="Poly fee %" step="0.05" />
     <input type="number" id="psbfee" value="0" placeholder="Book fee %" step="0.05" />
   </div>
-  <div class="slabel" style="margin-top:-4px;color:#555">Poly taker fee ≈0.3% (US) to 0.75% (sports). Edges shown are NET of fees.</div>
+  <div class="slabel" style="margin-top:-4px;color:#555">Poly taker fee â0.3% (US) to 0.75% (sports). Edges shown are NET of fees.</div>
   <div class="slabel">Cloudflare Worker URL (for live prices)</div>
   <input type="text" id="pworker" value="https://poly-relay.andrewramsey14.workers.dev" placeholder="https://your-worker.workers.dev" style="font-size:12px" />
   <div class="slabel" style="margin-top:-4px;color:#555">Paste your Worker URL for accurate live order-book prices. Stored locally.</div>
@@ -270,18 +270,18 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
   </div>
   <div class="slabel">Sports</div>
   <div class="sports" id="psports">
-    <div class="sb on" data-ps="baseball_mlb">⚾ MLB</div>
-    <div class="sb on" data-ps="basketball_nba">🏀 NBA</div>
-    <div class="sb on" data-ps="americanfootball_nfl">🏈 NFL</div>
-    <div class="sb on" data-ps="americanfootball_ncaaf">🏈 NCAAF</div>
-    <div class="sb on" data-ps="icehockey_nhl">🏒 NHL</div>
-    <div class="sb on" data-ps="soccer_usa_mls">⚽ MLS</div>
-    <div class="sb on" data-ps="basketball_wnba">🏀 WNBA</div>
-    <div class="sb on" data-ps="soccer_epl">⚽ EPL</div>
-    <div class="sb on" data-ps="mma_mixed_martial_arts">🥊 MMA</div>
-    <div class="sb on" data-ps="golf">⛳ Golf</div>
+    <div class="sb on" data-ps="baseball_mlb">â¾ MLB</div>
+    <div class="sb on" data-ps="basketball_nba">ð NBA</div>
+    <div class="sb on" data-ps="americanfootball_nfl">ð NFL</div>
+    <div class="sb on" data-ps="americanfootball_ncaaf">ð NCAAF</div>
+    <div class="sb on" data-ps="icehockey_nhl">ð NHL</div>
+    <div class="sb on" data-ps="soccer_usa_mls">â½ MLS</div>
+    <div class="sb on" data-ps="basketball_wnba">ð WNBA</div>
+    <div class="sb on" data-ps="soccer_epl">â½ EPL</div>
+    <div class="sb on" data-ps="mma_mixed_martial_arts">ð¥ MMA</div>
+    <div class="sb on" data-ps="golf">â³ Golf</div>
   </div>
-  <button class="scan" onclick="scanPoly()">📊 Scan Poly Arbs</button>
+  <button class="scan" onclick="scanPoly()">ð Scan Poly Arbs</button>
   <div id="pprog" style="display:none" class="prog">
     <span id="pprogText">Fetching Polymarket...</span>
     <div class="prog-bar"><div class="prog-fill" id="pprogFill" style="width:0%"></div></div>
@@ -292,7 +292,7 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
 <div id="view-offshore" class="view">
   <div class="slabel">SportsGameOdds API Key</div>
   <input type="password" id="opkey" placeholder="Paste SportsGameOdds API key (sportsgameodds.com)" style="font-size:12px" />
-  <div class="slabel" style="margin-top:-4px;color:#38bdf8">🔒 BookMaker.eu is locked as one leg of every arb — hedged against your domestic books. Paid tier = real-time.</div>
+  <div class="slabel" style="margin-top:-4px;color:#38bdf8">ð BookMaker.eu is locked as one leg of every arb â hedged against your domestic books. Paid tier = real-time.</div>
   <div class="row">
     <input type="number" id="obank" value="300" placeholder="US stake $" />
     <input type="number" id="omine" value="0.5" placeholder="Min %" step="0.1" />
@@ -312,49 +312,49 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
   </div>
   <div class="slabel">Leagues (one call covers all selected)</div>
   <div class="sports" id="oleagues">
-    <div class="sb on" data-l="MLB">⚾ MLB</div>
-    <div class="sb on" data-l="NBA">🏀 NBA</div>
-    <div class="sb on" data-l="NFL">🏈 NFL</div>
-    <div class="sb on" data-l="NHL">🏒 NHL</div>
-    <div class="sb on" data-l="WNBA">🏀 WNBA</div>
-    <div class="sb on" data-l="UFC">🥊 UFC</div>
-    <div class="sb" data-l="MLS">⚽ MLS</div>
-    <div class="sb" data-l="NCAAF">🏈 NCAAF</div>
-    <div class="sb" data-l="NCAAB">🏀 NCAAB</div>
-    <div class="sb" data-l="ATP">🎾 ATP</div>
-    <div class="sb" data-l="WTA">🎾 WTA</div>
-    <div class="sb" data-l="EPL">⚽ EPL</div>
-    <div class="sb" data-l="UEFA_CHAMPIONS_LEAGUE">⚽ UCL</div>
-    <div class="sb" data-l="UEFA_EUROPA_LEAGUE">⚽ Europa</div>
-    <div class="sb" data-l="LA_LIGA">⚽ La Liga</div>
-    <div class="sb" data-l="BUNDESLIGA">⚽ Bundesliga</div>
-    <div class="sb" data-l="IT_SERIE_A">⚽ Serie A</div>
-    <div class="sb" data-l="FR_LIGUE_1">⚽ Ligue 1</div>
-    <div class="sb" data-l="LIGA_MX">⚽ Liga MX</div>
+    <div class="sb on" data-l="MLB">â¾ MLB</div>
+    <div class="sb on" data-l="NBA">ð NBA</div>
+    <div class="sb on" data-l="NFL">ð NFL</div>
+    <div class="sb on" data-l="NHL">ð NHL</div>
+    <div class="sb on" data-l="WNBA">ð WNBA</div>
+    <div class="sb on" data-l="UFC">ð¥ UFC</div>
+    <div class="sb" data-l="MLS">â½ MLS</div>
+    <div class="sb" data-l="NCAAF">ð NCAAF</div>
+    <div class="sb" data-l="NCAAB">ð NCAAB</div>
+    <div class="sb" data-l="ATP">ð¾ ATP</div>
+    <div class="sb" data-l="WTA">ð¾ WTA</div>
+    <div class="sb" data-l="EPL">â½ EPL</div>
+    <div class="sb" data-l="UEFA_CHAMPIONS_LEAGUE">â½ UCL</div>
+    <div class="sb" data-l="UEFA_EUROPA_LEAGUE">â½ Europa</div>
+    <div class="sb" data-l="LA_LIGA">â½ La Liga</div>
+    <div class="sb" data-l="BUNDESLIGA">â½ Bundesliga</div>
+    <div class="sb" data-l="IT_SERIE_A">â½ Serie A</div>
+    <div class="sb" data-l="FR_LIGUE_1">â½ Ligue 1</div>
+    <div class="sb" data-l="LIGA_MX">â½ Liga MX</div>
   </div>
-  <button onclick="discoverLeagues()" style="background:#1a1a26;color:#38bdf8;border:1px solid #38bdf8;border-radius:8px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;width:100%;margin-bottom:8px">🔍 Show all leagues my key supports</button>
+  <button onclick="discoverLeagues()" style="background:#1a1a26;color:#38bdf8;border:1px solid #38bdf8;border-radius:8px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;width:100%;margin-bottom:8px">ð Show all leagues my key supports</button>
   <div id="oleaguesExtra"></div>
   <div class="slabel">Markets</div>
   <div class="markets" id="omarkets">
-    <div class="mb on" data-om="ml">💰 Moneyline</div>
-    <div class="mb on" data-om="sp">📊 Spreads</div>
-    <div class="mb on" data-om="ou">🔢 Totals</div>
-    <div class="mb on" data-om="props">🎯 Player Props</div>
-    <div class="mb on" data-om="gameprops">🏟️ Game Props</div>
-    <div class="mb on" data-om="alt">📈 Alt Lines</div>
+    <div class="mb on" data-om="ml">ð° Moneyline</div>
+    <div class="mb on" data-om="sp">ð Spreads</div>
+    <div class="mb on" data-om="ou">ð¢ Totals</div>
+    <div class="mb on" data-om="props">ð¯ Player Props</div>
+    <div class="mb on" data-om="gameprops">ðï¸ Game Props</div>
+    <div class="mb on" data-om="alt">ð Alt Lines</div>
   </div>
   <div class="slabel">Game Status</div>
   <div class="filters" id="ofilters">
-    <div class="fb on" data-of="all">🌐 All Games</div>
-    <div class="fb" data-of="upcoming">📅 Upcoming</div>
-    <div class="fb" data-of="live">🔴 Live</div>
+    <div class="fb on" data-of="all">ð All Games</div>
+    <div class="fb" data-of="upcoming">ð Upcoming</div>
+    <div class="fb" data-of="live">ð´ Live</div>
   </div>
   <div class="slabel">Max games to scan</div>
   <input type="number" id="omax" value="50" min="1" max="150" style="width:100px;margin-bottom:4px" />
   <div class="slabel" style="color:#555;margin-top:0">Higher = more coverage but more objects used. Keep low (15-25) if running Auto, since Auto re-scans every 60s and multiplies the cost.</div>
-  <div class="slabel" style="color:#555;margin-top:-4px">🌊 BookMaker.eu vs FanDuel · DraftKings · BetMGM · Caesars · ESPN Bet · theScore · 📈 Kalshi · Polymarket. Live bet-slip links included.</div>
-  <button class="scan" onclick="scanOffshore()" style="background:#38bdf8">🔒 Scan BookMaker Arbs</button>
-  <button onclick="checkSgoUsage()" style="background:#1a1a26;color:#38bdf8;border:1px solid #38bdf8;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;width:100%;margin-bottom:12px">📊 Check API Usage</button>
+  <div class="slabel" style="color:#555;margin-top:-4px">ð BookMaker.eu vs FanDuel Â· DraftKings Â· BetMGM Â· Caesars Â· ESPN Bet Â· theScore Â· ð Kalshi Â· Polymarket. Live bet-slip links included.</div>
+  <button class="scan" onclick="scanOffshore()" style="background:#38bdf8">ð Scan BookMaker Arbs</button>
+  <button onclick="checkSgoUsage()" style="background:#1a1a26;color:#38bdf8;border:1px solid #38bdf8;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;width:100%;margin-bottom:12px">ð Check API Usage</button>
   <div id="ousage"></div>
   <div id="oprog" style="display:none" class="prog"><span id="oprogText">...</span></div>
   <div id="oout"></div>
@@ -362,43 +362,63 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
 
 <div id="view-notify" class="view">
   <div class="sch-box" id="schBox">
-    <div class="sch-title">⏰ Background Scanner<span class="sch-status off" id="schStatus">OFF</span></div>
+    <div class="sch-title">â° Background Scanner<span class="sch-status off" id="schStatus">OFF</span></div>
     <div class="big-toggle" onclick="toggleScheduler()">
       <div>
         <div class="big-toggle-label" id="schToggleLabel">Scanner is OFF</div>
-        <div class="big-toggle-sub">Tap to turn on — runs every 10 min, 6am–10pm ET</div>
+        <div class="big-toggle-sub">Tap to turn on â runs every 10 min, 6amâ10pm ET</div>
       </div>
       <label class="switch-lg" onclick="event.stopPropagation()"><input type="checkbox" id="schEnabled" onchange="toggleScheduler()" /><span class="slider-lg"></span></label>
     </div>
-    <div class="slabel">Sports to scan</div>
+    <div class="slabel">Leagues to scan <span style="color:#38bdf8">(BookMaker.eu hedged vs domestic)</span></div>
     <div class="sch-sports">
-      <div class="sb on" data-ss="baseball_mlb">⚾ MLB</div>
-      <div class="sb on" data-ss="basketball_nba">🏀 NBA</div>
-      <div class="sb on" data-ss="americanfootball_nfl">🏈 NFL</div>
-      <div class="sb on" data-ss="americanfootball_ncaaf">🏈 NCAAF</div>
-      <div class="sb on" data-ss="icehockey_nhl">🏒 NHL</div>
-      <div class="sb on" data-ss="soccer_usa_mls">⚽ MLS</div>
-      <div class="sb on" data-ss="tennis_atp_french_open">🎾 Tennis</div>
-      <div class="sb on" data-ss="mma_mixed_martial_arts">🥊 MMA</div>
-      <div class="sb on" data-ss="golf">⛳ Golf</div>
-      <div class="sb on" data-ss="basketball_wnba">🏀 WNBA</div>
-      <div class="sb on" data-ss="soccer_epl">⚽ EPL</div>
-      <div class="sb on" data-ss="boxing_boxing">🥊 Boxing</div>
+      <div class="sb on" data-ss="MLB">â¾ MLB</div>
+      <div class="sb on" data-ss="NBA">ð NBA</div>
+      <div class="sb on" data-ss="NFL">ð NFL</div>
+      <div class="sb on" data-ss="NHL">ð NHL</div>
+      <div class="sb on" data-ss="WNBA">ð WNBA</div>
+      <div class="sb on" data-ss="UFC">ð¥ UFC</div>
+      <div class="sb" data-ss="NCAAF">ð NCAAF</div>
+      <div class="sb" data-ss="NCAAB">ð NCAAB</div>
+      <div class="sb" data-ss="MLS">â½ MLS</div>
+      <div class="sb" data-ss="ATP">ð¾ ATP</div>
+      <div class="sb" data-ss="WTA">ð¾ WTA</div>
+      <div class="sb" data-ss="EPL">â½ EPL</div>
     </div>
-    <div class="slabel" style="margin-top:14px">Min edge % to notify</div>
-    <input type="number" id="schMinEdge" value="0.5" step="0.1" min="0" placeholder="%" style="width:100px;margin-bottom:0" />
-    <div class="sch-note">⏰ Runs every 10 min between 6am–10pm Eastern — upcoming games only.<br>🔕 Automatically pauses overnight so you sleep undisturbed.<br>🔔 Pushover credentials are pulled from the Notifications panel.</div>
-    <button class="sch-save" id="schSaveBtn" onclick="saveSchedulerSettings()">💾 Save Settings to GitHub</button>
-    <div class="sch-log" id="schLog">Not saved yet — tap Save Settings to activate.</div>
+    <div class="slabel" style="margin-top:14px">Markets to scan</div>
+    <div class="sch-markets">
+      <div class="sb on" data-sm="ml">ð° Moneyline</div>
+      <div class="sb on" data-sm="sp">ð Spreads</div>
+      <div class="sb on" data-sm="ou">ð¢ Totals</div>
+      <div class="sb on" data-sm="props">ð¯ Player Props</div>
+      <div class="sb on" data-sm="gameprops">ðï¸ Game Props</div>
+    </div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:14px">
+      <div>
+        <div class="slabel">Min edge % to notify</div>
+        <input type="number" id="schMinEdge" value="0.5" step="0.1" min="0" placeholder="%" style="width:110px;margin-bottom:0" />
+      </div>
+      <div>
+        <div class="slabel">Flag stale above %</div>
+        <input type="number" id="schStaleFlag" value="8" step="0.5" min="0" placeholder="%" style="width:110px;margin-bottom:0" />
+      </div>
+      <div>
+        <div class="slabel">Max games / league</div>
+        <input type="number" id="schMaxGames" value="25" step="5" min="5" placeholder="#" style="width:110px;margin-bottom:0" />
+      </div>
+    </div>
+    <div class="sch-note">â° Runs every 10 min between 6amâ10pm Eastern â upcoming games only.<br>ð BookMaker.eu is locked as one leg, hedged vs your domestic books + exchanges (same SGO feed as the Offshore tab).<br>â ï¸ Arbs above the stale threshold get a "verify" flag (not hidden) â real BookMaker arbs cluster 0.5â2%.<br>ð Pushover credentials are pulled from the Notifications panel.</div>
+    <button class="sch-save" id="schSaveBtn" onclick="saveSchedulerSettings()">ð¾ Save Settings to GitHub</button>
+    <div class="sch-log" id="schLog">Not saved yet â tap Save Settings to activate.</div>
   </div>
   <div class="sch-box" style="margin-top:4px">
-    <div class="sch-title">📋 How it works</div>
+    <div class="sch-title">ð How it works</div>
     <div style="font-size:12px;color:#888;line-height:1.8">
       1. Enter your GitHub token below (stored locally only)<br>
-      2. Toggle ON and pick your sports<br>
-      3. Hit Save — GitHub Actions reads this and scans automatically<br>
+      2. Toggle ON, pick leagues + markets, set min edge<br>
+      3. Hit Save â GitHub Actions reads this and scans BookMaker arbs automatically<br>
       4. You get a Pushover alert when arbs are found<br>
-      5. Toggle OFF anytime — scanner stops immediately
+      5. Toggle OFF anytime â scanner stops immediately
     </div>
     <div class="slabel" style="margin-top:12px">Pushover App Token</div>
     <input type="text" id="poTokenInput" placeholder="App API Token (from pushover.net)" />
@@ -417,7 +437,7 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
 <div class="ticker">
   <div class="ticker-info"><span class="tdot" id="dot"></span><span id="ttext">idle</span></div>
   <div style="display:flex;gap:8px;flex-shrink:0">
-    <button class="tbtn" id="autoBtn" onclick="toggleAuto()" style="background:#00ff88;color:#000">⏱ Auto</button>
+    <button class="tbtn" id="autoBtn" onclick="toggleAuto()" style="background:#00ff88;color:#000">â± Auto</button>
     <button class="tbtn" onclick="document.getElementById('out').innerHTML=''" style="background:#1a1a26;color:#ff4757;border:1px solid #ff4757">Clear</button>
   </div>
 </div>
@@ -427,7 +447,7 @@ var timer=null,autoOn=false,scanCount=0;
 var ARB_CACHE=[];
 var OARB_CACHE=[]; var OEVENTS_CACHE={};
 
-// ── Tab switching ──────────────────────────────────────────
+// ââ Tab switching ââââââââââââââââââââââââââââââââââââââââââ
 function switchTab(tab){
   ['scanner','lookup','poly','offshore','notify'].forEach(function(t){
     document.getElementById('tab-'+t).classList.remove('active');
@@ -437,7 +457,7 @@ function switchTab(tab){
   document.getElementById('view-'+tab).classList.add('active');
 }
 
-// ── Filter toggle listeners ────────────────────────────────
+// ââ Filter toggle listeners ââââââââââââââââââââââââââââââââ
 document.getElementById('sports').addEventListener('click',function(e){
   var b=e.target.closest('[data-s]');
   if(b){b.classList.toggle('on');}
@@ -457,7 +477,7 @@ document.getElementById('filters').addEventListener('click',function(e){
   b.classList.add('on');
 });
 
-// ── Pushover ───────────────────────────────────────────────
+// ââ Pushover âââââââââââââââââââââââââââââââââââââââââââââââ
 (function(){
   try{
     var pt=localStorage.getItem('po_token'),pu=localStorage.getItem('po_user'),pe=localStorage.getItem('po_enabled'),pm=localStorage.getItem('po_minedge');
@@ -508,8 +528,8 @@ async function sendPushover(title,message,priority){
 async function testPushover(){
   var btn=document.getElementById('poTestBtn');
   btn.textContent='Sending...';btn.disabled=true;
-  var ok=await sendPushover('🔔 ArbEdge Test','Pushover is connected! You will now receive arb alerts on your iPhone and Apple Watch.',0);
-  btn.textContent=ok?'✓ Sent!':'✗ Failed';
+  var ok=await sendPushover('ð ArbEdge Test','Pushover is connected! You will now receive arb alerts on your iPhone and Apple Watch.',0);
+  btn.textContent=ok?'â Sent!':'â Failed';
   btn.style.background=ok?'#00ff88':'#ff4757';
   btn.style.color=ok?'#000':'#fff';
   setTimeout(function(){btn.textContent='Test';btn.disabled=false;btn.style.background='#ff6600';btn.style.color='#fff';},3000);
@@ -532,11 +552,11 @@ async function maybePushoverNotify(arbs){
   // Send one notification summarizing all new arbs (batch to avoid spam)
   var top=newArbs.slice(0,3);
   var lines=top.map(function(x){
-    return '+'+x.roi.toFixed(2)+'% | '+x.game.split(' — ')[0]+'\n'+x.side1.book+' vs '+x.side2.book+' | $'+x.profit.toFixed(2)+' profit';
+    return '+'+x.roi.toFixed(2)+'% | '+x.game.split(' â ')[0]+'\n'+x.side1.book+' vs '+x.side2.book+' | $'+x.profit.toFixed(2)+' profit';
   });
   var extra=newArbs.length>3?'\n...and '+(newArbs.length-3)+' more':'';
   var msg=lines.join('\n\n')+extra;
-  var title='🔔 '+newArbs.length+' Arb'+(newArbs.length>1?'s':'')+' Found — ArbEdge';
+  var title='ð '+newArbs.length+' Arb'+(newArbs.length>1?'s':'')+' Found â ArbEdge';
   // High priority if best arb is over 1%
   var priority=newArbs[0].edge>=1?1:0;
   await sendPushover(title,msg,priority);
@@ -544,7 +564,7 @@ async function maybePushoverNotify(arbs){
 
 
 
-// ── Helpers ────────────────────────────────────────────────
+// ââ Helpers ââââââââââââââââââââââââââââââââââââââââââââââââ
 function getSports(){return Array.from(document.querySelectorAll('#sports [data-s].on')).map(function(b){return b.dataset.s})}
 function getMarkets(){return Array.from(document.querySelectorAll('#markets [data-m].on')).map(function(b){return b.dataset.m})}
 function getBooks(){return Array.from(document.querySelectorAll('#books [data-b].on')).map(function(b){return b.dataset.b})}
@@ -559,12 +579,12 @@ function isTrueArb(o1,o2,min){var p1=oP(o1),p2=oP(o2),tot=p1+p2;return tot<1.0&&
 function isLive(t){return new Date(t).getTime()<=Date.now()}
 function passesFilter(game,mode){if(mode==='all')return true;var live=isLive(game.commence_time);return mode==='live'?live:!live}
 
-// ── Book risk (lower = place first) ──────────────────────
+// ââ Book risk (lower = place first) ââââââââââââââââââââââ
 var BOOK_RISK={'bovada':1,'betonline':1,'betus':1,'lowvig':1,'mybookie':1,'betany':1,'thescore':2,'espn':3,'fanatics':4,'betmgm':5,'caesars':6,'williamhill':6,'bet365':6,'draftkings':7,'fanduel':8};
 function bookRisk(name){var n=name.toLowerCase();for(var k in BOOK_RISK){if(n.indexOf(k)>-1)return BOOK_RISK[k]}return 5}
-function placeFirstNote(b1,b2){var r1=bookRisk(b1),r2=bookRisk(b2);if(r1===r2)return '';var first=r1<r2?b1:b2;return '<div class="place-first-note">⚠️ Place <strong>'+first+'</strong> first — smaller book, higher limit risk</div>'}
+function placeFirstNote(b1,b2){var r1=bookRisk(b1),r2=bookRisk(b2);if(r1===r2)return '';var first=r1<r2?b1:b2;return '<div class="place-first-note">â ï¸ Place <strong>'+first+'</strong> first â smaller book, higher limit risk</div>'}
 
-// ── Markets ────────────────────────────────────────────────
+// ââ Markets ââââââââââââââââââââââââââââââââââââââââââââââââ
 var PROP_MARKETS={
   baseball_mlb:[
     'batter_hits','batter_home_runs','batter_rbis','batter_runs_scored','batter_strikeouts',
@@ -727,7 +747,7 @@ var GP_LABEL={
   team_totals:'Team Total'
 };
 
-// ── Arb processing ─────────────────────────────────────────
+// ââ Arb processing âââââââââââââââââââââââââââââââââââââââââ
 function processH2H(oc,gl,sp2,bank,min,allArbs,label,tag,liveFlag){
   label=label||'Moneyline';tag=tag||'h2h';
   var bt={};
@@ -758,7 +778,7 @@ function process3Way(oc,gl,sp2,bank,min,allArbs,label,tag,liveFlag){
   var booksUsed=names.map(function(n){return best[n].book});
   var samebook=new Set(booksUsed).size!==booksUsed.length;
   var mn='3-way: Bet '+names.map(function(n,i){return n+' $'+stakes[i].toFixed(2)+' ('+best[n].book+')'}).join(', ')+'. All 3 must be covered.';
-  allArbs.push({game:gl,sport:sp2,market:tag,label:label+(samebook?' ⚠️ same book':''),middle:false,live:!!liveFlag,edge:edge,roi:(profit/totalStaked)*100,profit:profit,side1:{name:names[0],book:best[names[0]].book,odds:best[names[0]].odds,stake:stakes[0],link:best[names[0]].link,limit:best[names[0]].limit},side2:{name:names[1]+'/'+names[2],book:best[names[1]].book+'+'+best[names[2]].book,odds:best[names[1]].odds,stake:stakes[1]+stakes[2],link:best[names[1]].link},middleNote:mn});
+  allArbs.push({game:gl,sport:sp2,market:tag,label:label+(samebook?' â ï¸ same book':''),middle:false,live:!!liveFlag,edge:edge,roi:(profit/totalStaked)*100,profit:profit,side1:{name:names[0],book:best[names[0]].book,odds:best[names[0]].odds,stake:stakes[0],link:best[names[0]].link,limit:best[names[0]].limit},side2:{name:names[1]+'/'+names[2],book:best[names[1]].book+'+'+best[names[2]].book,odds:best[names[1]].odds,stake:stakes[1]+stakes[2],link:best[names[1]].link},middleNote:mn});
 }
 
 function processSpreads(oc,gl,sp2,bank,min,allArbs,label,tag,liveFlag){
@@ -773,7 +793,7 @@ function processSpreads(oc,gl,sp2,bank,min,allArbs,label,tag,liveFlag){
     if(!isTrueArb(a.odds,b.odds,min))return;
     var p1=oP(a.odds),p2=oP(b.odds),tot=p1+p2,s1=bank*(p1/tot),s2=bank*(p2/tot),pr=Math.min(s1*oD(a.odds),s2*oD(b.odds))-(s1+s2);
     var mf=(a.point>0&&b.point<0&&a.point>Math.abs(b.point))||(b.point>0&&a.point<0&&b.point>Math.abs(a.point));
-    var mn=mf?'🎯 MIDDLE: win both if margin between '+Math.min(Math.abs(a.point),Math.abs(b.point))+' and '+Math.max(Math.abs(a.point),Math.abs(b.point)):'';
+    var mn=mf?'ð¯ MIDDLE: win both if margin between '+Math.min(Math.abs(a.point),Math.abs(b.point))+' and '+Math.max(Math.abs(a.point),Math.abs(b.point)):'';
     if(!best||pr>best.profit)best={game:gl,sport:sp2,market:tag,label:label,middle:mf,live:!!liveFlag,edge:(1-tot)*100,roi:(pr/(s1+s2))*100,profit:pr,side1:{name:tn[0]+' '+fmt(a.point),book:a.book,odds:a.odds,stake:s1,link:a.link,limit:a.limit},side2:{name:tn[1]+' '+fmt(b.point),book:b.book,odds:b.odds,stake:s2,link:b.link,limit:b.limit},middleNote:mn};
   })});
   if(best)allArbs.push(best);
@@ -788,7 +808,7 @@ function processTotals(oc,gl,sp2,bank,min,allArbs,label,tag,liveFlag){
     if(a.book===b.book||a.point>b.point)return;
     if(!isTrueArb(a.odds,b.odds,min))return;
     var p1=oP(a.odds),p2=oP(b.odds),tot=p1+p2,s1=bank*(p1/tot),s2=bank*(p2/tot),pr=Math.min(s1*oD(a.odds),s2*oD(b.odds))-(s1+s2);
-    var mf=b.point>a.point,mn=mf?'🎯 MIDDLE: win both if total between '+a.point+' and '+b.point:'';
+    var mf=b.point>a.point,mn=mf?'ð¯ MIDDLE: win both if total between '+a.point+' and '+b.point:'';
     if(!best||pr>best.profit)best={game:gl,sport:sp2,market:tag,label:label,middle:mf,live:!!liveFlag,edge:(1-tot)*100,roi:(pr/(s1+s2))*100,profit:pr,side1:{name:'Over '+a.point,book:a.book,odds:a.odds,stake:s1,link:a.link,limit:a.limit},side2:{name:'Under '+b.point,book:b.book,odds:b.odds,stake:s2,link:b.link,limit:b.limit},middleNote:mn};
   })});
   if(best)allArbs.push(best);
@@ -814,7 +834,7 @@ function processProps(bookmakers,gl,sp2,bank,min,allArbs,liveFlag){
     if(bo.book===bu.book||!isTrueArb(bo.odds,bu.odds,min))return;
     var p1=oP(bo.odds),p2=oP(bu.odds),tot=p1+p2,s1=bank*(p1/tot),s2=bank*(p2/tot),pr=Math.min(s1*oD(bo.odds),s2*oD(bu.odds))-(s1+s2);
     var lbl=pm.market.replace(/_alternate/,' Alt').replace(/_/g,' ').replace(/\b\w/g,function(c){return c.toUpperCase()});
-    allArbs.push({game:gl+' — '+pm.desc,sport:sp2,market:'props',label:lbl,propMarketKey:pm.market,propPoint:pm.point,middle:false,live:!!liveFlag,edge:(1-tot)*100,roi:(pr/(s1+s2))*100,profit:pr,side1:{name:'Over '+pm.point,book:bo.book,odds:bo.odds,stake:s1,link:bo.link,limit:bo.limit},side2:{name:'Under '+pm.point,book:bu.book,odds:bu.odds,stake:s2,link:bu.link,limit:bu.limit},middleNote:''});
+    allArbs.push({game:gl+' â '+pm.desc,sport:sp2,market:'props',label:lbl,propMarketKey:pm.market,propPoint:pm.point,middle:false,live:!!liveFlag,edge:(1-tot)*100,roi:(pr/(s1+s2))*100,profit:pr,side1:{name:'Over '+pm.point,book:bo.book,odds:bo.odds,stake:s1,link:bo.link,limit:bo.limit},side2:{name:'Under '+pm.point,book:bu.book,odds:bu.odds,stake:s2,link:bu.link,limit:bu.limit},middleNote:''});
   });
 }
 
@@ -836,7 +856,7 @@ function processGameProps(bookmakers,gl,sp2,bank,min,allArbs,gpKeys,liveFlag,sp)
   });
 }
 
-// ── Scores ─────────────────────────────────────────────────
+// ââ Scores âââââââââââââââââââââââââââââââââââââââââââââââââ
 var SCORES_CACHE={};
 async function fetchScores(key,sports,BOOKS){
   await Promise.all(sports.map(function(sp){
@@ -850,10 +870,10 @@ async function fetchScores(key,sports,BOOKS){
 function getScoreLine(id){
   var ev=SCORES_CACHE[id];
   if(!ev||!ev.scores||ev.completed)return '';
-  return ev.scores.map(function(s){return s.name+' '+s.score}).join(' — ');
+  return ev.scores.map(function(s){return s.name+' '+s.score}).join(' â ');
 }
 
-// ── Golf ───────────────────────────────────────────────────
+// ââ Golf âââââââââââââââââââââââââââââââââââââââââââââââââââ
 async function scanGolf(key,bank,min,allArbs,filterMode,BOOKS){
   try{
     var r=await fetch('https://api.the-odds-api.com/v4/sports/?apiKey='+key);
@@ -870,7 +890,7 @@ async function scanGolf(key,bank,min,allArbs,filterMode,BOOKS){
         count++;
         if(!passesFilter(matchup,filterMode))return;
         var liveFlag=isLive(matchup.commence_time);
-        var gl=(matchup.home_team||'Player A')+' vs '+(matchup.away_team||'Player B')+' — '+t.title;
+        var gl=(matchup.home_team||'Player A')+' vs '+(matchup.away_team||'Player B')+' â '+t.title;
         var oc=[];
         (matchup.bookmakers||[]).forEach(function(book){
           (book.markets||[]).forEach(function(mkt){
@@ -879,7 +899,7 @@ async function scanGolf(key,bank,min,allArbs,filterMode,BOOKS){
           });
         });
         var preLen=allArbs.length;
-        if(oc.length>=2)processH2H(oc,gl,'Golf — '+t.title,bank,min,allArbs,'Matchup','golf',liveFlag);
+        if(oc.length>=2)processH2H(oc,gl,'Golf â '+t.title,bank,min,allArbs,'Matchup','golf',liveFlag);
         for(var ai=preLen;ai<allArbs.length;ai++){allArbs[ai].gameId=matchup.id;allArbs[ai].sportKey=t.key;allArbs[ai].commenceTime=matchup.commence_time;}
       });
     }
@@ -887,7 +907,7 @@ async function scanGolf(key,bank,min,allArbs,filterMode,BOOKS){
   }catch(e){return 0}
 }
 
-// ── Main scan ──────────────────────────────────────────────
+// ââ Main scan ââââââââââââââââââââââââââââââââââââââââââââââ
 async function scanAll(){
   var key=document.getElementById('key').value.trim();
   var bank=parseFloat(document.getElementById('bank').value)||1000;
@@ -993,41 +1013,41 @@ async function scanAll(){
 
   function renderCard(x,idx){
     var c='<div class="card'+(x.middle?' middle':x.live?' live':x.edge>2?' hot':'')+'"><div class="ctop"><div style="flex:1;min-width:0"><div class="gmeta">'+x.sport+'</div><span class="mktag '+x.market+'">'+x.label+'</span>';
-    if(x.live)c+='<span class="mktag live">🔴 LIVE</span>';
-    if(x.middle)c+='<span class="mktag mid">🎯 Middle</span>';
+    if(x.live)c+='<span class="mktag live">ð´ LIVE</span>';
+    if(x.middle)c+='<span class="mktag mid">ð¯ Middle</span>';
     c+='<div class="gtitle">'+x.game+'</div>';
     if(x.commenceTime)c+='<div class="gdate-tag">'+new Date(x.commenceTime).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+'</div>';
-    if(x.scoreLine)c+='<div class="score-line">⚡ '+x.scoreLine+'</div>';
+    if(x.scoreLine)c+='<div class="score-line">â¡ '+x.scoreLine+'</div>';
     c+='</div><div style="text-align:right;flex-shrink:0"><div class="roi">+'+x.roi.toFixed(2)+'%</div><div class="psub">$'+x.profit.toFixed(2)+' profit</div></div></div><div class="sides">';
     [x.side1,x.side2].forEach(function(s){
       c+='<div class="side"><div class="book">'+s.book+'</div><div class="team">'+s.name+'</div><div class="odds">'+fmt(s.odds)+'</div><div class="stake">Bet $'+s.stake.toFixed(2)+'</div>';
-      if(s.limit)c+='<div class="limit-tag">Max: $'+s.limit+(parseFloat(s.limit)<s.stake?' ⚠️':'')+'</div>';
-      if(s.link)c+='<a href="'+s.link+'" target="_blank" class="open-link">Open in '+s.book+' →</a>';
+      if(s.limit)c+='<div class="limit-tag">Max: $'+s.limit+(parseFloat(s.limit)<s.stake?' â ï¸':'')+'</div>';
+      if(s.link)c+='<a href="'+s.link+'" target="_blank" class="open-link">Open in '+s.book+' â</a>';
       c+='</div>';
     });
     c+='</div>';
     c+=placeFirstNote(x.side1.book,x.side2.book);
     if(x.middleNote)c+='<div class="middle-note">'+x.middleNote+'</div>';
-    c+='<div style="padding:8px 12px;border-top:1px solid #2a2a3d"><button class="lookup-btn" onclick="lookupFromArb('+idx+')">🔍 Find Alternative Lines</button></div>';
+    c+='<div style="padding:8px 12px;border-top:1px solid #2a2a3d"><button class="lookup-btn" onclick="lookupFromArb('+idx+')">ð Find Alternative Lines</button></div>';
     c+='</div>';
     return c;
   }
 
   var now=new Date().toLocaleTimeString();
   var h='';
-  if(allArbs.length)h+='<div class="alert-bar">🔔 '+allArbs.length+' arb'+(allArbs.length>1?'s':'')+' found at '+now+'</div>';
-  h+='<div class="stats">Scan #'+scanCount+' · '+totalGames+' games · '+allArbs.length+' arbs · '+now+'</div>';
+  if(allArbs.length)h+='<div class="alert-bar">ð '+allArbs.length+' arb'+(allArbs.length>1?'s':'')+' found at '+now+'</div>';
+  h+='<div class="stats">Scan #'+scanCount+' Â· '+totalGames+' games Â· '+allArbs.length+' arbs Â· '+now+'</div>';
   if(!allArbs.length){h+='<div class="msg">No arbs above '+min+'% right now.<br><br>Try lowering Min % to 0.2.</div>'}
   else{
     soonArbs.forEach(function(x){h+=renderCard(x,allArbs.indexOf(x))});
-    if(laterArbs.length){h+='<div class="section-divider"><span>📅 Games 3+ Days Away ('+laterArbs.length+')</span></div>';laterArbs.forEach(function(x){h+=renderCard(x,allArbs.indexOf(x))})}
+    if(laterArbs.length){h+='<div class="section-divider"><span>ð Games 3+ Days Away ('+laterArbs.length+')</span></div>';laterArbs.forEach(function(x){h+=renderCard(x,allArbs.indexOf(x))})}
   }
-  h+='<div class="limit-log"><div class="limit-log-title">📋 Known Book Limits</div><div class="limit-log-entry">🚫 <strong>Bally Bet</strong> — limited to <strong>$255</strong> on player props (Jun 22, 2026)</div><div class="limit-log-entry">🚫 <strong>Bally Bet</strong> — limited to <strong>$46</strong> on MLB player props (Jun 23, 2026)</div><div class="limit-log-entry">🚫 <strong>Hard Rock Bet</strong> — limited to <strong>$280</strong> on WNBA (Jun 22, 2026)</div><div class="limit-log-entry">⚠️ <strong>Hard Rock Bet</strong> — account gubbed Jun 24, 2026. No future promos. Limits may follow.</div><div class="limit-log-entry">🚫 <strong>Bally Bet</strong> — limited to <strong>$10</strong> per bet (Jun 24, 2026)</div><div class="limit-log-entry">🚫 <strong>Hard Rock Bet</strong> — limited to <strong>$10</strong> per bet (Jun 24, 2026)</div></div>';
+  h+='<div class="limit-log"><div class="limit-log-title">ð Known Book Limits</div><div class="limit-log-entry">ð« <strong>Bally Bet</strong> â limited to <strong>$255</strong> on player props (Jun 22, 2026)</div><div class="limit-log-entry">ð« <strong>Bally Bet</strong> â limited to <strong>$46</strong> on MLB player props (Jun 23, 2026)</div><div class="limit-log-entry">ð« <strong>Hard Rock Bet</strong> â limited to <strong>$280</strong> on WNBA (Jun 22, 2026)</div><div class="limit-log-entry">â ï¸ <strong>Hard Rock Bet</strong> â account gubbed Jun 24, 2026. No future promos. Limits may follow.</div><div class="limit-log-entry">ð« <strong>Bally Bet</strong> â limited to <strong>$10</strong> per bet (Jun 24, 2026)</div><div class="limit-log-entry">ð« <strong>Hard Rock Bet</strong> â limited to <strong>$10</strong> per bet (Jun 24, 2026)</div></div>';
   document.getElementById('out').innerHTML=h;
-  setStatus(autoOn,'#'+scanCount+' at '+now+(autoOn?' — next in 60s':''));
+  setStatus(autoOn,'#'+scanCount+' at '+now+(autoOn?' â next in 60s':''));
 }
 
-// ── Line Lookup ────────────────────────────────────────────
+// ââ Line Lookup ââââââââââââââââââââââââââââââââââââââââââââ
 function lookupFromArb(idx){
   var x=ARB_CACHE[idx];
   if(!x||!x.gameId||!x.sportKey){document.getElementById('lout').innerHTML='<div class="err">Run a fresh scan first, then tap this button.</div>';switchTab('lookup');return}
@@ -1040,10 +1060,10 @@ function lookupFromArb(idx){
   var playerFilter=null;
 
   if(x.market==='props'){
-    // Extract player name from game string e.g. "KC @ TB — Michael Massey"
-    var parts=x.game.split(' — ');
+    // Extract player name from game string e.g. "KC @ TB â Michael Massey"
+    var parts=x.game.split(' â ');
     playerFilter=parts.length>1?parts[parts.length-1].toLowerCase():null;
-    // Use the exact market key stored on the arb — also include its _alternate variant
+    // Use the exact market key stored on the arb â also include its _alternate variant
     if(x.propMarketKey){
       targetMkts=[x.propMarketKey];
       var altKey=x.propMarketKey.replace(/_alternate$/,'')+'_alternate';
@@ -1053,7 +1073,7 @@ function lookupFromArb(idx){
       targetMkts=allPropKeys.length?allPropKeys:['batter_hits','player_points'];
     }
   } else if(x.market==='gameprops'){
-    // Game prop (half/quarter/period) — fetch all game prop markets
+    // Game prop (half/quarter/period) â fetch all game prop markets
     targetMkts=GAME_PROP_MARKETS[sp]||[];
     if(!targetMkts.length)targetMkts=['h2h_h1','totals_h1'];
   } else if(x.market==='alt'){
@@ -1067,7 +1087,7 @@ function lookupFromArb(idx){
     targetMkts=['h2h'];
   }
 
-  var gameLabel=x.game.split(' — ')[0];
+  var gameLabel=x.game.split(' â ')[0];
   var arbLabel=x.label;
   fetchEventOdds(x.gameId,sp,targetMkts.filter(function(v,i,a){return a.indexOf(v)===i&&v}).join(','),gameLabel,playerFilter,arbLabel,x.propPoint);
 }
@@ -1089,7 +1109,7 @@ async function runLookup(){
     if(!matched.length){
       var html='<div class="msg" style="text-align:left;padding:12px">No match. Select a game:</div>';
       games.forEach(function(g){
-        html+='<div class="lcard" style="cursor:pointer" onclick="fetchEventOddsManual(\''+g.id+'\',\''+sport+'\',\''+encodeURIComponent(g.away_team+' @ '+g.home_team)+'\')"><div><div class="lbook">'+g.sport_title+'</div><div class="lname">'+g.away_team+' @ '+g.home_team+'</div></div><div style="color:#00ff88;font-size:18px">→</div></div>';
+        html+='<div class="lcard" style="cursor:pointer" onclick="fetchEventOddsManual(\''+g.id+'\',\''+sport+'\',\''+encodeURIComponent(g.away_team+' @ '+g.home_team)+'\')"><div><div class="lbook">'+g.sport_title+'</div><div class="lname">'+g.away_team+' @ '+g.home_team+'</div></div><div style="color:#00ff88;font-size:18px">â</div></div>';
       });
       out.innerHTML=html;return;
     }
@@ -1127,7 +1147,7 @@ async function fetchEventOdds(eventId,sport,markets,gameLabel,playerFilter,arbLa
             if(hasDesc&&!descMatches)return;
             if(!hasDesc&&!pointMatches)return;
           }
-          var desc=out2.description?out2.description+' — ':'';
+          var desc=out2.description?out2.description+' â ':'';
           var side=out2.name+(out2.point!=null?' '+out2.point:'');
           var k=mktLabel+'|||'+desc+side;
           if(!groups[k])groups[k]={label:mktLabel,desc:desc,side:side,lines:[]};
@@ -1140,7 +1160,7 @@ async function fetchEventOdds(eventId,sport,markets,gameLabel,playerFilter,arbLa
     keys.forEach(function(k){groups[k].lines.sort(function(a,b){return b.odds-a.odds})});
     var byMkt={};
     keys.forEach(function(k){var ml=groups[k].label;if(!byMkt[ml])byMkt[ml]=[];byMkt[ml].push(groups[k])});
-    var titleLine=arbLabel?gameLabel+' — <strong>'+arbLabel+'</strong>':gameLabel;
+    var titleLine=arbLabel?gameLabel+' â <strong>'+arbLabel+'</strong>':gameLabel;
     var html='<div class="stats" style="margin-bottom:16px">'+titleLine+'</div>';
     Object.keys(byMkt).forEach(function(mktLabel){
       html+='<div class="section-divider" style="margin:16px 0 10px"><span>'+mktLabel+'</span></div>';
@@ -1148,8 +1168,8 @@ async function fetchEventOdds(eventId,sport,markets,gameLabel,playerFilter,arbLa
         html+='<div style="color:#666;font-size:11px;margin:8px 0 4px">'+group.desc+group.side+'</div>';
         group.lines.forEach(function(l,i){
           html+='<div class="lcard'+(i===0?' best':'')+'"><div><div class="lbook">'+l.book+'</div>';
-          if(i===0)html+='<div class="lbest">★ Best Available</div>';
-          if(l.link)html+='<a href="'+l.link+'" target="_blank" class="llink">Open in '+l.book+' →</a>';
+          if(i===0)html+='<div class="lbest">â Best Available</div>';
+          if(l.link)html+='<a href="'+l.link+'" target="_blank" class="llink">Open in '+l.book+' â</a>';
           html+='</div><div class="lodds" style="color:'+(l.odds>0?'#00ff88':'#e8e8f0')+'">'+fmt(l.odds)+'</div></div>';
         });
       });
@@ -1158,8 +1178,8 @@ async function fetchEventOdds(eventId,sport,markets,gameLabel,playerFilter,arbLa
   }catch(e){out.innerHTML='<div class="err">Error: '+e.message+'</div>'}
 }
 
-// ── Controls ───────────────────────────────────────────────
-// ── Polymarket Arb Scanner ───────────────────────────────────
+// ââ Controls âââââââââââââââââââââââââââââââââââââââââââââââ
+// ââ Polymarket Arb Scanner âââââââââââââââââââââââââââââââââââ
 document.getElementById('psports').addEventListener('click',function(e){var b=e.target.closest('[data-ps]');if(b)b.classList.toggle('on');});
 (function(){
   try{
@@ -1272,14 +1292,14 @@ async function fetchPolyJson(url) {
 // so we sort ascending and fill from the lowest ask upward (real touch).
 async function fetchPolyDepth(tokenId, dollars) {
   // First get the TRUE live price from /price (accurate, unlike /book which has
-  // ghost data). We'll only count book liquidity near this price — ghost orders
+  // ghost data). We'll only count book liquidity near this price â ghost orders
   // parked at 0.99 are excluded so "available" reflects REAL takeable depth.
   var anchorAsk = await fetchPolyAsk(tokenId);
   if (anchorAsk == null) return null;
 
   var book = await fetchPolyJson('https://clob.polymarket.com/book?token_id='+tokenId);
   if (!book || !book.asks || !book.asks.length) {
-    // No usable book — return the anchor price but zero real depth
+    // No usable book â return the anchor price but zero real depth
     return { price: anchorAsk, availableDollars: 0, filled: false };
   }
 
@@ -1341,7 +1361,7 @@ async function fetchPolyAsk(tokenId) {
   if (bestAsk != null && bestBid == null) return bestAsk;
 
   // Book unusable (ghost/empty). Per docs, when spread >10c the UI shows last
-  // trade, not midpoint — so /price (midpoint) understates the ask. As a safe
+  // trade, not midpoint â so /price (midpoint) understates the ask. As a safe
   // fallback, take the midpoint and add a conservative half-spread estimate.
   var midData = await fetchPolyJson('https://clob.polymarket.com/midpoint?token_id='+tokenId);
   if (midData && midData.mid != null) {
@@ -1443,17 +1463,17 @@ function polyPriceToAmerican(price) {
 // Classify what type of bet a Polymarket market represents
 function classifyPolyMarket(title, outcomes) {
   var t = (title||'').toLowerCase();
-  // SEASON PROPS / win-totals — reject entirely (can't arb vs single game)
+  // SEASON PROPS / win-totals â reject entirely (can't arb vs single game)
   if (/win more than|win at least|win fewer than|over \d+\.?\d* (wins|games)|under \d+\.?\d* (wins|games)|\d+\.?\d* (wins|games) in the|regular season|make the playoffs|make the postseason|reach the|qualify for/.test(t)) {
     return {type:'season_prop', valid:false};
   }
-  // GAME PROPS / micro-markets — reject. These contain question phrasing about
+  // GAME PROPS / micro-markets â reject. These contain question phrasing about
   // events WITHIN a game (runs, innings, strikeouts, first to score, etc.) and
   // must never be matched to a moneyline. This was causing 11-13% false arbs.
   if (/will there be|run scored|first inning|any inning|score in the|first to score|first team to|how many|number of|total (runs|hits|strikeouts|points|goals)|player|home run|grand slam|stolen base|next (team|player)|margin of|exact|race to|reach \d+|by how many|winning margin|method of|both teams|either team|highest scoring|lead after/.test(t)) {
     return {type:'game_prop', valid:false};
   }
-  // FUTURES — championship/division/award markets (matched separately against SB futures)
+  // FUTURES â championship/division/award markets (matched separately against SB futures)
   if (/championship|champion|division title|conference title|win the.*title|win the.*cup|mvp|cy young|rookie of the year|award|world series|super bowl|stanley cup|nba finals|to win the|pennant|division winner|win the.*east|win the.*west|win the.*central|win the.*conference|win the.*division|win the \d{4}|\d{4} mls|\d{4} nba|\d{4} nfl|\d{4} mlb/.test(t)) {
     return {type:'futures', valid:true};
   }
@@ -1462,7 +1482,7 @@ function classifyPolyMarket(title, outcomes) {
     var pointMatch = t.match(/(\d+\.?\d*)/);
     return {type:'totals', valid:true, point: pointMatch?parseFloat(pointMatch[1]):null};
   }
-  // Moneyline — single-game head to head ONLY, phrased as a clean matchup.
+  // Moneyline â single-game head to head ONLY, phrased as a clean matchup.
   // Must contain "vs"/"@" AND must NOT contain a question mark (props are questions).
   if (/ vs\.? | @ | v /.test(t) && t.indexOf('?') === -1) {
     return {type:'h2h', valid:true};
@@ -1496,7 +1516,7 @@ function findMatchingGame(polyTitle, allOddsGames, polyStartTime) {
     var homeOk = teamFullyPresent(game.home_team||'', pNorm);
     var awayOk = teamFullyPresent(game.away_team||'', pNorm);
     if (!homeOk || !awayOk) return;
-    // DATE CHECK — only reject if we have a VALID poly date that clearly differs.
+    // DATE CHECK â only reject if we have a VALID poly date that clearly differs.
     // Window is 36h to allow for timezone/rounding differences while still
     // separating back-to-back series games (usually 24h apart).
     if (polyDate && !isNaN(polyDate) && game.commence_time) {
@@ -1508,7 +1528,7 @@ function findMatchingGame(polyTitle, allOddsGames, polyStartTime) {
         return;
       }
     }
-    // No usable date — fall back to name-only match
+    // No usable date â fall back to name-only match
     matches.push({game:game, hoursDiff:null});
   });
 
@@ -1516,7 +1536,7 @@ function findMatchingGame(polyTitle, allOddsGames, polyStartTime) {
   if (matches.length === 1) return matches[0].game;
 
   // Multiple games with same teams (back-to-back series).
-  // Pick the one closest in time IF we have date info; otherwise ambiguous → skip.
+  // Pick the one closest in time IF we have date info; otherwise ambiguous â skip.
   var withDates = matches.filter(function(m){return m.hoursDiff != null;});
   if (withDates.length) {
     withDates.sort(function(a,b){return a.hoursDiff - b.hoursDiff;});
@@ -1625,11 +1645,11 @@ async function scanPoly() {
     var pNoToken = pTokenIds[1]||null;
     if (!pYesPrice || !pNoPrice || pYesPrice<=0.01 || pYesPrice>=0.99) return;
 
-    // Classify the Polymarket market type — reject futures/invalid
+    // Classify the Polymarket market type â reject futures/invalid
     var cls = classifyPolyMarket(pTitle, pOutcomes);
     if (!cls.valid) return;
 
-    // ── FUTURES — currently skipped ──
+    // ââ FUTURES â currently skipped ââ
     // A clean futures arb requires betting opposite sides of the SAME championship
     // outcome. Sportsbooks only offer "team to win" (YES side), and Polymarket's
     // YES/NO on the same title can't be safely paired against a single sportsbook
@@ -1659,14 +1679,14 @@ async function scanPoly() {
       return outs;
     }
 
-    // ── MONEYLINE matching ──
+    // ââ MONEYLINE matching ââ
     if (cls.type === 'h2h') {
       var h2hOuts = getOutcomesForMarket('h2h');
       if (!h2hOuts.length) return;
 
       // CRITICAL: map each Poly outcome to its OWN token+price by index, then
       // match each outcome's team name to the sportsbook. Never guess YES/NO
-      // from title word order — that attaches the price to the wrong team.
+      // from title word order â that attaches the price to the wrong team.
       // pOutcomes[i] <-> pPrices[i] <-> pTokenIds[i] are index-aligned.
       function teamMatches(outcomeName, team) {
         var o = (outcomeName||'').toLowerCase();
@@ -1691,7 +1711,7 @@ async function scanPoly() {
           var homeIn = homeWords2.some(function(w){return titleLower2.indexOf(w)>-1;});
           var awayIn = awayWords2.some(function(w){return titleLower2.indexOf(w)>-1;});
           // "Yes" refers to the subject team of the title. If only one team is in
-          // the title, Yes=that team. Otherwise we can't safely tell — skip.
+          // the title, Yes=that team. Otherwise we can't safely tell â skip.
           if (homeIn && !awayIn) matchedTeam = (oname==='Yes') ? homeTeam : awayTeam;
           else if (awayIn && !homeIn) matchedTeam = (oname==='Yes') ? awayTeam : homeTeam;
         }
@@ -1723,7 +1743,7 @@ async function scanPoly() {
       });
     }
 
-    // ── TOTALS matching (Over/Under at SAME point) ──
+    // ââ TOTALS matching (Over/Under at SAME point) ââ
     if (cls.type === 'totals' && cls.point != null) {
       var totOuts = getOutcomesForMarket('totals');
       if (!totOuts.length) return;
@@ -1764,7 +1784,7 @@ async function scanPoly() {
         }
       }
     }
-    // NOTE: spreads intentionally skipped for now — Polymarket rarely has clean spread markets
+    // NOTE: spreads intentionally skipped for now â Polymarket rarely has clean spread markets
     // and matching them safely requires exact line alignment
   });
 
@@ -1774,7 +1794,7 @@ async function scanPoly() {
     arbs = arbs.filter(function(x){ return x.edge <= MAX_REALISTIC_EDGE; });
     arbs.sort(function(a,b){return b.edge-a.edge;});
 
-  // ── LIVE PRICE VERIFICATION ──
+  // ââ LIVE PRICE VERIFICATION ââ
   // Gamma prices are last-trade (stale). Re-check each candidate against the
   // live CLOB ask (the price you'd actually PAY). side=sell returns best ask.
   // Only keep arbs that still clear after using the real executable price.
@@ -1797,7 +1817,7 @@ async function scanPoly() {
       // real depth for that dollar amount to get the true effective fill price.
       var roughPolyProb = topAsk, roughSbProb = oP(a.sbOdds);
       var roughTot = roughPolyProb + roughSbProb;
-      var roughPolyStake = bank * (1/(1/topAsk)) / roughTot; // ≈ bank*topAsk/tot
+      var roughPolyStake = bank * (1/(1/topAsk)) / roughTot; // â bank*topAsk/tot
 
       var depth = await fetchPolyDepth(a.polyToken, roughPolyStake);
       // DROP if: no book, can't fill the order, or thin available depth
@@ -1805,7 +1825,7 @@ async function scanPoly() {
       // depth.filled means the order fills within the price band (no ghost orders).
       var MIN_DEPTH = Math.max(100, roughPolyStake * 0.5); // at least half the stake, min $100
       if (!depth || !depth.filled || depth.availableDollars < MIN_DEPTH) {
-        continue; // illiquid — not a real, executable arb
+        continue; // illiquid â not a real, executable arb
       }
       var liveAsk = depth.price; // TRUE effective price including slippage
       a.dbgTopAsk = topAsk; a.dbgDepthPrice = depth.price; a.dbgAvail = depth.availableDollars;
@@ -1845,12 +1865,12 @@ async function scanPoly() {
 
   var now = new Date().toLocaleTimeString();
   var mktLabels = {'h2h':'Moneyline','spreads':'Spread','totals':'Total','props':'Props','futures':'Futures'};
-  var h = '<div class="stats">'+polyMarkets.length+' Poly markets · '+allOddsGames.length+' games · '+arbs.length+' verified arbs · '+now+'</div>';
+  var h = '<div class="stats">'+polyMarkets.length+' Poly markets Â· '+allOddsGames.length+' games Â· '+arbs.length+' verified arbs Â· '+now+'</div>';
 
   if (!arbs.length) {
     h += '<div class="msg">No Polymarket vs sportsbook arbs above '+min+'% found.<br><br>Try lowering Min % to 0.2% or adding more sports.</div>';
   } else {
-    h += '<div class="alert-bar">📊 '+arbs.length+' Poly arb'+(arbs.length>1?'s':'')+' found at '+now+' · edges NET of '+(polyFeePct+sbFeePct).toFixed(2)+'% fees</div>';
+    h += '<div class="alert-bar">ð '+arbs.length+' Poly arb'+(arbs.length>1?'s':'')+' found at '+now+' Â· edges NET of '+(polyFeePct+sbFeePct).toFixed(2)+'% fees</div>';
     arbs.forEach(function(x) {
       var mktLabel = mktLabels[x.sbMarket]||x.sbMarket||'';
       h += '<div class="card'+(x.edge>2?' hot':'')+'">';
@@ -1868,13 +1888,13 @@ async function scanPoly() {
       h += '<div class="sides">';
       // Polymarket side
       h += '<div class="side">';
-      h += '<div class="book" style="color:#0087ff">POLYMARKET'+(x.liveVerified?' <span style="color:#00ff88">✓ LIVE</span>':(x.unverified?' <span style="color:#ff9500">⚠ UNVERIFIED</span>':''))+'</div>';
+      h += '<div class="book" style="color:#0087ff">POLYMARKET'+(x.liveVerified?' <span style="color:#00ff88">â LIVE</span>':(x.unverified?' <span style="color:#ff9500">â  UNVERIFIED</span>':''))+'</div>';
       h += '<div class="team">'+x.polySide+'</div>';
-      if (x.dbgTopAsk != null) h += '<div class="limit-tag" style="color:#888">dbg: '+(x.dbgBook||'?')+' · ask '+(x.dbgTopAsk*100).toFixed(1)+'¢</div>';
-      h += '<div class="odds" style="color:#0087ff">'+(x.polyPrice*100).toFixed(0)+'¢</div>';
+      if (x.dbgTopAsk != null) h += '<div class="limit-tag" style="color:#888">dbg: '+(x.dbgBook||'?')+' Â· ask '+(x.dbgTopAsk*100).toFixed(1)+'Â¢</div>';
+      h += '<div class="odds" style="color:#0087ff">'+(x.polyPrice*100).toFixed(0)+'Â¢</div>';
       h += '<div class="stake">Bet $'+x.polyStake.toFixed(2)+'</div>';
-      if (x.polyAvailable != null) h += '<div class="limit-tag">~$'+Math.round(x.polyAvailable)+' available'+(x.polyAvailable < x.polyStake ? ' ⚠️' : '')+'</div>';
-      if (x.polySlug) h += '<a href="https://polymarket.com/event/'+x.polySlug+'" target="_blank" class="open-link" style="color:#0087ff">Open Polymarket →</a>';
+      if (x.polyAvailable != null) h += '<div class="limit-tag">~$'+Math.round(x.polyAvailable)+' available'+(x.polyAvailable < x.polyStake ? ' â ï¸' : '')+'</div>';
+      if (x.polySlug) h += '<a href="https://polymarket.com/event/'+x.polySlug+'" target="_blank" class="open-link" style="color:#0087ff">Open Polymarket â</a>';
       h += '</div>';
       // Sportsbook side
       h += '<div class="side">';
@@ -1882,7 +1902,7 @@ async function scanPoly() {
       h += '<div class="team">'+x.sbSide+'</div>';
       h += '<div class="odds">'+fmt(x.sbOdds)+'</div>';
       h += '<div class="stake">Bet $'+x.sbStake.toFixed(2)+'</div>';
-      if (x.sbLink) h += '<a href="'+x.sbLink+'" target="_blank" class="open-link">Open in '+x.sbBook+' →</a>';
+      if (x.sbLink) h += '<a href="'+x.sbLink+'" target="_blank" class="open-link">Open in '+x.sbBook+' â</a>';
       h += '</div>';
       h += '</div></div>';
     });
@@ -1890,7 +1910,7 @@ async function scanPoly() {
   document.getElementById('pout').innerHTML = h;
 }
 
-// ── Scheduler ──────────────────────────────────────────────
+// ââ Scheduler ââââââââââââââââââââââââââââââââââââââââââââââ
 (function(){
   try{
     var gt=localStorage.getItem('gh_token');if(gt)document.getElementById('ghToken').value=gt;
@@ -1913,6 +1933,7 @@ async function scanPoly() {
     try{localStorage.setItem('po_manual',this.checked?'1':'0');document.getElementById('poEnabled').checked=this.checked;}catch(e){}
   });
   document.querySelector('.sch-sports').addEventListener('click',function(e){var b=e.target.closest('[data-ss]');if(b)b.classList.toggle('on');});
+  document.querySelector('.sch-markets').addEventListener('click',function(e){var b=e.target.closest('[data-sm]');if(b)b.classList.toggle('on');});
   loadSchedulerSettings();
 })();
 
@@ -1923,16 +1944,23 @@ async function loadSchedulerSettings(){
     var cfg=await res.json();
     document.getElementById('schEnabled').checked=!!cfg.enabled;
     if(cfg.minEdge)document.getElementById('schMinEdge').value=cfg.minEdge;
-    if(cfg.sports){
-      document.querySelectorAll('[data-ss]').forEach(function(b){
-        b.classList.toggle('on',cfg.sports.indexOf(b.dataset.ss)>-1);
+    if(cfg.staleFlagEdge)document.getElementById('schStaleFlag').value=cfg.staleFlagEdge;
+    if(cfg.maxGames)document.getElementById('schMaxGames').value=cfg.maxGames;
+    if(cfg.offshoreLeagues){
+      document.querySelectorAll('.sch-sports [data-ss]').forEach(function(b){
+        b.classList.toggle('on',cfg.offshoreLeagues.indexOf(b.dataset.ss)>-1);
+      });
+    }
+    if(cfg.offshoreMarkets){
+      document.querySelectorAll('.sch-markets [data-sm]').forEach(function(b){
+        b.classList.toggle('on',cfg.offshoreMarkets.indexOf(b.dataset.sm)>-1);
       });
     }
     updateSchStatus(!!cfg.enabled);
     var d=cfg.lastSaved?new Date(cfg.lastSaved).toLocaleString():'never';
-    document.getElementById('schLog').textContent='Last saved: '+d+(cfg.enabled?' — Scanner ACTIVE':' — Scanner PAUSED');
+    document.getElementById('schLog').textContent='Last saved: '+d+(cfg.enabled?' â Scanner ACTIVE':' â Scanner PAUSED');
   }catch(e){
-    document.getElementById('schLog').textContent='No config yet — save settings to activate.';
+    document.getElementById('schLog').textContent='No config yet â save settings to activate.';
   }
 }
 
@@ -1955,9 +1983,14 @@ async function saveSchedulerSettings(){
   var btn=document.getElementById('schSaveBtn');
   btn.textContent='Saving...';btn.disabled=true;
   var enabled=document.getElementById('schEnabled').checked;
-  var sports=Array.from(document.querySelectorAll('[data-ss].on')).map(function(b){return b.dataset.ss});
+  var offshoreLeagues=Array.from(document.querySelectorAll('.sch-sports [data-ss].on')).map(function(b){return b.dataset.ss});
+  var offshoreMarkets=Array.from(document.querySelectorAll('.sch-markets [data-sm].on')).map(function(b){return b.dataset.sm});
+  if(enabled&&!offshoreLeagues.length){alert('Pick at least one league to scan.');btn.textContent='ð¾ Save Settings to GitHub';btn.disabled=false;return;}
+  if(enabled&&!offshoreMarkets.length){alert('Pick at least one market to scan.');btn.textContent='ð¾ Save Settings to GitHub';btn.disabled=false;return;}
   var minEdge=parseFloat(document.getElementById('schMinEdge').value)||0.5;
-  var cfg={enabled:enabled,sports:sports,minEdge:minEdge,lastSaved:new Date().toISOString()};
+  var staleFlagEdge=parseFloat(document.getElementById('schStaleFlag').value)||8;
+  var maxGames=parseInt(document.getElementById('schMaxGames').value,10)||25;
+  var cfg={enabled:enabled,offshoreLeagues:offshoreLeagues,offshoreMarkets:offshoreMarkets,minEdge:minEdge,staleFlagEdge:staleFlagEdge,maxGames:maxGames,lastSaved:new Date().toISOString()};
   try{
     var shaRes=await fetch('https://api.github.com/repos/aramsey9/arb/contents/scheduler-config.json',{headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json'}});
     var sha=null;
@@ -1966,25 +1999,25 @@ async function saveSchedulerSettings(){
     if(sha)body.sha=sha;
     var res=await fetch('https://api.github.com/repos/aramsey9/arb/contents/scheduler-config.json',{method:'PUT',headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'},body:JSON.stringify(body)});
     if(res.ok){
-      btn.textContent='✓ Saved!';btn.style.background='#7c3aed';btn.style.color='#fff';
-      document.getElementById('schLog').textContent='Saved at '+new Date().toLocaleTimeString()+' — Scanner is '+(enabled?'ACTIVE — runs every 10 min 6am-10pm ET':'PAUSED');
+      btn.textContent='â Saved!';btn.style.background='#7c3aed';btn.style.color='#fff';
+      document.getElementById('schLog').textContent='Saved at '+new Date().toLocaleTimeString()+' â Scanner is '+(enabled?'ACTIVE â runs every 10 min 6am-10pm ET':'PAUSED');
       updateSchStatus(enabled);
       try{localStorage.setItem('gh_token',token);}catch(e){}
     }else{
       var err=await res.json();
-      btn.textContent='✗ Failed';btn.style.background='#ff4757';btn.style.color='#fff';
+      btn.textContent='â Failed';btn.style.background='#ff4757';btn.style.color='#fff';
       document.getElementById('schLog').textContent='Error: '+(err.message||'Check your GitHub token');
     }
   }catch(e){
-    btn.textContent='✗ Error';btn.style.background='#ff4757';btn.style.color='#fff';
+    btn.textContent='â Error';btn.style.background='#ff4757';btn.style.color='#fff';
     document.getElementById('schLog').textContent='Error: '+e.message;
   }
-  setTimeout(function(){btn.textContent='💾 Save Settings to GitHub';btn.disabled=false;btn.style.background='#00ff88';btn.style.color='#000';},3000);
+  setTimeout(function(){btn.textContent='ð¾ Save Settings to GitHub';btn.disabled=false;btn.style.background='#00ff88';btn.style.color='#000';},3000);
 }
 
 function startScan(){scanAll()}
 
-// ── Offshore (SportsGameOdds) — BookMaker.eu LOCKED as one leg ──
+// ââ Offshore (SportsGameOdds) â BookMaker.eu LOCKED as one leg ââ
 (function(){
   try{ var k=localStorage.getItem('sgo_key'); if(k)document.getElementById('opkey').value=k; }catch(e){}
   document.getElementById('opkey').addEventListener('input',function(){
@@ -2025,7 +2058,7 @@ function oGetFilter(){ var el=document.querySelector('#ofilters [data-of].on'); 
 function amDec(o){ o=parseFloat(o); if(!o) return null; return o>0 ? o/100+1 : 100/Math.abs(o)+1; }
 function amFmt(o){ o=parseFloat(o); return o>0?'+'+o:''+o; }
 
-// Show every book's price for the specific market of an offshore arb (no extra API call — uses cached event).
+// Show every book's price for the specific market of an offshore arb (no extra API call â uses cached event).
 function showOffshoreLines(idx){
   var x = OARB_CACHE[idx]; if(!x){ return; }
   var box = document.getElementById('olines-'+idx);
@@ -2059,18 +2092,18 @@ function showOffshoreLines(idx){
     var h='<div style="color:#666;font-size:11px;margin:8px 0 4px">'+(node.sideID||sideName(node,isOpp))+(node.fairOddsAvailable?'':'')+'</div>';
     rows.forEach(function(l,i){
       var isBM = l.book==='bookmakereu';
-      h+='<div class="lcard'+(i===0?' best':'')+'" style="padding:8px 12px"><div><div class="lbook"'+(isBM?' style="color:#38bdf8"':'')+'>'+(isBM?'🌊 ':'')+sgoName(l.book)+(SGO_NAMES[l.book]?'':' ('+l.book+')')+'</div>';
-      if(i===0) h+='<div class="lbest">★ Best</div>';
-      if(l.link) h+='<a href="'+l.link+'" target="_blank" class="llink">Open bet slip →</a>';
+      h+='<div class="lcard'+(i===0?' best':'')+'" style="padding:8px 12px"><div><div class="lbook"'+(isBM?' style="color:#38bdf8"':'')+'>'+(isBM?'ð ':'')+sgoName(l.book)+(SGO_NAMES[l.book]?'':' ('+l.book+')')+'</div>';
+      if(i===0) h+='<div class="lbest">â Best</div>';
+      if(l.link) h+='<a href="'+l.link+'" target="_blank" class="llink">Open bet slip â</a>';
       h+='</div><div class="lodds" style="color:'+(parseFloat(l.am)>0?'#00ff88':'#e8e8f0')+'">'+amFmt(l.am)+(l.line!=null?' <span style="font-size:11px;color:#666">@'+l.line+'</span>':'')+'</div></div>';
     });
     return h;
   }
   var html='<div style="padding:10px 12px;background:#0d0d14;border-top:1px solid #2a2a3d">';
-  html+='<div class="stats" style="margin-bottom:8px">All books · '+(x.label||'')+'</div>';
+  html+='<div class="stats" style="margin-bottom:8px">All books Â· '+(x.label||'')+'</div>';
   html+=render(od,false);
   if(opp) html+=render(opp,true);
-  html+='<div style="font-size:10px;color:#555;margin-top:8px">Sorted best price first. 🌊 = BookMaker.eu. Same feed as the scan (no extra API cost).</div></div>';
+  html+='<div style="font-size:10px;color:#555;margin-top:8px">Sorted best price first. ð = BookMaker.eu. Same feed as the scan (no extra API cost).</div></div>';
   box.innerHTML=html;
 }
 
@@ -2089,14 +2122,14 @@ async function discoverLeagues(){
   // IDs already shown as buttons
   var shown={}; document.querySelectorAll('#oleagues [data-l]').forEach(function(b){ shown[b.dataset.l]=true; });
   // Build a toggleable chip per league
-  var h='<div class="slabel" style="margin-top:4px">Your key supports '+list.length+' leagues — tap to add to scan:</div><div class="sports" id="oleaguesDynamic">';
+  var h='<div class="slabel" style="margin-top:4px">Your key supports '+list.length+' leagues â tap to add to scan:</div><div class="sports" id="oleaguesDynamic">';
   list.forEach(function(lg){
     var id = lg.leagueID || lg.id || lg.name; if(!id) return;
     var nm = lg.name || lg.shortName || id;
     var already = shown[id];
-    h+='<div class="sb'+(already?' on':'')+'" data-l="'+id+'" title="'+id+'">'+nm+(already?' ✓':'')+'</div>';
+    h+='<div class="sb'+(already?' on':'')+'" data-l="'+id+'" title="'+id+'">'+nm+(already?' â':'')+'</div>';
   });
-  h+='</div><div style="font-size:10px;color:#555;margin-top:4px">✓ = already in your league list above. Tapping any chip here includes it in the next scan.</div>';
+  h+='</div><div style="font-size:10px;color:#555;margin-top:4px">â = already in your league list above. Tapping any chip here includes it in the next scan.</div>';
   box.innerHTML=h;
   // Wire the dynamic chips into the same selection set
   var dyn=document.getElementById('oleaguesDynamic');
@@ -2121,7 +2154,7 @@ async function checkSgoUsage(){
   var objLimit= pick('objects.max','objects.limit','rateLimits.perMonth.objects.max','objectsMax','monthlyObjectLimit');
   var tier = pick('tier','plan','planName','subscription.tier','subscription.plan');
 
-  var h='<div class="po-box connected" style="margin-top:6px"><div class="po-title">📊 SportsGameOdds Usage'+(tier?' · '+tier:'')+'<span class="po-status ok">live</span></div>';
+  var h='<div class="po-box connected" style="margin-top:6px"><div class="po-title">ð SportsGameOdds Usage'+(tier?' Â· '+tier:'')+'<span class="po-status ok">live</span></div>';
   function bar(label,used,limit){
     if(used==null) return '';
     var pct = (limit&&limit>0)? Math.min(100,Math.round(used/limit*100)) : null;
@@ -2321,36 +2354,36 @@ async function scanOffshore(){
   OARB_CACHE=arbs;
 
   var now2=new Date().toLocaleTimeString();
-  var h='<div class="stats">Scanned '+events.length+' events · '+arbs.length+' BookMaker arbs · '+now2+'</div>';
-  if(droppedBooks.length) h+='<div class="alert-bar" style="background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.3);color:#f59e0b">⚠️ Skipped (not in your tier): '+droppedBooks.join(', ')+'</div>';
-  h+='<div class="alert-bar" style="background:rgba(56,189,248,.1);border-color:rgba(56,189,248,.3);color:#38bdf8">'+(sawBookmaker?'✓ BookMaker.eu present — locked as one leg of every arb below':'⚠️ No BookMaker.eu odds in feed (check plan/leagues)')+'</div>';
+  var h='<div class="stats">Scanned '+events.length+' events Â· '+arbs.length+' BookMaker arbs Â· '+now2+'</div>';
+  if(droppedBooks.length) h+='<div class="alert-bar" style="background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.3);color:#f59e0b">â ï¸ Skipped (not in your tier): '+droppedBooks.join(', ')+'</div>';
+  h+='<div class="alert-bar" style="background:rgba(56,189,248,.1);border-color:rgba(56,189,248,.3);color:#38bdf8">'+(sawBookmaker?'â BookMaker.eu present â locked as one leg of every arb below':'â ï¸ No BookMaker.eu odds in feed (check plan/leagues)')+'</div>';
 
-  if(!arbs.length){ h+='<div class="msg">No BookMaker arbs above '+min+'% right now.<br><br>BookMaker is sharp, so edges are rare and small — try lowering Min % to 0.2, enabling props, or adding leagues.</div>'; }
+  if(!arbs.length){ h+='<div class="msg">No BookMaker arbs above '+min+'% right now.<br><br>BookMaker is sharp, so edges are rare and small â try lowering Min % to 0.2, enabling props, or adding leagues.</div>'; }
   else {
     arbs.forEach(function(x,idx){
-      h+='<div class="card'+(x.overMax?' live':x.edge>2?' hot':x.live?' live':'')+'"><div class="ctop"><div style="flex:1;min-width:0"><div class="gmeta">🔒 '+(x.league?x.league+' · ':'')+'BOOKMAKER'+(x.isProp?' · PROP':x.isGameProp?' · GAME PROP':'')+'</div><span class="mktag '+(x.isProp?'props':x.isGameProp?'gameprops':'h2h')+'">'+x.label+'</span>';
-      if(x.overMax) h+='<span class="mktag live">🚫 OVER MAX</span>';
-      if(x.live) h+='<span class="mktag live">🔴 LIVE</span>';
+      h+='<div class="card'+(x.overMax?' live':x.edge>2?' hot':x.live?' live':'')+'"><div class="ctop"><div style="flex:1;min-width:0"><div class="gmeta">ð '+(x.league?x.league+' Â· ':'')+'BOOKMAKER'+(x.isProp?' Â· PROP':x.isGameProp?' Â· GAME PROP':'')+'</div><span class="mktag '+(x.isProp?'props':x.isGameProp?'gameprops':'h2h')+'">'+x.label+'</span>';
+      if(x.overMax) h+='<span class="mktag live">ð« OVER MAX</span>';
+      if(x.live) h+='<span class="mktag live">ð´ LIVE</span>';
       h+='<div class="gtitle">'+x.game+'</div>';
       if(x.start) h+='<div class="gdate-tag">'+new Date(x.start).toLocaleString()+'</div>';
       h+='</div><div style="text-align:right;flex-shrink:0"><div class="roi">+'+x.edge.toFixed(2)+'%</div><div class="psub">$'+x.profit.toFixed(2)+' profit</div><div class="psub">on $'+x.totalStaked.toFixed(0)+' staked</div></div></div><div class="sides">';
       // BookMaker leg (exact hedge), then domestic leg (round stake)
-      h+='<div class="side"><div class="book" style="color:#38bdf8">🌊 BookMaker.eu</div><div class="team">'+x.bmLeg.name+'</div><div class="odds">'+amFmt(x.bmLeg.am)+'</div><div class="stake">Bet $'+x.bmLeg.stake.toFixed(2)+'</div>';
-      if(x.bmLeg.link) h+='<a href="'+x.bmLeg.link+'" target="_blank" class="open-link">Open bet slip →</a>';
-      else h+='<a href="'+sgoHome('bookmakereu')+'" target="_blank" class="open-link">Open BookMaker.eu →</a>';
+      h+='<div class="side"><div class="book" style="color:#38bdf8">ð BookMaker.eu</div><div class="team">'+x.bmLeg.name+'</div><div class="odds">'+amFmt(x.bmLeg.am)+'</div><div class="stake">Bet $'+x.bmLeg.stake.toFixed(2)+'</div>';
+      if(x.bmLeg.link) h+='<a href="'+x.bmLeg.link+'" target="_blank" class="open-link">Open bet slip â</a>';
+      else h+='<a href="'+sgoHome('bookmakereu')+'" target="_blank" class="open-link">Open BookMaker.eu â</a>';
       h+='</div>';
       h+='<div class="side"><div class="book">'+sgoName(x.domLeg.book)+'</div><div class="team">'+x.domLeg.name+'</div><div class="odds">'+amFmt(x.domLeg.am)+'</div><div class="stake" style="color:#fbbf24;font-weight:700">Bet $'+x.domLeg.stake.toFixed(0)+'</div>';
-      if(x.domLeg.link) h+='<a href="'+x.domLeg.link+'" target="_blank" class="open-link">Open bet slip →</a>';
-      else if(sgoHome(x.domLeg.book)) h+='<a href="'+sgoHome(x.domLeg.book)+'" target="_blank" class="open-link">Open '+sgoName(x.domLeg.book)+' →</a>';
+      if(x.domLeg.link) h+='<a href="'+x.domLeg.link+'" target="_blank" class="open-link">Open bet slip â</a>';
+      else if(sgoHome(x.domLeg.book)) h+='<a href="'+sgoHome(x.domLeg.book)+'" target="_blank" class="open-link">Open '+sgoName(x.domLeg.book)+' â</a>';
       h+='</div>';
       h+='</div>';
-      h+='<div class="place-first-note">⚠️ '+sgoName(x.domLeg.book)+' is your fixed $'+x.domLeg.stake.toFixed(0)+' leg. Place <strong>BookMaker.eu first</strong> ($'+x.bmLeg.stake.toFixed(2)+') — sharp side moves fastest — then lock '+sgoName(x.domLeg.book)+'.</div>';
+      h+='<div class="place-first-note">â ï¸ '+sgoName(x.domLeg.book)+' is your fixed $'+x.domLeg.stake.toFixed(0)+' leg. Place <strong>BookMaker.eu first</strong> ($'+x.bmLeg.stake.toFixed(2)+') â sharp side moves fastest â then lock '+sgoName(x.domLeg.book)+'.</div>';
       if(x.overMax){
-        h+='<div class="middle-note" style="background:rgba(255,71,87,.12);border-top:1px solid rgba(255,71,87,.4);color:#ff6b6b">🚫 BookMaker hedge $'+x.bmLeg.stake.toFixed(2)+' exceeds your max ($'+x.cap.toFixed(0)+').';
-        if(x.fit) h+=' To fit: bet <strong>$'+x.fit.bm.toFixed(2)+'</strong> on BookMaker + <strong>$'+x.fit.dom.toFixed(2)+'</strong> on '+sgoName(x.domLeg.book)+' → $'+x.fit.profit.toFixed(2)+' profit.';
+        h+='<div class="middle-note" style="background:rgba(255,71,87,.12);border-top:1px solid rgba(255,71,87,.4);color:#ff6b6b">ð« BookMaker hedge $'+x.bmLeg.stake.toFixed(2)+' exceeds your max ($'+x.cap.toFixed(0)+').';
+        if(x.fit) h+=' To fit: bet <strong>$'+x.fit.bm.toFixed(2)+'</strong> on BookMaker + <strong>$'+x.fit.dom.toFixed(2)+'</strong> on '+sgoName(x.domLeg.book)+' â $'+x.fit.profit.toFixed(2)+' profit.';
         h+='</div>';
       }
-      h+='<div style="padding:8px 12px;border-top:1px solid #2a2a3d"><button class="lookup-btn" onclick="showOffshoreLines('+idx+')">📋 Show all book lines for this market</button></div>';
+      h+='<div style="padding:8px 12px;border-top:1px solid #2a2a3d"><button class="lookup-btn" onclick="showOffshoreLines('+idx+')">ð Show all book lines for this market</button></div>';
       h+='<div id="olines-'+idx+'"></div>';
       h+='</div>';
     });
@@ -2360,8 +2393,8 @@ async function scanOffshore(){
 
 function toggleAuto(){
   autoOn=!autoOn;var btn=document.getElementById('autoBtn');
-  if(autoOn){btn.textContent='⏹ Stop';btn.style.background='#ff4757';btn.style.color='#fff';scanAll();timer=setInterval(scanAll,60000)}
-  else{btn.textContent='⏱ Auto';btn.style.background='#00ff88';btn.style.color='#000';clearInterval(timer);setStatus(false,'auto stopped')}
+  if(autoOn){btn.textContent='â¹ Stop';btn.style.background='#ff4757';btn.style.color='#fff';scanAll();timer=setInterval(scanAll,60000)}
+  else{btn.textContent='â± Auto';btn.style.background='#00ff88';btn.style.color='#000';clearInterval(timer);setStatus(false,'auto stopped')}
 }
 </script>
 </body>
