@@ -1,19 +1,20 @@
 {
   "enabled": true,
-  "offshoreLeagues": [
-    "MLB",
-    "WNBA",
-    "UFC"
-  ],
-  "offshoreMarkets": [
-    "ml",
-    "sp",
-    "ou",
-    "props",
-    "gameprops"
+  "sports": [
+    "baseball_mlb",
+    "basketball_nba",
+    "americanfootball_nfl",
+    "americanfootball_ncaaf",
+    "icehockey_nhl",
+    "soccer_usa_mls",
+    "tennis_atp_french_open",
+    "mma_mixed_martial_arts",
+    "golf",
+    "basketball_wnba",
+    "soccer_epl",
+    "boxing_boxing"
   ],
   "minEdge": 0.1,
-  "staleFlagEdge": 8,
-  "maxGames": 50,
-  "lastSaved": "2026-06-29T18:17:16.666Z"
+  "intervalMinutes": 5,
+  "lastSaved": "2026-06-29T21:39:46.591Z"
 }
