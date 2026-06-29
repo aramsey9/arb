@@ -2,8 +2,10 @@ name: ArbEdge Background Scanner
 
 on:
   schedule:
-    - cron: '*/10 10-23 * * *'
-    - cron: '*/10 0-2 * * *'
+    # Ticks every 5 min (GitHub's reliable floor). The app's "Scan interval"
+    # field throttles this down to whatever cadence you set (>=5 min).
+    - cron: '*/5 10-23 * * *'
+    - cron: '*/5 0-2 * * *'
   workflow_dispatch:
   repository_dispatch:
     types: [run-scanner]
@@ -20,9 +22,24 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Restore notify state
+        uses: actions/cache/restore@v4
+        with:
+          path: notif-state.json
+          key: notif-state-${{ github.run_id }}
+          restore-keys: |
+            notif-state-
+
       - name: Run ArbEdge Scanner
         env:
-          SGO_API_KEY: ${{ secrets.SGO_API_KEY }}
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           PUSHOVER_TOKEN: ${{ secrets.PUSHOVER_TOKEN }}
           PUSHOVER_USER: ${{ secrets.PUSHOVER_USER }}
         run: node scanner.js
+
+      - name: Save notify state
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: notif-state.json
+          key: notif-state-${{ github.run_id }}
