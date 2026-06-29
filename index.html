@@ -352,7 +352,7 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
   <div class="slabel">Max games to scan</div>
   <input type="number" id="omax" value="50" min="1" max="150" style="width:100px;margin-bottom:4px" />
   <div class="slabel" style="color:#555;margin-top:0">Higher = more coverage but more objects used. Keep low (15-25) if running Auto, since Auto re-scans every 60s and multiplies the cost.</div>
-  <div class="slabel" style="color:#555;margin-top:-4px">🌊 BookMaker.eu vs FanDuel · DraftKings · BetMGM · Caesars · ESPN Bet · theScore. Live bet-slip links included.</div>
+  <div class="slabel" style="color:#555;margin-top:-4px">🌊 BookMaker.eu vs FanDuel · DraftKings · BetMGM · Caesars · ESPN Bet · theScore · 📈 Kalshi · Polymarket. Live bet-slip links included.</div>
   <button class="scan" onclick="scanOffshore()" style="background:#38bdf8">🔒 Scan BookMaker Arbs</button>
   <button onclick="checkSgoUsage()" style="background:#1a1a26;color:#38bdf8;border:1px solid #38bdf8;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;width:100%;margin-bottom:12px">📊 Check API Usage</button>
   <div id="ousage"></div>
@@ -1997,9 +1997,9 @@ function startScan(){scanAll()}
 })();
 
 var SGO_BOOKMAKER = 'bookmakereu';
-var SGO_DOMESTIC = ['draftkings','fanduel','betmgm','caesars','espnbet','thescorebet'];
-var SGO_NAMES = {bookmakereu:'BookMaker.eu',draftkings:'DraftKings',fanduel:'FanDuel',betmgm:'BetMGM',caesars:'Caesars',espnbet:'ESPN Bet',thescorebet:'theScore'};
-var SGO_HOME = {bookmakereu:'https://www.bookmaker.eu',draftkings:'https://sportsbook.draftkings.com',fanduel:'https://sportsbook.fanduel.com',betmgm:'https://sports.betmgm.com',caesars:'https://sportsbook.caesars.com',espnbet:'https://espnbet.com',thescorebet:'https://www.thescore.bet'};
+var SGO_DOMESTIC = ['draftkings','fanduel','betmgm','caesars','espnbet','thescorebet','kalshi','polymarket'];
+var SGO_NAMES = {bookmakereu:'BookMaker.eu',draftkings:'DraftKings',fanduel:'FanDuel',betmgm:'BetMGM',caesars:'Caesars',espnbet:'ESPN Bet',thescorebet:'theScore',kalshi:'Kalshi',polymarket:'Polymarket'};
+var SGO_HOME = {bookmakereu:'https://www.bookmaker.eu',draftkings:'https://sportsbook.draftkings.com',fanduel:'https://sportsbook.fanduel.com',betmgm:'https://sports.betmgm.com',caesars:'https://sportsbook.caesars.com',espnbet:'https://espnbet.com',thescorebet:'https://www.thescore.bet',kalshi:'https://kalshi.com',polymarket:'https://polymarket.com'};
 function sgoHome(b){ return SGO_HOME[b]||null; }
 function sgoName(b){ return SGO_NAMES[b]||b; }
 
