@@ -332,6 +332,8 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
     <div class="sb" data-l="FR_LIGUE_1">⚽ Ligue 1</div>
     <div class="sb" data-l="LIGA_MX">⚽ Liga MX</div>
   </div>
+  <button onclick="discoverLeagues()" style="background:#1a1a26;color:#38bdf8;border:1px solid #38bdf8;border-radius:8px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;width:100%;margin-bottom:8px">🔍 Show all leagues my key supports</button>
+  <div id="oleaguesExtra"></div>
   <div class="slabel">Markets</div>
   <div class="markets" id="omarkets">
     <div class="mb on" data-om="ml">💰 Moneyline</div>
@@ -2016,7 +2018,7 @@ async function sgoFetch(url, key){
 }
 
 function oSetProg(t){ document.getElementById('oprog').style.display='block'; document.getElementById('oprogText').textContent=t; }
-function oGetLeagues(){ return Array.from(document.querySelectorAll('#oleagues [data-l].on')).map(function(b){return b.dataset.l;}); }
+function oGetLeagues(){ var s={}; document.querySelectorAll('#oleagues [data-l].on, #oleaguesDynamic [data-l].on').forEach(function(b){ s[b.dataset.l]=true; }); return Object.keys(s); }
 function oGetMarkets(){ return Array.from(document.querySelectorAll('#omarkets [data-om].on')).map(function(b){return b.dataset.om;}); }
 function oGetFilter(){ var el=document.querySelector('#ofilters [data-of].on'); return el?el.dataset.of:'all'; }
 
@@ -2070,6 +2072,35 @@ function showOffshoreLines(idx){
   if(opp) html+=render(opp,true);
   html+='<div style="font-size:10px;color:#555;margin-top:8px">Sorted best price first. 🌊 = BookMaker.eu. Same feed as the scan (no extra API cost).</div></div>';
   box.innerHTML=html;
+}
+
+async function discoverLeagues(){
+  var key=document.getElementById('opkey').value.trim();
+  var box=document.getElementById('oleaguesExtra');
+  if(!key){ box.innerHTML='<div class="err">Paste your SportsGameOdds API key first.</div>'; return; }
+  if(box.innerHTML){ box.innerHTML=''; return; } // toggle off
+  box.innerHTML='<div class="prog">Loading your leagues...</div>';
+  var url='https://api.sportsgameodds.com/v2/leagues?apiKey='+encodeURIComponent(key);
+  var resp=await sgoFetch(url, key);
+  if(!resp){ box.innerHTML='<div class="err">Could not load leagues. Check key / Worker.</div>'; return; }
+  if(resp.success===false){ box.innerHTML='<div class="err"><strong>SGO said:</strong> '+(resp.error||'unknown')+'</div>'; return; }
+  var list = Array.isArray(resp.data)?resp.data:(Array.isArray(resp)?resp:[]);
+  if(!list.length){ box.innerHTML='<div class="msg" style="padding:12px">No leagues returned.</div>'; return; }
+  // IDs already shown as buttons
+  var shown={}; document.querySelectorAll('#oleagues [data-l]').forEach(function(b){ shown[b.dataset.l]=true; });
+  // Build a toggleable chip per league
+  var h='<div class="slabel" style="margin-top:4px">Your key supports '+list.length+' leagues — tap to add to scan:</div><div class="sports" id="oleaguesDynamic">';
+  list.forEach(function(lg){
+    var id = lg.leagueID || lg.id || lg.name; if(!id) return;
+    var nm = lg.name || lg.shortName || id;
+    var already = shown[id];
+    h+='<div class="sb'+(already?' on':'')+'" data-l="'+id+'" title="'+id+'">'+nm+(already?' ✓':'')+'</div>';
+  });
+  h+='</div><div style="font-size:10px;color:#555;margin-top:4px">✓ = already in your league list above. Tapping any chip here includes it in the next scan.</div>';
+  box.innerHTML=h;
+  // Wire the dynamic chips into the same selection set
+  var dyn=document.getElementById('oleaguesDynamic');
+  dyn.addEventListener('click',function(e){ var b=e.target.closest('[data-l]'); if(b) b.classList.toggle('on'); });
 }
 
 async function checkSgoUsage(){
