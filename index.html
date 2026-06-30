@@ -36,6 +36,8 @@ button.scan{background:#00ff88;color:#000;border:none;border-radius:8px;padding:
 .stake{color:#00ff88;font-size:11px;font-family:monospace;margin-top:2px}
 .limit-tag{color:#94a3b8;font-size:10px;font-family:monospace;margin-top:4px}
 .open-link{display:block;margin-top:6px;color:#7c3aed;font-size:11px;font-weight:700;text-decoration:none}
+.copy-bet{display:block;width:100%;margin-top:5px;background:#16161f;border:1px solid #2a2a3d;color:#a78bfa;font-size:11px;font-weight:700;padding:6px 4px;border-radius:6px;cursor:pointer;line-height:1.3}
+.copy-bet:active{background:#20202c}
 .score-line{color:#fbbf24;font-size:11px;font-family:monospace;margin-top:3px}
 .gdate-tag{color:#666;font-size:10px;font-family:monospace;margin-top:3px}
 .middle-note{background:rgba(245,158,11,.1);border-top:1px solid rgba(245,158,11,.3);padding:8px 12px;font-size:11px;color:#f59e0b}
@@ -2035,6 +2037,17 @@ function amDec(o){ o=parseFloat(o); if(!o) return null; return o>0 ? o/100+1 : 1
 function amFmt(o){ o=parseFloat(o); return o>0?'+'+o:''+o; }
 
 // Show every book's price for the specific market of an offshore arb (no extra API call — uses cached event).
+function obCopyBet(btn){
+  var t=btn.getAttribute('data-bet')||'';
+  var done=function(){var o=btn.textContent;btn.textContent='✓ Copied — paste into the book\u2019s search';setTimeout(function(){btn.textContent=o;},1800);};
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(done).catch(function(){obCopyFallback(t,done);});}
+  else obCopyFallback(t,done);
+}
+function obCopyFallback(t,done){
+  var ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.focus();ta.select();
+  try{document.execCommand('copy');done();}catch(e){}
+  document.body.removeChild(ta);
+}
 function showOffshoreLines(idx){
   var x = OARB_CACHE[idx]; if(!x){ return; }
   var box = document.getElementById('olines-'+idx);
@@ -2307,6 +2320,14 @@ async function scanOffshore(){
     });
   });
 
+  // Build a clean, search-ready bet string for the Copy-bet button.
+  function obBetStr(x, which){
+    var leg = which==='bm' ? x.bmLeg : x.domLeg;
+    var bookNm = which==='bm' ? 'BookMaker.eu' : sgoName(x.domLeg.book);
+    return x.game + ' — ' + x.label + ' — ' + leg.name + ' (' + amFmt(leg.am) + ') @ ' + bookNm;
+  }
+  function obEsc(s){ return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
   function bestDomestic(node){
     if(!node || !node.byBookmaker) return null;
     var best=null, decs=[];
@@ -2471,10 +2492,12 @@ async function scanOffshore(){
       h+='<div class="side"><div class="book" style="color:#38bdf8">🌊 BookMaker.eu</div><div class="team">'+x.bmLeg.name+'</div><div class="odds">'+amFmt(x.bmLeg.am)+'</div><div class="stake">Bet $'+x.bmLeg.stake.toFixed(2)+'</div>';
       if(x.bmLeg.link) h+='<a href="'+x.bmLeg.link+'" target="_blank" class="open-link">Open bet slip →</a>';
       else h+='<a href="'+sgoHome('bookmakereu')+'" target="_blank" class="open-link">Open BookMaker.eu →</a>';
+      h+='<button class="copy-bet" data-bet="'+obEsc(obBetStr(x,'bm'))+'" onclick="obCopyBet(this)">📋 Copy bet</button>';
       h+='</div>';
       h+='<div class="side"><div class="book">'+sgoName(x.domLeg.book)+'</div><div class="team">'+x.domLeg.name+'</div><div class="odds">'+amFmt(x.domLeg.am)+'</div><div class="stake" style="color:#fbbf24;font-weight:700">Bet $'+x.domLeg.stake.toFixed(0)+'</div>';
       if(x.domLeg.link) h+='<a href="'+x.domLeg.link+'" target="_blank" class="open-link">Open bet slip →</a>';
       else if(sgoHome(x.domLeg.book)) h+='<a href="'+sgoHome(x.domLeg.book)+'" target="_blank" class="open-link">Open '+sgoName(x.domLeg.book)+' →</a>';
+      h+='<button class="copy-bet" data-bet="'+obEsc(obBetStr(x,'dom'))+'" onclick="obCopyBet(this)">📋 Copy bet</button>';
       h+='</div>';
       h+='</div>';
       h+='<div class="place-first-note">⚠️ '+sgoName(x.domLeg.book)+' is your fixed $'+x.domLeg.stake.toFixed(0)+' leg. Place <strong>BookMaker.eu first</strong> ($'+x.bmLeg.stake.toFixed(2)+') — sharp side moves fastest — then lock '+sgoName(x.domLeg.book)+'.</div>';
