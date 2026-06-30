@@ -104,7 +104,7 @@ function bookmakerSide(node) {
   return { book: SGO_BOOKMAKER, am: bb.odds, dec: d, line: (bb.overUnder != null ? bb.overUnder : bb.spread) };
 }
 
-function scanEvents(events, minEdge, out) {
+function scanEvents(events, minEdge, out, inclProps, inclGameProps) {
   events.forEach(function (ev) {
     var odds = ev.odds || {}; if (!odds) return;
     var live = ev.status && (ev.status.started === true || ev.status.live === true);
@@ -118,11 +118,12 @@ function scanEvents(events, minEdge, out) {
     Object.keys(odds).forEach(function (oddID) {
       var od = odds[oddID]; if (!od) return;
       var bt = od.betTypeID, side = od.sideID;
-      var primarySides = { ml: 'home', sp: 'home', ou: 'over' };
+      var primarySides = { ml: 'home', sp: 'home', ou: 'over', yn: 'yes' };
       var isProp = !!od.playerID;
       var isGameProp = !isProp && od.periodID && od.periodID !== 'game';
-      if (isProp || isGameProp) return;               // notifier = main lines only
-      if (['ml', 'sp', 'ou'].indexOf(bt) < 0) return;
+      if (isProp && !inclProps) return;
+      if (isGameProp && !inclGameProps) return;
+      if (['ml', 'sp', 'ou', 'yn'].indexOf(bt) < 0) return;
       if (side !== primarySides[bt]) return;
 
       var oppID = od.opposingOddID; if (!oppID) return;
@@ -133,6 +134,7 @@ function scanEvents(events, minEdge, out) {
 
       function sideName(which) {
         if (bt === 'ou') return which === 'primary' ? 'Over' : 'Under';
+        if (bt === 'yn') return which === 'primary' ? 'Yes' : 'No';
         return which === 'primary' ? homeName : awayName;
       }
       function withLine(nm, leg) { if (leg && leg.line != null && (bt === 'ou' || bt === 'sp')) return nm + ' ' + (parseFloat(leg.line) > 0 && bt === 'sp' ? '+' : '') + leg.line; return nm; }
@@ -158,8 +160,10 @@ function scanEvents(events, minEdge, out) {
         var total = sDOM + sBM;
         var profit = payout - total;
         var mLabel = od.marketName || (od.statID ? od.statID.replace(/_/g, ' ') : bt.toUpperCase());
+        if (isGameProp && od.periodID) mLabel = od.periodID.toUpperCase() + ' ' + mLabel;
+        var kind = isProp ? 'PROP' : (isGameProp ? 'GAME PROP' : 'MAIN');
         out.push({
-          game: gl, league: leagueName, edge: edge, profit: profit, roi: (profit / total) * 100, label: mLabel,
+          game: gl, league: leagueName, edge: edge, profit: profit, roi: (profit / total) * 100, label: mLabel, kind: kind,
           bmLeg: { book: legBM.book, am: legBM.am, name: nameA },
           domLeg: { book: legDOM.book, am: legDOM.am, name: nameB }
         });
@@ -220,15 +224,17 @@ async function main() {
   state.lastRun = now;
 
   var minEdge = config.minEdge || 0.5;
+  var inclProps = config.includeProps !== false;        // default ON
+  var inclGameProps = config.includeGameProps !== false; // default ON
   var sportKeys = config.sports || ['baseball_mlb', 'basketball_nba', 'americanfootball_nfl'];
   var leagues = sportKeys.map(function (s) { return SPORT_TO_SGO[s]; }).filter(function (v, i, a) { return v && a.indexOf(v) === i; });
   if (!leagues.length) { console.log('No SGO-supported leagues selected — skipping'); saveState(state); process.exit(0); }
-  console.log('Leagues:', leagues.join(', '), '· min edge', minEdge + '% · interval', intervalMin + 'm');
+  console.log('Leagues:', leagues.join(', '), '· min edge', minEdge + '% · interval', intervalMin + 'm · props', inclProps, '· gameProps', inclGameProps);
 
   var allArbs = [];
   for (var i = 0; i < leagues.length; i++) {
     var events = await fetchLeague(leagues[i], 50);
-    scanEvents(events, minEdge, allArbs);
+    scanEvents(events, minEdge, allArbs, inclProps, inclGameProps);
     await new Promise(function (r) { setTimeout(r, 300); });
   }
   allArbs.sort(function (a, b) { return b.edge - a.edge; });
@@ -248,7 +254,8 @@ async function main() {
   var top = eligible.slice(0, 3);
   top.forEach(function (x) { state.seen[arbSig(x)].n = (state.seen[arbSig(x)].n || 0) + 1; });
   var lines = top.map(function (x) {
-    return '+' + x.edge.toFixed(2) + '% | ' + x.game + ' (' + x.league + ')\n🌊 BookMaker ' + amFmt(x.bmLeg.am) + ' ' + x.bmLeg.name + '  vs  ' + sgoName(x.domLeg.book) + ' ' + amFmt(x.domLeg.am) + ' ' + x.domLeg.name + '  | $' + x.profit.toFixed(2) + ' / $100';
+    var tag = x.kind === 'PROP' ? '🎯 ' : (x.kind === 'GAME PROP' ? '⏱ ' : '');
+    return '+' + x.edge.toFixed(2) + '% | ' + tag + x.game + ' (' + x.league + ')\n' + x.label + '\n🌊 BookMaker ' + amFmt(x.bmLeg.am) + ' ' + x.bmLeg.name + '  vs  ' + sgoName(x.domLeg.book) + ' ' + amFmt(x.domLeg.am) + ' ' + x.domLeg.name + '  | $' + x.profit.toFixed(2) + ' / $100';
   });
   var more = eligible.length - top.length;
   var msg = lines.join('\n\n') + (more > 0 ? '\n...and ' + more + ' more new' : '') + '\n\n⚠️ Place BookMaker first — sharp side moves fastest.';
