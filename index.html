@@ -67,8 +67,8 @@ button.scan{background:#00ff88;color:#000;border:none;border-radius:8px;padding:
 .prog{background:#1a1a26;border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:12px;color:#666;font-family:monospace}
 .prog-bar{height:4px;background:#2a2a3d;border-radius:2px;margin-top:8px;overflow:hidden}
 .prog-fill{height:100%;background:#00ff88;border-radius:2px;transition:width .3s}
-.tab-bar{display:flex;gap:0;margin-bottom:16px;background:#12121a;border-radius:10px;padding:4px;border:1px solid #2a2a3d}
-.tab-btn{flex:1;padding:10px;font-size:13px;font-weight:700;border:none;border-radius:8px;cursor:pointer;background:transparent;color:#666}
+.tab-bar{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:16px;background:#12121a;border-radius:10px;padding:4px;border:1px solid #2a2a3d}
+.tab-btn{flex:1 1 28%;min-width:90px;padding:10px;font-size:13px;font-weight:700;border:none;border-radius:8px;cursor:pointer;background:transparent;color:#666}
 .tab-btn.active{background:#00ff88;color:#000}
 .view{display:none}.view.active{display:block}
 .lcard{background:#12121a;border:1px solid #2a2a3d;border-radius:12px;margin-bottom:10px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center}
@@ -133,9 +133,9 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
 <div class="tab-bar">
   <button class="tab-btn active" id="tab-scanner" onclick="switchTab('scanner')">🔍 Scanner</button>
   <button class="tab-btn" id="tab-lookup" onclick="switchTab('lookup')">📋 Line Lookup</button>
-  <button class="tab-btn" id="tab-poly" onclick="switchTab('poly')">📊 Poly Arb</button>
   <button class="tab-btn" id="tab-offshore" onclick="switchTab('offshore')">🌊 Offshore</button>
   <button class="tab-btn" id="tab-notify" onclick="switchTab('notify')">🔔 Notify</button>
+  <button class="tab-btn" id="tab-trueline" onclick="switchTab('trueline')">🎯 TrueLine</button>
 </div>
 
 <div id="view-scanner" class="view active">
@@ -244,51 +244,6 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
     <button class="lookup-go" onclick="runLookup()">Go</button>
   </div>
   <div id="lout"></div>
-</div>
-
-<div id="view-poly" class="view">
-  <div class="row">
-    <input type="number" id="pbank" value="1000" placeholder="Bankroll $" />
-    <input type="number" id="pmine" value="0.5" placeholder="Min % (net)" step="0.1" />
-  </div>
-  <div class="row">
-    <input type="number" id="pfee" value="0.75" placeholder="Poly fee %" step="0.05" />
-    <input type="number" id="psbfee" value="0" placeholder="Book fee %" step="0.05" />
-  </div>
-  <div class="slabel" style="margin-top:-4px;color:#555">Poly taker fee ≈0.3% (US) to 0.75% (sports). Edges shown are NET of fees.</div>
-  <div class="slabel">Cloudflare Worker URL (for live prices)</div>
-  <input type="text" id="pworker" value="https://poly-relay.andrewramsey14.workers.dev" placeholder="https://your-worker.workers.dev" style="font-size:12px" />
-  <div class="slabel" style="margin-top:-4px;color:#555">Paste your Worker URL for accurate live order-book prices. Stored locally.</div>
-  <div class="slabel">Sportsbooks to compare vs Polymarket</div>
-  <div class="sports" id="pbooks">
-    <div class="sb on" data-pb="fanduel">FanDuel</div>
-    <div class="sb on" data-pb="draftkings">DraftKings</div>
-    <div class="sb on" data-pb="betmgm">BetMGM</div>
-    <div class="sb on" data-pb="williamhill_us">Caesars</div>
-    <div class="sb on" data-pb="fanatics">Fanatics</div>
-    <div class="sb on" data-pb="thescore">theScore</div>
-    <div class="sb on" data-pb="espnbet">ESPN Bet</div>
-    <div class="sb on" data-pb="bet365">Bet365</div>
-  </div>
-  <div class="slabel">Sports</div>
-  <div class="sports" id="psports">
-    <div class="sb on" data-ps="baseball_mlb">⚾ MLB</div>
-    <div class="sb on" data-ps="basketball_nba">🏀 NBA</div>
-    <div class="sb on" data-ps="americanfootball_nfl">🏈 NFL</div>
-    <div class="sb on" data-ps="americanfootball_ncaaf">🏈 NCAAF</div>
-    <div class="sb on" data-ps="icehockey_nhl">🏒 NHL</div>
-    <div class="sb on" data-ps="soccer_usa_mls">⚽ MLS</div>
-    <div class="sb on" data-ps="basketball_wnba">🏀 WNBA</div>
-    <div class="sb on" data-ps="soccer_epl">⚽ EPL</div>
-    <div class="sb on" data-ps="mma_mixed_martial_arts">🥊 MMA</div>
-    <div class="sb on" data-ps="golf">⛳ Golf</div>
-  </div>
-  <button class="scan" onclick="scanPoly()">📊 Scan Poly Arbs</button>
-  <div id="pprog" style="display:none" class="prog">
-    <span id="pprogText">Fetching Polymarket...</span>
-    <div class="prog-bar"><div class="prog-fill" id="pprogFill" style="width:0%"></div></div>
-  </div>
-  <div id="pout"></div>
 </div>
 
 <div id="view-offshore" class="view">
@@ -421,6 +376,88 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
   </div>
 </div>
 
+<div id="view-trueline" class="view">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@600;700&family=JetBrains+Mono:wght@500;700&display=swap');
+#view-trueline{--fair:#F2B441;--vig:#FF5A5F;--value:#3DDC97;--fav:#5AA9FF;--dog:#9AA6B8;--tlmut:#8A94A6;--tlmut2:#5C6675;--tlpanel:#161B22;--tlpanel2:#1C232D;--tlline:#252E3A;--tlink:#0E1116}
+#view-trueline .tl-hd{font-family:Oswald,sans-serif;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+#view-trueline .tl-mono{font-family:'JetBrains Mono',monospace}
+#view-trueline .tl-setup{background:var(--tlpanel);border:1px solid var(--tlline);border-radius:12px;padding:12px;margin-bottom:14px}
+#view-trueline .tl-row{display:flex;gap:8px}
+#view-trueline .tl-sel{flex:1;background:var(--tlink);border:1px solid var(--tlline);color:#E8ECF1;border-radius:9px;padding:11px 12px;font-size:14px}
+#view-trueline .tl-sel:focus{outline:none;border-color:var(--fair)}
+#view-trueline .tl-btn{background:var(--fair);color:#1a1205;border:0;border-radius:9px;padding:11px 16px;font-weight:700;font-size:14px;cursor:pointer;white-space:nowrap}
+#view-trueline .tl-btn:active{transform:translateY(1px)}
+#view-trueline .tl-hint{font-size:11px;color:var(--tlmut2);margin-top:9px;line-height:1.5}
+#view-trueline .tl-hint #tlCredits{color:var(--fair)}
+#view-trueline .tl-games{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+#view-trueline .tl-game{background:var(--tlpanel);border:1px solid var(--tlline);border-radius:11px;padding:12px 14px;cursor:pointer;display:flex;align-items:center;gap:12px}
+#view-trueline .tl-game.sel{border-color:var(--fair)}
+#view-trueline .tl-game .tl-teams{font-weight:600;font-size:14px}
+#view-trueline .tl-game .tl-when{font-size:11px;color:var(--tlmut);margin-top:2px}
+#view-trueline .tl-game .tl-chev{margin-left:auto;color:var(--tlmut2);font-family:'JetBrains Mono',monospace;font-size:12px}
+#view-trueline .tl-card{background:var(--tlpanel);border:1px solid var(--tlline);border-radius:16px;overflow:hidden;margin-bottom:14px}
+#view-trueline .tl-chead{padding:15px 16px 11px;border-bottom:1px solid var(--tlline)}
+#view-trueline .tl-mkt{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--fair);font-weight:700}
+#view-trueline .tl-match{font-family:Oswald,sans-serif;font-weight:600;font-size:21px;letter-spacing:.02em;margin-top:2px}
+#view-trueline .tl-sub{font-size:11px;color:var(--tlmut);margin-top:3px}
+#view-trueline .tl-hero{padding:16px}
+#view-trueline .tl-fg{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+#view-trueline .tl-fg.three{grid-template-columns:1fr 1fr 1fr}
+#view-trueline .tl-fo{background:var(--tlpanel2);border:1px solid var(--tlline);border-radius:12px;padding:13px 10px;text-align:center}
+#view-trueline .tl-fo .tl-name{font-size:12px;color:var(--tlmut);font-weight:600;margin-bottom:6px;min-height:30px;display:flex;align-items:center;justify-content:center;line-height:1.2}
+#view-trueline .tl-fo .tl-prob{font-family:Oswald,sans-serif;font-weight:700;font-size:32px;line-height:1}
+#view-trueline .tl-fo .tl-prob span{font-size:15px}
+#view-trueline .tl-fo .tl-odds{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;color:var(--fair);margin-top:5px}
+#view-trueline .tl-fo .tl-bestp{font-size:10px;color:var(--tlmut);margin-top:6px}
+#view-trueline .tl-fo .tl-bestp b{color:#E8ECF1}
+#view-trueline .tl-ev{display:inline-block;margin-top:7px;font-size:10px;font-weight:700;letter-spacing:.05em;padding:3px 7px;border-radius:20px;text-transform:uppercase}
+#view-trueline .tl-ev.pos{background:rgba(61,220,151,.15);color:var(--value);border:1px solid rgba(61,220,151,.4)}
+#view-trueline .tl-ev.neg{background:rgba(138,148,166,.1);color:var(--tlmut);border:1px solid var(--tlline)}
+#view-trueline .tl-splitwrap{margin:16px 0 4px}
+#view-trueline .tl-splitlbl{display:flex;justify-content:space-between;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--tlmut);margin-bottom:6px}
+#view-trueline .tl-split{height:36px;border-radius:9px;overflow:hidden;display:flex;background:var(--tlink);border:1px solid var(--tlline)}
+#view-trueline .tl-seg{display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;color:#0c1016;transition:width 1s cubic-bezier(.2,.8,.2,1);white-space:nowrap;overflow:hidden;min-width:0}
+#view-trueline .tl-seg.s0{background:var(--fav)}
+#view-trueline .tl-seg.s1{background:var(--dog)}
+#view-trueline .tl-seg.s2{background:#6c7688}
+#view-trueline .tl-vig{margin-top:14px;background:var(--tlpanel2);border:1px solid var(--tlline);border-radius:12px;padding:13px}
+#view-trueline .tl-vigtop{display:flex;align-items:baseline;gap:10px}
+#view-trueline .tl-vigtop .n{font-family:Oswald,sans-serif;font-weight:700;font-size:25px;color:var(--vig)}
+#view-trueline .tl-vigtop .l{font-size:12px;color:var(--tlmut);line-height:1.3}
+#view-trueline .tl-vigmeter{height:7px;background:var(--tlink);border-radius:5px;overflow:hidden;margin:9px 0 4px}
+#view-trueline .tl-vigmeter i{display:block;height:100%;background:linear-gradient(90deg,#ff8a5f,var(--vig));transition:width .8s ease}
+#view-trueline .tl-vigscale{display:flex;justify-content:space-between;font-size:9px;color:var(--tlmut2);font-family:'JetBrains Mono',monospace}
+#view-trueline .tl-take{font-size:13px;color:#E8ECF1;margin-top:12px;padding:11px;background:rgba(242,180,65,.07);border-left:2px solid var(--fair);border-radius:0 8px 8px 0;line-height:1.5}
+#view-trueline .tl-books{margin-top:14px}
+#view-trueline .tl-books h3{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--tlmut);margin:0 0 6px}
+#view-trueline .tl-brow{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--tlline);font-size:13px}
+#view-trueline .tl-brow:last-child{border-bottom:0}
+#view-trueline .tl-bk{font-weight:600;display:flex;align-items:center;gap:6px;min-width:0}
+#view-trueline .tl-flag{font-size:9px;font-weight:700;padding:2px 5px;border-radius:5px;letter-spacing:.04em;background:rgba(61,220,151,.15);color:var(--value);white-space:nowrap}
+#view-trueline .tl-px{font-family:'JetBrains Mono',monospace;font-weight:700;text-align:right}
+#view-trueline .tl-hdc{font-family:'JetBrains Mono',monospace;text-align:right;color:var(--tlmut);font-size:12px;min-width:50px}
+#view-trueline .tl-hdc.hi{color:var(--vig)}
+#view-trueline .tl-hdc.lo{color:var(--value)}
+#view-trueline .tl-empty{text-align:center;color:var(--tlmut);padding:34px 18px;font-size:13px}
+#view-trueline .tl-big{font-family:Oswald,sans-serif;font-size:19px;color:#E8ECF1;margin-bottom:6px;letter-spacing:.03em}
+#view-trueline .tl-spin{display:inline-block;width:15px;height:15px;border:2px solid var(--tlline);border-top-color:var(--fair);border-radius:50%;animation:tlsp .7s linear infinite;vertical-align:-3px;margin-right:8px}
+@keyframes tlsp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){#view-trueline *{animation:none!important;transition:none!important}}
+</style>
+
+  <div class="tl-setup">
+    <div class="tl-row">
+      <select id="tlSport" class="tl-sel"><option value="">Loading sports…</option></select>
+      <button class="tl-btn" onclick="tlLoadGames()">Load games</button>
+    </div>
+    <div class="tl-hint">Uses the Odds API key up top. Moneyline, vig removed, every US book. ~2 credits per load. <span id="tlCredits"></span></div>
+  </div>
+  <div id="tlErr"></div>
+  <div class="tl-games" id="tlGames"><div class="tl-empty"><div class="tl-big">Pick a sport, then Load games</div>Tap any game to see its true no-vig price.</div></div>
+  <div id="tlAnalysis"></div>
+</div>
+
 <div class="ticker">
   <div class="ticker-info"><span class="tdot" id="dot"></span><span id="ttext">idle</span></div>
   <div style="display:flex;gap:8px;flex-shrink:0">
@@ -436,12 +473,13 @@ var OARB_CACHE=[]; var OEVENTS_CACHE={};
 
 // ── Tab switching ──────────────────────────────────────────
 function switchTab(tab){
-  ['scanner','lookup','poly','offshore','notify'].forEach(function(t){
+  ['scanner','lookup','offshore','notify','trueline'].forEach(function(t){
     document.getElementById('tab-'+t).classList.remove('active');
     document.getElementById('view-'+t).classList.remove('active');
   });
   document.getElementById('tab-'+tab).classList.add('active');
   document.getElementById('view-'+tab).classList.add('active');
+  if(tab==='trueline' && window.tlInit) tlInit();
 }
 
 // ── Filter toggle listeners ────────────────────────────────
@@ -1166,19 +1204,7 @@ async function fetchEventOdds(eventId,sport,markets,gameLabel,playerFilter,arbLa
 }
 
 // ── Controls ───────────────────────────────────────────────
-// ── Polymarket Arb Scanner ───────────────────────────────────
-document.getElementById('psports').addEventListener('click',function(e){var b=e.target.closest('[data-ps]');if(b)b.classList.toggle('on');});
-(function(){
-  try{
-    var w=localStorage.getItem('poly_worker');
-    if(w){ document.getElementById('pworker').value=w; }
-    else { localStorage.setItem('poly_worker', document.getElementById('pworker').value.trim()); }
-  }catch(e){}
-  document.getElementById('pworker').addEventListener('input',function(){
-    try{ localStorage.setItem('poly_worker', this.value.trim()); }catch(e){}
-  });
-})();
-document.getElementById('pbooks').addEventListener('click',function(e){var b=e.target.closest('[data-pb]');if(b)b.classList.toggle('on');});
+// (Poly Arb tab removed)
 
 function getPSports(){return Array.from(document.querySelectorAll('#psports [data-ps].on')).map(function(b){return b.dataset.ps});}
 function getPBooks(){return Array.from(document.querySelectorAll('#pbooks [data-pb].on')).map(function(b){return b.dataset.pb});}
@@ -2522,6 +2548,128 @@ function toggleAuto(){
   if(autoOn){btn.textContent='⏹ Stop';btn.style.background='#ff4757';btn.style.color='#fff';scanAll();timer=setInterval(scanAll,60000)}
   else{btn.textContent='⏱ Auto';btn.style.background='#00ff88';btn.style.color='#000';clearInterval(timer);setStatus(false,'auto stopped')}
 }
+</script>
+<script>
+// ── TrueLine tab (Module 1: true odds + hold/EV, on The Odds API) ──
+(function(){
+  function tlKey(){ return (document.getElementById('key').value||'').trim(); }
+  function tlAmDec(p){p=parseFloat(p);if(!p)return null;return p>0?p/100+1:100/Math.abs(p)+1;}
+  function tlDecAm(d){if(!d||d<=1)return null;return d>=2?'+'+Math.round((d-1)*100):''+Math.round(-100/(d-1));}
+  function tlMedian(a){if(!a.length)return null;var s=a.slice().sort(function(x,y){return x-y;});var m=Math.floor(s.length/2);return s.length%2?s[m]:(s[m-1]+s[m])/2;}
+  function tlEsc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  function tlErr(m){document.getElementById('tlErr').innerHTML='<div class="err">'+tlEsc(m)+'</div>';}
+  function tlClrErr(){document.getElementById('tlErr').innerHTML='';}
+  function tlCredits(res){try{var r=res.headers.get('x-requests-remaining');if(r!=null)document.getElementById('tlCredits').textContent='· '+r+' credits left';}catch(e){}}
+
+  var tlSportsLoaded=false, TL=[];
+
+  window.tlInit=function(){
+    if(!tlSportsLoaded && tlKey()) tlLoadSports();
+  };
+
+  async function tlLoadSports(){
+    var key=tlKey(); if(!key){return;}
+    try{
+      var res=await fetch('https://api.the-odds-api.com/v4/sports/?apiKey='+encodeURIComponent(key));
+      tlCredits(res);
+      if(res.status===401){tlErr('Odds API key was rejected — check the key up top.');return;}
+      var data=await res.json();
+      if(!Array.isArray(data)){tlErr('Unexpected response loading sports.');return;}
+      tlClrErr(); tlSportsLoaded=true;
+      var order=['americanfootball_nfl','basketball_nba','baseball_mlb','icehockey_nhl','americanfootball_ncaaf','basketball_ncaab','basketball_wnba','mma_mixed_martial_arts','soccer_epl'];
+      data.sort(function(a,b){var ia=order.indexOf(a.key),ib=order.indexOf(b.key);return (ia<0?99:ia)-(ib<0?99:ib);});
+      var opts=data.filter(function(s){return !s.has_outrights;}).map(function(s){return '<option value="'+tlEsc(s.key)+'">'+tlEsc(s.title)+'</option>';}).join('');
+      document.getElementById('tlSport').innerHTML=opts||'<option value="">No active sports</option>';
+    }catch(e){tlErr('Network error loading sports.');}
+  }
+
+  window.tlLoadGames=async function(){
+    var key=tlKey(); if(!key){tlErr('Paste your Odds API key up top first.');return;}
+    if(!tlSportsLoaded){await tlLoadSports();}
+    var sport=document.getElementById('tlSport').value; if(!sport){return;}
+    document.getElementById('tlGames').innerHTML='<div class="tl-empty"><span class="tl-spin"></span>Loading games…</div>';
+    document.getElementById('tlAnalysis').innerHTML='';
+    try{
+      var res=await fetch('https://api.the-odds-api.com/v4/sports/'+sport+'/odds/?apiKey='+encodeURIComponent(key)+'&regions=us,us2&markets=h2h&oddsFormat=american');
+      tlCredits(res);
+      if(res.status===401){document.getElementById('tlGames').innerHTML='';tlErr('Key rejected.');return;}
+      if(res.status===422){document.getElementById('tlGames').innerHTML='';tlErr('No moneyline available for this sport right now.');return;}
+      var data=await res.json();
+      if(!Array.isArray(data)||!data.length){document.getElementById('tlGames').innerHTML='<div class="tl-empty"><div class="tl-big">No games on the board</div>Nothing upcoming here — try another sport.</div>';return;}
+      tlClrErr(); TL=data;
+      document.getElementById('tlGames').innerHTML=data.map(function(g,i){
+        var t=new Date(g.commence_time);
+        var when=t.toLocaleDateString([], {weekday:'short',month:'short',day:'numeric'})+' · '+t.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
+        var nb=(g.bookmakers||[]).length;
+        return '<div class="tl-game" id="tlg'+i+'" onclick="tlAnalyze('+i+')"><div><div class="tl-teams">'+tlEsc(g.away_team)+' <span style="color:#5C6675">@</span> '+tlEsc(g.home_team)+'</div><div class="tl-when">'+tlEsc(when)+' · '+nb+' books</div></div><div class="tl-chev">analyze →</div></div>';
+      }).join('');
+    }catch(e){document.getElementById('tlGames').innerHTML='';tlErr('Network error loading games.');}
+  };
+
+  window.tlAnalyze=function(i){
+    var g=TL[i]; if(!g)return;
+    document.querySelectorAll('#view-trueline .tl-game').forEach(function(x){x.classList.remove('sel');});
+    var gel=document.getElementById('tlg'+i); if(gel)gel.classList.add('sel');
+
+    var names=[], perBook=[];
+    (g.bookmakers||[]).forEach(function(bk){
+      var mkt=(bk.markets||[]).filter(function(m){return m.key==='h2h';})[0];
+      if(!mkt||!mkt.outcomes||mkt.outcomes.length<2)return;
+      var q={},decs={},tot=0,ok=true;
+      mkt.outcomes.forEach(function(o){var d=tlAmDec(o.price);if(!d){ok=false;return;}decs[o.name]=d;q[o.name]=1/d;tot+=1/d;if(names.indexOf(o.name)<0)names.push(o.name);});
+      if(!ok||tot<=0)return;
+      var fair={};Object.keys(q).forEach(function(n){fair[n]=q[n]/tot;});
+      perBook.push({book:bk.title,fair:fair,hold:(tot-1)*100,dec:decs});
+    });
+    if(perBook.length<1||names.length<2){document.getElementById('tlAnalysis').innerHTML='<div class="err">Not enough book data to de-vig this game yet.</div>';return;}
+
+    var cons={};names.forEach(function(n){var arr=perBook.filter(function(b){return b.fair[n]!=null;}).map(function(b){return b.fair[n];});cons[n]=tlMedian(arr)||0;});
+    var cs=0;names.forEach(function(n){cs+=cons[n];});names.forEach(function(n){cons[n]=cons[n]/cs;});
+
+    var best={};names.forEach(function(n){var bd=0,bb='';perBook.forEach(function(b){if(b.dec[n]&&b.dec[n]>bd){bd=b.dec[n];bb=b.book;}});best[n]={dec:bd,book:bb,ev:(cons[n]*(bd-1)-(1-cons[n]))*100};});
+    var holdMed=tlMedian(perBook.map(function(b){return b.hold;}));
+    var minHold=Math.min.apply(null,perBook.map(function(b){return b.hold;}));
+
+    var three=names.length>=3;
+    var t=new Date(g.commence_time);
+    var when=t.toLocaleDateString([], {weekday:'short',month:'short',day:'numeric'})+' · '+t.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
+
+    var cards=names.map(function(n){var p=cons[n],b=best[n],pos=b.ev>0.01;
+      return '<div class="tl-fo"><div class="tl-name">'+tlEsc(n)+'</div><div class="tl-prob">'+(p*100).toFixed(1)+'<span>%</span></div>'+
+        '<div class="tl-odds">fair '+tlDecAm(1/p)+'</div><div class="tl-bestp">best <b>'+tlDecAm(b.dec)+'</b> @ '+tlEsc(b.book||'—')+'</div>'+
+        '<span class="tl-ev '+(pos?'pos':'neg')+'">'+(pos?'+EV '+b.ev.toFixed(1)+'%':'no edge')+'</span></div>';
+    }).join('');
+
+    var sc=['s0','s1','s2'];
+    var segs=names.slice().sort(function(a,b){return cons[b]-cons[a];}).map(function(n,idx){var w=cons[n]*100;return '<div class="tl-seg '+sc[idx]+'" data-w="'+w+'" style="width:0%">'+(w>14?Math.round(w)+'%':'')+'</div>';}).join('');
+
+    var rows=perBook.slice().sort(function(a,b){return a.hold-b.hold;}).map(function(b){
+      var cheap=Math.abs(b.hold-minHold)<0.001;
+      var px=names.map(function(n){var isB=best[n].book===b.book&&best[n].dec===b.dec[n];return '<span class="tl-px" style="'+(isB?'color:var(--fav)':'')+'">'+tlDecAm(b.dec[n])+'</span>';});
+      var hc=b.hold>=holdMed+1?'hi':(cheap?'lo':'');
+      return '<div class="tl-brow"><div class="tl-bk">'+tlEsc(b.book)+(cheap?' <span class="tl-flag">LOW VIG</span>':'')+'</div><div style="display:flex;gap:12px;justify-content:flex-end">'+px.join('')+'</div><div class="tl-hdc '+hc+'">'+b.hold.toFixed(1)+'%</div></div>';
+    }).join('');
+
+    var bev=names.slice().sort(function(a,b){return best[b].ev-best[a].ev;})[0];
+    var take = best[bev].ev>0.01
+      ? '<b>'+tlEsc(bev)+'</b> at '+tlDecAm(best[bev].dec)+' ('+tlEsc(best[bev].book)+') beats its fair price — about <b style="color:var(--value)">+'+best[bev].ev.toFixed(1)+'%</b> per $100. Real edges are small; confirm the line is still live.'
+      : 'No book is priced above the fair line — every side is −EV once vig is counted. Cheapest vig here is <b>'+minHold.toFixed(1)+'%</b>; anything more is extra tax.';
+
+    document.getElementById('tlAnalysis').innerHTML=
+      '<div class="tl-card"><div class="tl-chead"><div class="tl-mkt">Moneyline · no-vig</div><div class="tl-match">'+tlEsc(g.away_team)+' @ '+tlEsc(g.home_team)+'</div><div class="tl-sub">'+tlEsc(when)+' · consensus of '+perBook.length+' books</div></div>'+
+      '<div class="tl-hero"><div class="tl-fg'+(three?' three':'')+'">'+cards+'</div>'+
+      '<div class="tl-splitwrap"><div class="tl-splitlbl"><span>True probability (vig removed)</span><span>100%</span></div><div class="tl-split" id="tlSplit">'+segs+'</div></div>'+
+      '<div class="tl-vig"><div class="tl-vigtop"><span class="n">'+holdMed.toFixed(1)+'%</span><span class="l">typical vig on this game — the books\u2019 built-in tax</span></div>'+
+      '<div class="tl-vigmeter"><i id="tlVig" style="width:0%"></i></div><div class="tl-vigscale"><span>0%</span><span>fair</span><span>5%</span><span>gouging</span><span>10%+</span></div>'+
+      '<div class="tl-take">'+take+'</div></div>'+
+      '<div class="tl-books"><h3>Every book — price &amp; its vig</h3>'+rows+'</div></div></div>';
+
+    requestAnimationFrame(function(){setTimeout(function(){
+      document.querySelectorAll('#tlSplit .tl-seg').forEach(function(s){s.style.width=s.getAttribute('data-w')+'%';});
+      var vf=document.getElementById('tlVig'); if(vf)vf.style.width=Math.min(holdMed/10*100,100)+'%';
+    },60);});
+  };
+})();
 </script>
 </body>
 </html>
