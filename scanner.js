@@ -18,8 +18,8 @@ if (!SGO_API_KEY || !PUSHOVER_TOKEN || !PUSHOVER_USER) {
 
 // ── Config knobs (sensible defaults; override via scheduler-config.json) ──
 const SGO_BOOKMAKER = 'bookmakereu';
-const SGO_DOMESTIC = ['draftkings', 'fanduel', 'betmgm', 'caesars', 'espnbet', 'thescorebet'];
-const SGO_NAMES = { bookmakereu: 'BookMaker.eu', draftkings: 'DraftKings', fanduel: 'FanDuel', betmgm: 'BetMGM', caesars: 'Caesars', espnbet: 'ESPN Bet', thescorebet: 'theScore' };
+const SGO_DOMESTIC = ['draftkings', 'fanduel', 'betmgm', 'caesars', 'fanatics', 'bet365', 'thescorebet'];
+const SGO_NAMES = { bookmakereu: 'BookMaker.eu', draftkings: 'DraftKings', fanduel: 'FanDuel', betmgm: 'BetMGM', caesars: 'Caesars', fanatics: 'Fanatics', bet365: 'Bet365', thescorebet: 'theScore' };
 // Map the app's sport keys -> SGO league IDs. Soccer/golf/boxing/tennis are
 // skipped (3-way or not on SGO). MMA uses UFC.
 const SPORT_TO_SGO = {
