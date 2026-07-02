@@ -1,270 +1,2675 @@
-// ArbEdge Background Scanner — BookMaker.eu (SGO) edition
-// Scans the SAME engine as the in-app Offshore tab: BookMaker.eu locked as
-// one leg, hedged against domestic books from the SportsGameOdds feed.
-// Fires Pushover. Honors the in-app scheduler-config.json (enabled, sports,
-// minEdge, intervalMinutes). Dedups so you're pinged at most twice per bet.
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ArbEdge</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0a0f;color:#e8e8f0;font-family:sans-serif;padding:16px 16px 80px}
+h1{color:#00ff88;font-size:22px;margin-bottom:4px}
+.sub{color:#666;font-size:12px;margin-bottom:16px}
+input,select{background:#1a1a26;border:1px solid #2a2a3d;color:#e8e8f0;border-radius:8px;padding:12px;font-size:14px;width:100%;margin-bottom:10px;font-family:monospace}
+.row{display:flex;gap:8px;margin-bottom:10px}
+.row input{margin-bottom:0}
+button.scan{background:#00ff88;color:#000;border:none;border-radius:8px;padding:14px;font-size:15px;font-weight:bold;cursor:pointer;width:100%;margin-bottom:12px}
+.sports,.markets,.filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.sb,.mb,.fb{background:#1a1a26;color:#eee;border:1px solid #2a2a3d;border-radius:8px;padding:8px 12px;font-size:12px;cursor:pointer;user-select:none;-webkit-user-select:none}
+.sb.on,.mb.on{background:#00ff88;color:#000;border-color:#00ff88}
+.fb.on{background:#7c3aed;color:#fff;border-color:#7c3aed}
+.slabel{color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;margin-top:10px}
+.stats{color:#666;font-size:12px;margin-bottom:12px}
+.card{background:#12121a;border:1px solid #2a2a3d;border-radius:12px;margin-bottom:12px;overflow:hidden}
+.card.hot{border-color:#00ff88;box-shadow:0 0 16px rgba(0,255,136,.1)}
+.card.middle{border-color:#f59e0b;box-shadow:0 0 16px rgba(245,158,11,.15)}
+.card.live{border-color:#ff4757}
+.ctop{padding:12px 14px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.gtitle{font-size:14px;font-weight:600;line-height:1.3}
+.gmeta{color:#666;font-size:10px;text-transform:uppercase;margin-bottom:3px}
+.roi{color:#00ff88;font-size:20px;font-weight:bold;white-space:nowrap}
+.psub{color:#666;font-size:11px;text-align:right}
+.sides{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:#2a2a3d;border-top:1px solid #2a2a3d}
+.side{background:#1a1a26;padding:10px 12px}
+.book{color:#7c3aed;font-size:10px;font-weight:bold;text-transform:uppercase;margin-bottom:2px}
+.team{color:#e8e8f0;font-size:12px;margin-bottom:3px;line-height:1.3}
+.odds{font-size:15px;font-weight:bold;font-family:monospace}
+.stake{color:#00ff88;font-size:11px;font-family:monospace;margin-top:2px}
+.limit-tag{color:#94a3b8;font-size:10px;font-family:monospace;margin-top:4px}
+.open-link{display:block;margin-top:6px;color:#7c3aed;font-size:11px;font-weight:700;text-decoration:none}
+.copy-bet{display:block;width:100%;margin-top:5px;background:#16161f;border:1px solid #2a2a3d;color:#a78bfa;font-size:11px;font-weight:700;padding:6px 4px;border-radius:6px;cursor:pointer;line-height:1.3}
+.copy-bet:active{background:#20202c}
+.score-line{color:#fbbf24;font-size:11px;font-family:monospace;margin-top:3px}
+.gdate-tag{color:#666;font-size:10px;font-family:monospace;margin-top:3px}
+.middle-note{background:rgba(245,158,11,.1);border-top:1px solid rgba(245,158,11,.3);padding:8px 12px;font-size:11px;color:#f59e0b}
+.place-first-note{background:rgba(251,191,36,.08);border-top:1px solid rgba(251,191,36,.25);padding:8px 12px;font-size:11px;color:#fbbf24}
+.lookup-btn{width:100%;background:#1a1a26;color:#7c3aed;border:1px solid #7c3aed;border-radius:8px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;margin-top:0}
+.section-divider{margin:24px 0 14px;text-align:center;border-top:1px dashed #2a2a3d;padding-top:14px}
+.section-divider span{color:#7c3aed;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px}
+.msg{color:#666;text-align:center;padding:40px 16px;background:#12121a;border-radius:12px;line-height:1.8}
+.err{color:#ff4757;background:rgba(255,71,87,.1);border:1px solid rgba(255,71,87,.3);border-radius:8px;padding:12px;margin-bottom:12px;font-size:13px}
+.alert-bar{background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.3);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#00ff88}
+.ticker{position:fixed;bottom:0;left:0;right:0;background:#12121a;border-top:1px solid #2a2a3d;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.ticker-info{font-size:12px;color:#666;font-family:monospace;flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.tdot{width:8px;height:8px;border-radius:50%;background:#666;display:inline-block;margin-right:6px;flex-shrink:0}
+.tdot.live{background:#00ff88;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.tbtn{border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:bold;cursor:pointer}
+.mktag{display:inline-block;font-size:9px;font-weight:bold;text-transform:uppercase;letter-spacing:.6px;padding:2px 6px;border-radius:4px;margin-bottom:4px;margin-right:4px}
+.mktag.h2h{background:rgba(124,58,237,.2);color:#a78bfa}
+.mktag.spreads{background:rgba(255,107,53,.2);color:#ff6b35}
+.mktag.totals{background:rgba(59,130,246,.2);color:#60a5fa}
+.mktag.props{background:rgba(236,72,153,.2);color:#f472b6}
+.mktag.gameprops{background:rgba(168,85,247,.2);color:#c084fc}
+.mktag.alt{background:rgba(16,185,129,.2);color:#34d399}
+.mktag.golf{background:rgba(34,197,94,.2);color:#4ade80}
+.mktag.mid{background:rgba(245,158,11,.2);color:#f59e0b}
+.mktag.live{background:rgba(255,71,87,.2);color:#ff6b6b}
+.prog{background:#1a1a26;border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:12px;color:#666;font-family:monospace}
+.prog-bar{height:4px;background:#2a2a3d;border-radius:2px;margin-top:8px;overflow:hidden}
+.prog-fill{height:100%;background:#00ff88;border-radius:2px;transition:width .3s}
+.tab-bar{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:16px;background:#12121a;border-radius:10px;padding:4px;border:1px solid #2a2a3d}
+.tab-btn{flex:1 1 28%;min-width:90px;padding:10px;font-size:13px;font-weight:700;border:none;border-radius:8px;cursor:pointer;background:transparent;color:#666}
+.tab-btn.active{background:#00ff88;color:#000}
+.view{display:none}.view.active{display:block}
+.lcard{background:#12121a;border:1px solid #2a2a3d;border-radius:12px;margin-bottom:10px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center}
+.lcard.best{border-color:#00ff88;background:rgba(0,255,136,.05)}
+.lbook{color:#7c3aed;font-size:10px;font-weight:700;text-transform:uppercase;margin-bottom:3px}
+.lname{font-size:12px;color:#e8e8f0;margin-bottom:2px}
+.lodds{font-size:22px;font-weight:700;font-family:monospace}
+.lbest{color:#00ff88;font-size:10px;margin-top:3px}
+.llink{display:block;color:#7c3aed;font-size:11px;font-weight:700;margin-top:6px;text-decoration:none}
+.lookup-go{background:#00ff88;color:#000;border:none;border-radius:8px;padding:12px 20px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;margin-bottom:10px}
+.limit-log{background:#12121a;border:1px solid #2a2a3d;border-radius:12px;padding:14px;margin-top:24px;margin-bottom:80px}
+.limit-log-title{color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px}
+.limit-log-entry{font-size:12px;color:#e8e8f0;padding:8px 0;border-bottom:1px solid #1a1a26}
+.limit-log-entry:last-child{border-bottom:none}
+.po-box{background:#12121a;border:1px solid #2a2a3d;border-radius:12px;padding:14px;margin-bottom:12px}
+.po-box.connected{border-color:#00ff88}
+.po-title{color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+.po-status{font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;background:#1a1a26;color:#666}
+.po-status.ok{background:rgba(0,255,136,.15);color:#00ff88}
+.po-row{display:flex;gap:8px;margin-bottom:8px}
+.po-row input{margin-bottom:0;font-size:13px}
+.po-btn{background:#ff6600;color:#fff;border:none;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+.po-btn:disabled{opacity:.5;cursor:not-allowed}
+.po-toggle{display:flex;align-items:center;gap:10px;margin-top:4px}
+.po-toggle label{font-size:12px;color:#888;flex:1}
+.switch{position:relative;display:inline-block;width:40px;height:22px;flex-shrink:0}
+.switch input{opacity:0;width:0;height:0}
+.slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#2a2a3d;border-radius:22px;transition:.3s}
+.slider:before{position:absolute;content:"";height:16px;width:16px;left:3px;bottom:3px;background:#666;border-radius:50%;transition:.3s}
+input:checked+.slider{background:#00ff88}
+input:checked+.slider:before{transform:translateX(18px);background:#000}
+.po-min-row{display:flex;align-items:center;gap:8px;margin-top:8px}
+.po-min-row label{font-size:12px;color:#888;flex:1}
+.po-min-row input{width:70px;margin-bottom:0;padding:8px;font-size:13px;flex-shrink:0}
+.sch-box{background:#12121a;border:1px solid #2a2a3d;border-radius:12px;padding:14px;margin-bottom:12px}
+.sch-box.active{border-color:#00ff88;box-shadow:0 0 16px rgba(0,255,136,.08)}
+.sch-title{color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+.sch-status{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:#1a1a26;color:#666}
+.sch-status.on{background:rgba(0,255,136,.15);color:#00ff88}
+.sch-status.off{background:rgba(255,71,87,.1);color:#ff4757}
+.big-toggle{display:flex;align-items:center;justify-content:space-between;background:#1a1a26;border-radius:10px;padding:14px;margin-bottom:12px;cursor:pointer}
+.big-toggle-label{font-size:15px;font-weight:700;color:#e8e8f0}
+.big-toggle-sub{font-size:11px;color:#666;margin-top:2px}
+.switch-lg{position:relative;display:inline-block;width:52px;height:28px;flex-shrink:0}
+.switch-lg input{opacity:0;width:0;height:0}
+.slider-lg{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#2a2a3d;border-radius:28px;transition:.3s}
+.slider-lg:before{position:absolute;content:"";height:20px;width:20px;left:4px;bottom:4px;background:#666;border-radius:50%;transition:.3s}
+input:checked+.slider-lg{background:#00ff88}
+input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
+.sch-sports{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px}
+.sch-save{background:#00ff88;color:#000;border:none;border-radius:8px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;width:100%;margin-top:12px}
+.sch-save:disabled{opacity:.5;cursor:not-allowed}
+.sch-log{background:#1a1a26;border-radius:8px;padding:10px 12px;font-size:11px;color:#666;font-family:monospace;margin-top:10px;line-height:1.8}
+.sch-note{font-size:11px;color:#666;margin-top:8px;line-height:1.6}
+</style>
+</head>
+<body>
+<h1>ArbEdge</h1>
+<div class="sub">FanDuel · DraftKings · BetMGM · Caesars · Fanatics · theScore · ESPN Bet · Bet365</div>
+<input type="text" id="key" placeholder="Paste Odds API key..." />
 
-const https = require('https');
-const fs = require('fs');
+<div class="tab-bar">
+  <button class="tab-btn active" id="tab-scanner" onclick="switchTab('scanner')">🔍 Scanner</button>
+  <button class="tab-btn" id="tab-lookup" onclick="switchTab('lookup')">📋 Line Lookup</button>
+  <button class="tab-btn" id="tab-offshore" onclick="switchTab('offshore')">🌊 Offshore</button>
+  <button class="tab-btn" id="tab-notify" onclick="switchTab('notify')">🔔 Notify</button>
+  <button class="tab-btn" id="tab-trueline" onclick="switchTab('trueline')">🎯 TrueLine</button>
+</div>
 
-const SGO_API_KEY = process.env.SGO_API_KEY;
-const PUSHOVER_TOKEN = process.env.PUSHOVER_TOKEN;
-const PUSHOVER_USER = process.env.PUSHOVER_USER;
+<div id="view-scanner" class="view active">
+<div class="row">
+  <input type="number" id="bank" value="1000" placeholder="Bankroll $" />
+  <input type="number" id="mine" value="0.3" placeholder="Min %" step="0.1" />
+</div>
+<div class="slabel">Sports</div>
+<div class="sports" id="sports">
+  <div class="sb on" data-s="baseball_mlb">⚾ MLB</div>
+  <div class="sb on" data-s="basketball_nba">🏀 NBA</div>
+  <div class="sb on" data-s="americanfootball_nfl">🏈 NFL</div>
+  <div class="sb on" data-s="americanfootball_ncaaf">🏈 NCAAF</div>
+  <div class="sb on" data-s="icehockey_nhl">🏒 NHL</div>
+  <div class="sb on" data-s="soccer_usa_mls">⚽ MLS</div>
+  <div class="sb on" data-s="soccer_fifa_world_cup">🌍 World Cup</div>
+  <div class="sb on" data-s="tennis_atp_french_open">🎾 Tennis</div>
+  <div class="sb on" data-s="mma_mixed_martial_arts">🥊 MMA</div>
+  <div class="sb on" data-s="golf">⛳ Golf</div>
+  <div class="sb on" data-s="basketball_wnba">🏀 WNBA</div>
+  <div class="sb on" data-s="basketball_ncaab">🏀 NCAAB</div>
+  <div class="sb on" data-s="soccer_epl">⚽ EPL</div>
+  <div class="sb on" data-s="soccer_uefa_champs_league">⚽ UCL</div>
+  <div class="sb on" data-s="soccer_spain_la_liga">⚽ La Liga</div>
+  <div class="sb on" data-s="soccer_germany_bundesliga">⚽ Bundesliga</div>
+  <div class="sb on" data-s="soccer_italy_serie_a">⚽ Serie A</div>
+  <div class="sb on" data-s="soccer_france_ligue_1">⚽ Ligue 1</div>
+  <div class="sb on" data-s="soccer_mexico_ligamx">⚽ Liga MX</div>
+  <div class="sb on" data-s="soccer_uefa_europa_league">⚽ Europa</div>
+  <div class="sb on" data-s="boxing_boxing">🥊 Boxing</div>
+  <div class="sb on" data-s="lacrosse_pll">🥍 PLL</div>
+  <div class="sb on" data-s="lacrosse_ncaa">🥍 NCAA Lax</div>
+</div>
+<div class="slabel">Markets</div>
+<div class="markets" id="markets">
+  <div class="mb on" data-m="h2h">💰 Moneyline</div>
+  <div class="mb on" data-m="spreads">📊 Spreads</div>
+  <div class="mb on" data-m="totals">🔢 Totals</div>
+  <div class="mb on" data-m="alternate_spreads">📈 Alt Spreads</div>
+  <div class="mb on" data-m="alternate_totals">📉 Alt Totals</div>
+  <div class="mb on" data-m="props">🎯 Player Props</div>
+  <div class="mb on" data-m="gameprops">🏟️ Game Props</div>
+</div>
+<div class="slabel">Sportsbooks</div>
+<div class="sports" id="books">
+  <div class="sb on" data-b="fanduel">FanDuel</div>
+  <div class="sb on" data-b="draftkings">DraftKings</div>
+  <div class="sb on" data-b="betmgm">BetMGM</div>
+  <div class="sb on" data-b="williamhill_us">Caesars</div>
+  <div class="sb on" data-b="fanatics">Fanatics</div>
+  <div class="sb on" data-b="thescore">theScore Bet</div>
+  <div class="sb on" data-b="espnbet">ESPN Bet</div>
+  <div class="sb on" data-b="bet365">Bet365</div>
+</div>
+<div class="slabel">Game Status</div>
+<div class="filters" id="filters">
+  <div class="fb on" data-f="all">🌐 All Games</div>
+  <div class="fb" data-f="live">🔴 Live Only</div>
+  <div class="fb" data-f="upcoming">📅 Upcoming Only</div>
+</div>
+<!-- ── Pushover Notifications ── -->
+<div id="poToken" style="display:none"></div>
+<div id="poUser" style="display:none"></div>
+<div id="poStatus" style="display:none"></div>
+<div id="poBox" style="display:none"></div>
+<input type="checkbox" id="poEnabled" style="display:none" />
+<input type="number" id="poMinEdge" value="0.5" style="display:none" />
+<button id="poTestBtn" style="display:none"></button>
 
-if (!SGO_API_KEY || !PUSHOVER_TOKEN || !PUSHOVER_USER) {
-  console.log('Missing env vars — need SGO_API_KEY, PUSHOVER_TOKEN, PUSHOVER_USER in GitHub Secrets');
-  process.exit(1);
+<button class="scan" onclick="startScan()">🔍 Scan Now</button>
+<div id="prog" style="display:none" class="prog">
+  <span id="progText">Initializing...</span>
+  <div class="prog-bar"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+</div>
+<div id="out"></div>
+</div>
+
+<div id="view-lookup" class="view">
+  <div class="slabel">Sport</div>
+  <select id="lsport" style="margin-bottom:10px">
+    <option value="baseball_mlb">⚾ MLB</option>
+    <option value="basketball_nba">🏀 NBA</option>
+    <option value="americanfootball_nfl">🏈 NFL</option>
+    <option value="americanfootball_ncaaf">🏈 NCAAF</option>
+    <option value="icehockey_nhl">🏒 NHL</option>
+    <option value="soccer_usa_mls">⚽ MLS</option>
+    <option value="soccer_fifa_world_cup">🌍 World Cup</option>
+    <option value="mma_mixed_martial_arts">🥊 MMA</option>
+    <option value="basketball_wnba">🏀 WNBA</option>
+    <option value="basketball_ncaab">🏀 NCAAB</option>
+    <option value="soccer_epl">⚽ EPL</option>
+    <option value="soccer_uefa_champs_league">⚽ Champions League</option>
+    <option value="soccer_spain_la_liga">⚽ La Liga</option>
+    <option value="soccer_germany_bundesliga">⚽ Bundesliga</option>
+    <option value="soccer_italy_serie_a">⚽ Serie A</option>
+    <option value="soccer_france_ligue_1">⚽ Ligue 1</option>
+    <option value="soccer_mexico_ligamx">⚽ Liga MX</option>
+    <option value="soccer_uefa_europa_league">⚽ Europa League</option>
+    <option value="boxing_boxing">🥊 Boxing</option>
+    <option value="lacrosse_pll">🥍 PLL</option>
+    <option value="lacrosse_ncaa">🥍 NCAA Lacrosse</option>
+  </select>
+  <div class="slabel">Team or player name</div>
+  <div class="row" style="margin-bottom:14px">
+    <input type="text" id="lquery" placeholder="e.g. Yankees, Massey, KC Royals..." style="margin-bottom:0" />
+    <button class="lookup-go" onclick="runLookup()">Go</button>
+  </div>
+  <div id="lout"></div>
+</div>
+
+<div id="view-offshore" class="view">
+  <div class="slabel">SportsGameOdds API Key</div>
+  <input type="password" id="opkey" placeholder="Paste SportsGameOdds API key (sportsgameodds.com)" style="font-size:12px" />
+  <div class="slabel" style="margin-top:-4px;color:#38bdf8">🔒 BookMaker.eu is locked as one leg of every arb — hedged against your domestic books. Paid tier = real-time.</div>
+  <div class="row">
+    <input type="number" id="obank" value="300" placeholder="US stake $" />
+    <input type="number" id="omine" value="0.5" placeholder="Min %" step="0.1" />
+  </div>
+  <div class="slabel">Round US (domestic) stake to nearest</div>
+  <div class="filters" id="oround">
+    <div class="fb" data-r="50">$50</div>
+    <div class="fb on" data-r="100">$100</div>
+    <div class="fb" data-r="200">$200</div>
+    <div class="fb" data-r="0">Exact</div>
+  </div>
+  <div class="slabel">BookMaker.eu max bet (flags when hedge exceeds)</div>
+  <div class="row" style="gap:6px">
+    <div style="flex:1"><div style="font-size:10px;color:#666;margin-bottom:2px">ML / Spreads</div><input type="number" id="omaxML" value="1000" placeholder="ML max" style="margin-bottom:0"/></div>
+    <div style="flex:1"><div style="font-size:10px;color:#666;margin-bottom:2px">Totals</div><input type="number" id="omaxTot" value="1000" placeholder="Totals max" style="margin-bottom:0"/></div>
+    <div style="flex:1"><div style="font-size:10px;color:#666;margin-bottom:2px">Props</div><input type="number" id="omaxProp" value="655" placeholder="Props max" style="margin-bottom:0"/></div>
+  </div>
+  <div class="slabel">Leagues (one call covers all selected)</div>
+  <div class="sports" id="oleagues">
+    <div class="sb on" data-l="MLB">⚾ MLB</div>
+    <div class="sb on" data-l="NBA">🏀 NBA</div>
+    <div class="sb on" data-l="NFL">🏈 NFL</div>
+    <div class="sb on" data-l="NHL">🏒 NHL</div>
+    <div class="sb on" data-l="WNBA">🏀 WNBA</div>
+    <div class="sb on" data-l="UFC">🥊 UFC</div>
+    <div class="sb" data-l="MLS">⚽ MLS</div>
+    <div class="sb" data-l="NCAAF">🏈 NCAAF</div>
+    <div class="sb" data-l="NCAAB">🏀 NCAAB</div>
+    <div class="sb" data-l="ATP">🎾 ATP</div>
+    <div class="sb" data-l="WTA">🎾 WTA</div>
+    <div class="sb" data-l="EPL">⚽ EPL</div>
+    <div class="sb" data-l="UEFA_CHAMPIONS_LEAGUE">⚽ UCL</div>
+    <div class="sb" data-l="UEFA_EUROPA_LEAGUE">⚽ Europa</div>
+    <div class="sb" data-l="LA_LIGA">⚽ La Liga</div>
+    <div class="sb" data-l="BUNDESLIGA">⚽ Bundesliga</div>
+    <div class="sb" data-l="IT_SERIE_A">⚽ Serie A</div>
+    <div class="sb" data-l="FR_LIGUE_1">⚽ Ligue 1</div>
+    <div class="sb" data-l="LIGA_MX">⚽ Liga MX</div>
+  </div>
+  <button onclick="discoverLeagues()" style="background:#1a1a26;color:#38bdf8;border:1px solid #38bdf8;border-radius:8px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;width:100%;margin-bottom:8px">🔍 Show all leagues my key supports</button>
+  <div id="oleaguesExtra"></div>
+  <div class="slabel">Markets</div>
+  <div class="markets" id="omarkets">
+    <div class="mb on" data-om="ml">💰 Moneyline</div>
+    <div class="mb on" data-om="sp">📊 Spreads</div>
+    <div class="mb on" data-om="ou">🔢 Totals</div>
+    <div class="mb on" data-om="props">🎯 Player Props</div>
+    <div class="mb on" data-om="gameprops">🏟️ Game Props</div>
+    <div class="mb on" data-om="alt">📈 Alt Lines</div>
+  </div>
+  <div class="slabel">Game Status</div>
+  <div class="filters" id="ofilters">
+    <div class="fb on" data-of="all">🌐 All Games</div>
+    <div class="fb" data-of="upcoming">📅 Upcoming</div>
+    <div class="fb" data-of="live">🔴 Live</div>
+  </div>
+  <div class="slabel">Max games to scan</div>
+  <input type="number" id="omax" value="50" min="1" max="150" style="width:100px;margin-bottom:4px" />
+  <div class="slabel" style="color:#555;margin-top:0">Higher = more coverage but more objects used. Keep low (15-25) if running Auto, since Auto re-scans every 60s and multiplies the cost.</div>
+  <div class="slabel" style="color:#555;margin-top:-4px">🌊 BookMaker.eu vs FanDuel · DraftKings · BetMGM · Caesars · Fanatics · Bet365 · theScore · 📈 Kalshi · Polymarket. Live bet-slip links included.</div>
+  <button class="scan" onclick="scanOffshore()" style="background:#38bdf8">🔒 Scan BookMaker Arbs</button>
+  <button onclick="checkSgoUsage()" style="background:#1a1a26;color:#38bdf8;border:1px solid #38bdf8;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;width:100%;margin-bottom:8px">📊 Check API Usage</button>
+  <button onclick="checkSgoBooks()" style="background:#1a1a26;color:#a78bfa;border:1px solid #a78bfa;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;width:100%;margin-bottom:12px">📋 Check my books (which slugs my key can access)</button>
+  <div id="obooks"></div>
+  <div id="ousage"></div>
+  <div id="oprog" style="display:none" class="prog"><span id="oprogText">...</span></div>
+  <div id="oout"></div>
+</div>
+
+<div id="view-notify" class="view">
+  <div class="sch-box" id="schBox">
+    <div class="sch-title">⏰ Background Scanner<span class="sch-status off" id="schStatus">OFF</span></div>
+    <div class="big-toggle" onclick="toggleScheduler()">
+      <div>
+        <div class="big-toggle-label" id="schToggleLabel">Scanner is OFF</div>
+        <div class="big-toggle-sub">Tap to turn on — set your scan interval below, 6am–10pm ET</div>
+      </div>
+      <label class="switch-lg" onclick="event.stopPropagation()"><input type="checkbox" id="schEnabled" onchange="toggleScheduler()" /><span class="slider-lg"></span></label>
+    </div>
+    <div class="slabel">Sports to scan</div>
+    <div class="sch-sports">
+      <div class="sb on" data-ss="baseball_mlb">⚾ MLB</div>
+      <div class="sb on" data-ss="basketball_nba">🏀 NBA</div>
+      <div class="sb on" data-ss="americanfootball_nfl">🏈 NFL</div>
+      <div class="sb on" data-ss="americanfootball_ncaaf">🏈 NCAAF</div>
+      <div class="sb on" data-ss="icehockey_nhl">🏒 NHL</div>
+      <div class="sb on" data-ss="soccer_usa_mls">⚽ MLS</div>
+      <div class="sb on" data-ss="tennis_atp_french_open">🎾 Tennis</div>
+      <div class="sb on" data-ss="mma_mixed_martial_arts">🥊 MMA</div>
+      <div class="sb on" data-ss="golf">⛳ Golf</div>
+      <div class="sb on" data-ss="basketball_wnba">🏀 WNBA</div>
+      <div class="sb on" data-ss="soccer_epl">⚽ EPL</div>
+      <div class="sb on" data-ss="boxing_boxing">🥊 Boxing</div>
+    </div>
+    <div class="slabel" style="margin-top:14px">Min edge % to notify</div>
+    <input type="number" id="schMinEdge" value="0.5" step="0.1" min="0" placeholder="%" style="width:100px;margin-bottom:0" />
+    <div class="slabel" style="margin-top:14px">Scan interval (minutes)</div>
+    <input type="number" id="schInterval" value="10" step="1" min="5" placeholder="min" style="width:100px;margin-bottom:0" />
+    <div class="sch-note" style="margin-top:6px">⚡ Type how often to scan, then Save. <b>Minimum is 5 min</b> — GitHub Actions can't reliably run faster than that, so 1-minute scanning isn't possible here. Lower = fresher arbs but more API usage; raise it to conserve quota.</div>
+    <div class="sch-note">⏰ Active 6am–10pm Eastern — upcoming games only.<br>🔕 Automatically pauses overnight so you sleep undisturbed.<br>🔔 Pushover credentials are pulled from the Notifications panel.<br>🔁 You'll be notified at most twice about the exact same bet, then it goes quiet while new arbs still alert.</div>
+    <button class="sch-save" id="schSaveBtn" onclick="saveSchedulerSettings()">💾 Save Settings to GitHub</button>
+    <div class="sch-log" id="schLog">Not saved yet — tap Save Settings to activate.</div>
+  </div>
+  <div class="sch-box" style="margin-top:4px">
+    <div class="sch-title">📋 How it works</div>
+    <div style="font-size:12px;color:#888;line-height:1.8">
+      1. Enter your GitHub token below (stored locally only)<br>
+      2. Toggle ON and pick your sports<br>
+      3. Hit Save — GitHub Actions reads this and scans automatically<br>
+      4. You get a Pushover alert when arbs are found<br>
+      5. Toggle OFF anytime — scanner stops immediately
+    </div>
+    <div class="slabel" style="margin-top:12px">Pushover App Token</div>
+    <input type="text" id="poTokenInput" placeholder="App API Token (from pushover.net)" />
+    <div class="slabel">Pushover User Key</div>
+    <input type="text" id="poUserInput" placeholder="User Key (from pushover.net)" />
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <label style="font-size:12px;color:#888;flex:1">Notify on manual scans too</label>
+      <label class="switch"><input type="checkbox" id="poManualEnabled" /><span class="slider"></span></label>
+    </div>
+    <div class="slabel">GitHub Personal Access Token</div>
+    <input type="password" id="ghToken" placeholder="ghp_xxxxxxxxxxxx (stored locally only)" />
+    <div style="font-size:10px;color:#666;margin-top:-6px">Never sent anywhere except directly to GitHub API</div>
+  </div>
+</div>
+
+<div id="view-trueline" class="view">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@600;700&family=JetBrains+Mono:wght@500;700&display=swap');
+#view-trueline{--fair:#F2B441;--vig:#FF5A5F;--value:#3DDC97;--fav:#5AA9FF;--dog:#9AA6B8;--tlmut:#8A94A6;--tlmut2:#5C6675;--tlpanel:#161B22;--tlpanel2:#1C232D;--tlline:#252E3A;--tlink:#0E1116}
+#view-trueline .tl-hd{font-family:Oswald,sans-serif;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+#view-trueline .tl-mono{font-family:'JetBrains Mono',monospace}
+#view-trueline .tl-setup{background:var(--tlpanel);border:1px solid var(--tlline);border-radius:12px;padding:12px;margin-bottom:14px}
+#view-trueline .tl-row{display:flex;gap:8px}
+#view-trueline .tl-sel{flex:1;background:var(--tlink);border:1px solid var(--tlline);color:#E8ECF1;border-radius:9px;padding:11px 12px;font-size:14px}
+#view-trueline .tl-sel:focus{outline:none;border-color:var(--fair)}
+#view-trueline .tl-btn{background:var(--fair);color:#1a1205;border:0;border-radius:9px;padding:11px 16px;font-weight:700;font-size:14px;cursor:pointer;white-space:nowrap}
+#view-trueline .tl-btn:active{transform:translateY(1px)}
+#view-trueline .tl-hint{font-size:11px;color:var(--tlmut2);margin-top:9px;line-height:1.5}
+#view-trueline .tl-hint #tlCredits{color:var(--fair)}
+#view-trueline .tl-games{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+#view-trueline .tl-game{background:var(--tlpanel);border:1px solid var(--tlline);border-radius:11px;padding:12px 14px;cursor:pointer;display:flex;align-items:center;gap:12px}
+#view-trueline .tl-game.sel{border-color:var(--fair)}
+#view-trueline .tl-game .tl-teams{font-weight:600;font-size:14px}
+#view-trueline .tl-game .tl-when{font-size:11px;color:var(--tlmut);margin-top:2px}
+#view-trueline .tl-game .tl-chev{margin-left:auto;color:var(--tlmut2);font-family:'JetBrains Mono',monospace;font-size:12px}
+#view-trueline .tl-card{background:var(--tlpanel);border:1px solid var(--tlline);border-radius:16px;overflow:hidden;margin-bottom:14px}
+#view-trueline .tl-chead{padding:15px 16px 11px;border-bottom:1px solid var(--tlline)}
+#view-trueline .tl-mkt{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--fair);font-weight:700}
+#view-trueline .tl-match{font-family:Oswald,sans-serif;font-weight:600;font-size:21px;letter-spacing:.02em;margin-top:2px}
+#view-trueline .tl-sub{font-size:11px;color:var(--tlmut);margin-top:3px}
+#view-trueline .tl-hero{padding:16px}
+#view-trueline .tl-fg{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+#view-trueline .tl-fg.three{grid-template-columns:1fr 1fr 1fr}
+#view-trueline .tl-fo{background:var(--tlpanel2);border:1px solid var(--tlline);border-radius:12px;padding:13px 10px;text-align:center}
+#view-trueline .tl-fo .tl-name{font-size:12px;color:var(--tlmut);font-weight:600;margin-bottom:6px;min-height:30px;display:flex;align-items:center;justify-content:center;line-height:1.2}
+#view-trueline .tl-fo .tl-prob{font-family:Oswald,sans-serif;font-weight:700;font-size:32px;line-height:1}
+#view-trueline .tl-fo .tl-prob span{font-size:15px}
+#view-trueline .tl-fo .tl-odds{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;color:var(--fair);margin-top:5px}
+#view-trueline .tl-fo .tl-bestp{font-size:10px;color:var(--tlmut);margin-top:6px}
+#view-trueline .tl-fo .tl-bestp b{color:#E8ECF1}
+#view-trueline .tl-ev{display:inline-block;margin-top:7px;font-size:10px;font-weight:700;letter-spacing:.05em;padding:3px 7px;border-radius:20px;text-transform:uppercase}
+#view-trueline .tl-ev.pos{background:rgba(61,220,151,.15);color:var(--value);border:1px solid rgba(61,220,151,.4)}
+#view-trueline .tl-ev.neg{background:rgba(138,148,166,.1);color:var(--tlmut);border:1px solid var(--tlline)}
+#view-trueline .tl-splitwrap{margin:16px 0 4px}
+#view-trueline .tl-splitlbl{display:flex;justify-content:space-between;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--tlmut);margin-bottom:6px}
+#view-trueline .tl-split{height:36px;border-radius:9px;overflow:hidden;display:flex;background:var(--tlink);border:1px solid var(--tlline)}
+#view-trueline .tl-seg{display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;color:#0c1016;transition:width 1s cubic-bezier(.2,.8,.2,1);white-space:nowrap;overflow:hidden;min-width:0}
+#view-trueline .tl-seg.s0{background:var(--fav)}
+#view-trueline .tl-seg.s1{background:var(--dog)}
+#view-trueline .tl-seg.s2{background:#6c7688}
+#view-trueline .tl-vig{margin-top:14px;background:var(--tlpanel2);border:1px solid var(--tlline);border-radius:12px;padding:13px}
+#view-trueline .tl-vigtop{display:flex;align-items:baseline;gap:10px}
+#view-trueline .tl-vigtop .n{font-family:Oswald,sans-serif;font-weight:700;font-size:25px;color:var(--vig)}
+#view-trueline .tl-vigtop .l{font-size:12px;color:var(--tlmut);line-height:1.3}
+#view-trueline .tl-vigmeter{height:7px;background:var(--tlink);border-radius:5px;overflow:hidden;margin:9px 0 4px}
+#view-trueline .tl-vigmeter i{display:block;height:100%;background:linear-gradient(90deg,#ff8a5f,var(--vig));transition:width .8s ease}
+#view-trueline .tl-vigscale{display:flex;justify-content:space-between;font-size:9px;color:var(--tlmut2);font-family:'JetBrains Mono',monospace}
+#view-trueline .tl-take{font-size:13px;color:#E8ECF1;margin-top:12px;padding:11px;background:rgba(242,180,65,.07);border-left:2px solid var(--fair);border-radius:0 8px 8px 0;line-height:1.5}
+#view-trueline .tl-books{margin-top:14px}
+#view-trueline .tl-books h3{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--tlmut);margin:0 0 6px}
+#view-trueline .tl-brow{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--tlline);font-size:13px}
+#view-trueline .tl-brow:last-child{border-bottom:0}
+#view-trueline .tl-bk{font-weight:600;display:flex;align-items:center;gap:6px;min-width:0}
+#view-trueline .tl-flag{font-size:9px;font-weight:700;padding:2px 5px;border-radius:5px;letter-spacing:.04em;background:rgba(61,220,151,.15);color:var(--value);white-space:nowrap}
+#view-trueline .tl-px{font-family:'JetBrains Mono',monospace;font-weight:700;text-align:right}
+#view-trueline .tl-hdc{font-family:'JetBrains Mono',monospace;text-align:right;color:var(--tlmut);font-size:12px;min-width:50px}
+#view-trueline .tl-hdc.hi{color:var(--vig)}
+#view-trueline .tl-hdc.lo{color:var(--value)}
+#view-trueline .tl-empty{text-align:center;color:var(--tlmut);padding:34px 18px;font-size:13px}
+#view-trueline .tl-big{font-family:Oswald,sans-serif;font-size:19px;color:#E8ECF1;margin-bottom:6px;letter-spacing:.03em}
+#view-trueline .tl-spin{display:inline-block;width:15px;height:15px;border:2px solid var(--tlline);border-top-color:var(--fair);border-radius:50%;animation:tlsp .7s linear infinite;vertical-align:-3px;margin-right:8px}
+@keyframes tlsp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){#view-trueline *{animation:none!important;transition:none!important}}
+</style>
+
+  <div class="tl-setup">
+    <div class="tl-row">
+      <select id="tlSport" class="tl-sel"><option value="">Loading sports…</option></select>
+      <button class="tl-btn" onclick="tlLoadGames()">Load games</button>
+    </div>
+    <div class="tl-hint">Uses the Odds API key up top. Moneyline, vig removed, every US book. ~2 credits per load. <span id="tlCredits"></span></div>
+  </div>
+  <div id="tlErr"></div>
+  <div class="tl-games" id="tlGames"><div class="tl-empty"><div class="tl-big">Pick a sport, then Load games</div>Tap any game to see its true no-vig price.</div></div>
+  <div id="tlAnalysis"></div>
+</div>
+
+<div class="ticker">
+  <div class="ticker-info"><span class="tdot" id="dot"></span><span id="ttext">idle</span></div>
+  <div style="display:flex;gap:8px;flex-shrink:0">
+    <button class="tbtn" id="autoBtn" onclick="toggleAuto()" style="background:#00ff88;color:#000">⏱ Auto</button>
+    <button class="tbtn" onclick="document.getElementById('out').innerHTML=''" style="background:#1a1a26;color:#ff4757;border:1px solid #ff4757">Clear</button>
+  </div>
+</div>
+
+<script>
+var timer=null,autoOn=false,scanCount=0;
+var ARB_CACHE=[];
+var OARB_CACHE=[]; var OEVENTS_CACHE={};
+
+// ── Tab switching ──────────────────────────────────────────
+function switchTab(tab){
+  ['scanner','lookup','offshore','notify','trueline'].forEach(function(t){
+    document.getElementById('tab-'+t).classList.remove('active');
+    document.getElementById('view-'+t).classList.remove('active');
+  });
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.getElementById('view-'+tab).classList.add('active');
+  if(tab==='trueline' && window.tlInit) tlInit();
 }
 
-// ── Config knobs (sensible defaults; override via scheduler-config.json) ──
-const SGO_BOOKMAKER = 'bookmakereu';
-const SGO_DOMESTIC = ['draftkings', 'fanduel', 'betmgm', 'caesars', 'fanatics', 'bet365', 'thescorebet'];
-const SGO_NAMES = { bookmakereu: 'BookMaker.eu', draftkings: 'DraftKings', fanduel: 'FanDuel', betmgm: 'BetMGM', caesars: 'Caesars', fanatics: 'Fanatics', bet365: 'Bet365', thescorebet: 'theScore' };
-// Map the app's sport keys -> SGO league IDs. Soccer/golf/boxing/tennis are
-// skipped (3-way or not on SGO). MMA uses UFC.
-const SPORT_TO_SGO = {
-  baseball_mlb: 'MLB', basketball_nba: 'NBA', basketball_wnba: 'WNBA',
-  americanfootball_nfl: 'NFL', americanfootball_ncaaf: 'NCAAF',
-  icehockey_nhl: 'NHL', mma_mixed_martial_arts: 'UFC'
+// ── Filter toggle listeners ────────────────────────────────
+document.getElementById('sports').addEventListener('click',function(e){
+  var b=e.target.closest('[data-s]');
+  if(b){b.classList.toggle('on');}
+});
+document.getElementById('markets').addEventListener('click',function(e){
+  var b=e.target.closest('[data-m]');
+  if(b){b.classList.toggle('on');}
+});
+document.getElementById('books').addEventListener('click',function(e){
+  var b=e.target.closest('[data-b]');
+  if(b){b.classList.toggle('on');}
+});
+document.getElementById('filters').addEventListener('click',function(e){
+  var b=e.target.closest('[data-f]');
+  if(!b)return;
+  document.querySelectorAll('[data-f]').forEach(function(x){x.classList.remove('on')});
+  b.classList.add('on');
+});
+
+// ── Pushover ───────────────────────────────────────────────
+(function(){
+  try{
+    var pt=localStorage.getItem('po_token'),pu=localStorage.getItem('po_user'),pe=localStorage.getItem('po_enabled'),pm=localStorage.getItem('po_minedge');
+    if(pt)document.getElementById('poToken').value=pt;
+    if(pu)document.getElementById('poUser').value=pu;
+    if(pe==='1')document.getElementById('poEnabled').checked=true;
+    if(pm)document.getElementById('poMinEdge').value=pm;
+    updatePoStatus();
+  }catch(e){}
+  document.getElementById('poToken').addEventListener('input',function(){try{localStorage.setItem('po_token',this.value.trim());updatePoStatus();}catch(e){}});
+  document.getElementById('poUser').addEventListener('input',function(){try{localStorage.setItem('po_user',this.value.trim());updatePoStatus();}catch(e){}});
+  document.getElementById('poEnabled').addEventListener('change',function(){try{localStorage.setItem('po_enabled',this.checked?'1':'0');}catch(e){}});
+  document.getElementById('poMinEdge').addEventListener('input',function(){try{localStorage.setItem('po_minedge',this.value);}catch(e){}});
+})();
+
+function updatePoStatus(){
+  var t=document.getElementById('poToken').value.trim(),u=document.getElementById('poUser').value.trim();
+  var s=document.getElementById('poStatus'),b=document.getElementById('poBox');
+  if(t&&u){s.textContent='Connected';s.className='po-status ok';b.classList.add('connected');}
+  else{s.textContent='Not connected';s.className='po-status';b.classList.remove('connected');}
+}
+
+async function sendPushover(title,message,priority){
+  var token=localStorage.getItem('po_token')||'';
+  var user=localStorage.getItem('po_user')||'';
+  if(!token||!user)return false;
+  var payload={token:token,user:user,title:title,message:message,priority:priority||0,sound:'cashregister'};
+  // Try corsproxy.io first to bypass CORS block
+  try{
+    var res=await fetch('https://corsproxy.io/?https://api.pushover.net/1/messages.json',{
+      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)
+    });
+    var data=await res.json();
+    if(data.status===1)return true;
+  }catch(e){}
+  // Fallback: try allorigins proxy
+  try{
+    var body=new URLSearchParams(payload);
+    var res2=await fetch('https://api.allorigins.win/raw?url='+encodeURIComponent('https://api.pushover.net/1/messages.json'),{
+      method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body.toString()
+    });
+    var data2=await res2.json();
+    if(data2.status===1)return true;
+  }catch(e){}
+  return false;
+}
+
+async function testPushover(){
+  var btn=document.getElementById('poTestBtn');
+  btn.textContent='Sending...';btn.disabled=true;
+  var ok=await sendPushover('🔔 ArbEdge Test','Pushover is connected! You will now receive arb alerts on your iPhone and Apple Watch.',0);
+  btn.textContent=ok?'✓ Sent!':'✗ Failed';
+  btn.style.background=ok?'#00ff88':'#ff4757';
+  btn.style.color=ok?'#000':'#fff';
+  setTimeout(function(){btn.textContent='Test';btn.disabled=false;btn.style.background='#ff6600';btn.style.color='#fff';},3000);
+}
+
+var LAST_ARB_IDS=new Set();
+async function maybePushoverNotify(arbs){
+  if(!document.getElementById('poEnabled').checked)return;
+  var token=localStorage.getItem('po_token')||'';
+  var user=localStorage.getItem('po_user')||'';
+  if(!token||!user)return;
+  var minEdge=parseFloat(document.getElementById('poMinEdge').value)||0;
+  var newArbs=arbs.filter(function(x){
+    var id=x.game+'|'+x.market+'|'+x.side1.book+'|'+x.side2.book;
+    return x.edge>=minEdge&&!LAST_ARB_IDS.has(id);
+  });
+  if(!newArbs.length)return;
+  // Update seen set
+  arbs.forEach(function(x){LAST_ARB_IDS.add(x.game+'|'+x.market+'|'+x.side1.book+'|'+x.side2.book)});
+  // Send one notification summarizing all new arbs (batch to avoid spam)
+  var top=newArbs.slice(0,3);
+  var lines=top.map(function(x){
+    return '+'+x.roi.toFixed(2)+'% | '+x.game.split(' — ')[0]+'\n'+x.side1.book+' vs '+x.side2.book+' | $'+x.profit.toFixed(2)+' profit';
+  });
+  var extra=newArbs.length>3?'\n...and '+(newArbs.length-3)+' more':'';
+  var msg=lines.join('\n\n')+extra;
+  var title='🔔 '+newArbs.length+' Arb'+(newArbs.length>1?'s':'')+' Found — ArbEdge';
+  // High priority if best arb is over 1%
+  var priority=newArbs[0].edge>=1?1:0;
+  await sendPushover(title,msg,priority);
+}
+
+
+
+// ── Helpers ────────────────────────────────────────────────
+function getSports(){return Array.from(document.querySelectorAll('#sports [data-s].on')).map(function(b){return b.dataset.s})}
+function getMarkets(){return Array.from(document.querySelectorAll('#markets [data-m].on')).map(function(b){return b.dataset.m})}
+function getBooks(){return Array.from(document.querySelectorAll('#books [data-b].on')).map(function(b){return b.dataset.b})}
+function getFilter(){var el=document.querySelector('[data-f].on');return el?el.dataset.f:'all'}
+function oP(o){return o>0?100/(o+100):Math.abs(o)/(Math.abs(o)+100)}
+function oD(o){return o>0?o/100+1:100/Math.abs(o)+1}
+function fmt(o){return o>0?'+'+o:''+o}
+function setStatus(live,text){document.getElementById('dot').className='tdot'+(live?' live':'');document.getElementById('ttext').textContent=text}
+function setProgress(pct,text){document.getElementById('progText').textContent=text;document.getElementById('progFill').style.width=pct+'%'}
+function playAlert(){try{var a=new AudioContext(),o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.frequency.value=660;g.gain.setValueAtTime(.3,a.currentTime);g.gain.exponentialRampToValueAtTime(.001,a.currentTime+.5);o.start();o.stop(a.currentTime+.5)}catch(e){}}
+function isTrueArb(o1,o2,min){var p1=oP(o1),p2=oP(o2),tot=p1+p2;return tot<1.0&&(1-tot)*100>=min}
+function isLive(t){return new Date(t).getTime()<=Date.now()}
+function passesFilter(game,mode){if(mode==='all')return true;var live=isLive(game.commence_time);return mode==='live'?live:!live}
+
+// ── Book risk (lower = place first) ──────────────────────
+var BOOK_RISK={'bovada':1,'betonline':1,'betus':1,'lowvig':1,'mybookie':1,'betany':1,'thescore':2,'espn':3,'fanatics':4,'betmgm':5,'caesars':6,'williamhill':6,'bet365':6,'draftkings':7,'fanduel':8};
+function bookRisk(name){var n=name.toLowerCase();for(var k in BOOK_RISK){if(n.indexOf(k)>-1)return BOOK_RISK[k]}return 5}
+function placeFirstNote(b1,b2){var r1=bookRisk(b1),r2=bookRisk(b2);if(r1===r2)return '';var first=r1<r2?b1:b2;return '<div class="place-first-note">⚠️ Place <strong>'+first+'</strong> first — smaller book, higher limit risk</div>'}
+
+// ── Markets ────────────────────────────────────────────────
+var PROP_MARKETS={
+  baseball_mlb:[
+    'batter_hits','batter_home_runs','batter_rbis','batter_runs_scored','batter_strikeouts',
+    'batter_total_bases','batter_stolen_bases','batter_walks',
+    'pitcher_strikeouts','pitcher_hits_allowed','pitcher_walks','pitcher_earned_runs','pitcher_outs',
+    'batter_hits_alternate','batter_home_runs_alternate','batter_total_bases_alternate',
+    'pitcher_strikeouts_alternate','batter_rbis_alternate','batter_runs_scored_alternate'
+  ],
+  basketball_nba:[
+    'player_points','player_rebounds','player_assists','player_threes','player_blocks','player_steals',
+    'player_turnovers','player_points_rebounds','player_points_assists',
+    'player_points_rebounds_assists','player_rebounds_assists','player_blocks_steals',
+    'player_double_double','player_triple_double',
+    'player_points_alternate','player_rebounds_alternate','player_assists_alternate',
+    'player_threes_alternate','player_blocks_alternate','player_steals_alternate'
+  ],
+  americanfootball_nfl:[
+    'player_pass_tds','player_pass_yds','player_pass_attempts','player_pass_completions',
+    'player_pass_interceptions','player_rush_yds','player_rush_attempts','player_rush_tds',
+    'player_reception_yds','player_receptions','player_receiving_tds',
+    'player_anytime_td','player_first_td','player_last_td',
+    'player_kicking_points','player_field_goals',
+    'player_pass_yds_alternate','player_rush_yds_alternate','player_reception_yds_alternate',
+    'player_receptions_alternate','player_pass_tds_alternate'
+  ],
+  americanfootball_ncaaf:[
+    'player_pass_yds','player_rush_yds','player_reception_yds',
+    'player_pass_tds','player_rush_tds','player_receptions','player_anytime_td',
+    'player_pass_yds_alternate','player_rush_yds_alternate','player_reception_yds_alternate'
+  ],
+  icehockey_nhl:[
+    'player_goals','player_assists','player_points','player_shots_on_goal',
+    'player_blocked_shots','player_total_saves',
+    'player_goals_alternate','player_assists_alternate','player_shots_on_goal_alternate'
+  ],
+  soccer_usa_mls:[
+    'player_goal_scorer_anytime','player_goal_scorer_first',
+    'player_shots','player_shots_on_target','player_assists'
+  ],
+  soccer_fifa_world_cup:[
+    'player_goal_scorer_anytime','player_goal_scorer_first',
+    'player_shots','player_shots_on_target','player_assists'
+  ],
+  soccer_epl:[
+    'player_goal_scorer_anytime','player_goal_scorer_first',
+    'player_shots','player_shots_on_target','player_assists'
+  ],
+  soccer_uefa_champs_league:[
+    'player_goal_scorer_anytime','player_goal_scorer_first',
+    'player_shots','player_shots_on_target','player_assists'
+  ],
+  soccer_spain_la_liga:[
+    'player_goal_scorer_anytime','player_goal_scorer_first',
+    'player_shots','player_shots_on_target','player_assists'
+  ],
+  soccer_germany_bundesliga:[
+    'player_goal_scorer_anytime','player_goal_scorer_first',
+    'player_shots','player_shots_on_target','player_assists'
+  ],
+  soccer_italy_serie_a:[
+    'player_goal_scorer_anytime','player_goal_scorer_first',
+    'player_shots','player_shots_on_target','player_assists'
+  ],
+  soccer_france_ligue_1:[
+    'player_goal_scorer_anytime','player_goal_scorer_first',
+    'player_shots','player_shots_on_target','player_assists'
+  ],
+  soccer_mexico_ligamx:[
+    'player_goal_scorer_anytime','player_goal_scorer_first',
+    'player_shots','player_shots_on_target','player_assists'
+  ],
+  soccer_uefa_europa_league:[
+    'player_goal_scorer_anytime','player_goal_scorer_first',
+    'player_shots','player_shots_on_target','player_assists'
+  ],
+  basketball_wnba:[
+    'player_points','player_rebounds','player_assists','player_threes',
+    'player_blocks','player_steals',
+    'player_points_alternate','player_rebounds_alternate','player_assists_alternate'
+  ],
+  basketball_ncaab:[
+    'player_points','player_rebounds','player_assists','player_threes',
+    'player_points_alternate','player_rebounds_alternate'
+  ],
+  tennis_atp_french_open:[
+    'player_aces','player_double_faults','player_games_won'
+  ],
+  mma_mixed_martial_arts:[
+    'player_significant_strikes','player_takedowns_landed'
+  ],
+  boxing_boxing:[],
+  lacrosse_pll:[],
+  lacrosse_ncaa:[]
 };
-const STALE_OUTLIER = 1.05;  // domestic line 5%+ longer than peers = likely stale -> skip
-const EDGE_CEILING = 15;     // edges above this are near-certainly data errors -> skip
-const DEFAULT_STAKE = 100;   // domestic leg $ used to express profit
+var GAME_PROP_MARKETS={
+  baseball_mlb:[
+    'h2h_1st_5_innings','spreads_1st_5_innings','totals_1st_5_innings',
+    'h2h_1st_3_innings','totals_1st_3_innings',
+    'team_totals'
+  ],
+  basketball_nba:[
+    'h2h_h1','spreads_h1','totals_h1',
+    'h2h_q1','spreads_q1','totals_q1',
+    'h2h_q2','spreads_q2','totals_q2',
+    'h2h_q3','spreads_q3','totals_q3',
+    'h2h_q4','spreads_q4','totals_q4',
+    'team_totals'
+  ],
+  americanfootball_nfl:[
+    'h2h_h1','spreads_h1','totals_h1',
+    'h2h_h2','spreads_h2','totals_h2',
+    'h2h_q1','spreads_q1','totals_q1',
+    'h2h_q2','spreads_q2','totals_q2',
+    'h2h_q3','spreads_q3','totals_q3',
+    'h2h_q4','spreads_q4','totals_q4',
+    'team_totals'
+  ],
+  americanfootball_ncaaf:[
+    'h2h_h1','spreads_h1','totals_h1',
+    'h2h_h2','spreads_h2','totals_h2',
+    'h2h_q1','spreads_q1','totals_q1',
+    'team_totals'
+  ],
+  icehockey_nhl:[
+    'h2h_p1','spreads_p1','totals_p1',
+    'h2h_p2','spreads_p2','totals_p2',
+    'h2h_p3','spreads_p3','totals_p3',
+    'team_totals'
+  ],
+  soccer_usa_mls:['h2h_h1','totals_h1','h2h_h2','totals_h2','team_totals'],
+  soccer_fifa_world_cup:['h2h_h1','totals_h1','h2h_h2','totals_h2','team_totals'],
+  soccer_epl:['h2h_h1','totals_h1','h2h_h2','totals_h2','team_totals'],
+  soccer_uefa_champs_league:['h2h_h1','totals_h1','h2h_h2','totals_h2','team_totals'],
+  soccer_spain_la_liga:['h2h_h1','totals_h1','h2h_h2','totals_h2','team_totals'],
+  soccer_germany_bundesliga:['h2h_h1','totals_h1','h2h_h2','totals_h2','team_totals'],
+  soccer_italy_serie_a:['h2h_h1','totals_h1','h2h_h2','totals_h2','team_totals'],
+  soccer_france_ligue_1:['h2h_h1','totals_h1','h2h_h2','totals_h2','team_totals'],
+  soccer_mexico_ligamx:['h2h_h1','totals_h1','h2h_h2','totals_h2','team_totals'],
+  soccer_uefa_europa_league:['h2h_h1','totals_h1','h2h_h2','totals_h2','team_totals'],
+  basketball_wnba:['h2h_h1','spreads_h1','totals_h1','h2h_q1','spreads_q1','totals_q1','h2h_q2','spreads_q2','totals_q2','h2h_q3','spreads_q3','totals_q3','h2h_q4','spreads_q4','totals_q4','team_totals'],
+  basketball_ncaab:['h2h_h1','spreads_h1','totals_h1','h2h_h2','spreads_h2','totals_h2','team_totals'],
+  tennis_atp_french_open:[],
+  mma_mixed_martial_arts:[],
+  boxing_boxing:[],
+  lacrosse_pll:[],
+  lacrosse_ncaa:[]
+};
+var GP_LABEL={
+  h2h_1st_5_innings:'1st 5 Inn ML',spreads_1st_5_innings:'1st 5 Inn Spread',totals_1st_5_innings:'1st 5 Inn Total',
+  h2h_1st_3_innings:'1st 3 Inn ML',totals_1st_3_innings:'1st 3 Inn Total',
+  h2h_h1:'1st Half ML',spreads_h1:'1st Half Spread',totals_h1:'1st Half Total',
+  h2h_h2:'2nd Half ML',spreads_h2:'2nd Half Spread',totals_h2:'2nd Half Total',
+  h2h_q1:'1st Qtr ML',spreads_q1:'1st Qtr Spread',totals_q1:'1st Qtr Total',
+  h2h_q2:'2nd Qtr ML',spreads_q2:'2nd Qtr Spread',totals_q2:'2nd Qtr Total',
+  h2h_q3:'3rd Qtr ML',spreads_q3:'3rd Qtr Spread',totals_q3:'3rd Qtr Total',
+  h2h_q4:'4th Qtr ML',spreads_q4:'4th Qtr Spread',totals_q4:'4th Qtr Total',
+  h2h_p1:'1st Period ML',spreads_p1:'1st Period Spread',totals_p1:'1st Period Total',
+  h2h_p2:'2nd Period ML',spreads_p2:'2nd Period Spread',totals_p2:'2nd Period Total',
+  h2h_p3:'3rd Period ML',spreads_p3:'3rd Period Spread',totals_p3:'3rd Period Total',
+  team_totals:'Team Total'
+};
 
-// ── Persistent state (GitHub Actions cache) ──────────────────────
-const STATE_FILE = './notif-state.json';
-const NOTIFY_CAP = 2;
-const PRUNE_MS = 36 * 60 * 60 * 1000;
-function loadState() { try { return JSON.parse(fs.readFileSync(STATE_FILE, 'utf8')); } catch (e) { return { lastRun: 0, seen: {} }; } }
-function saveState(st) { try { fs.writeFileSync(STATE_FILE, JSON.stringify(st)); } catch (e) { console.log('State save error:', e.message); } }
-function arbSig(x) { return [x.game, x.bmLeg.book, x.bmLeg.name, x.domLeg.book, x.domLeg.name].join(' | '); }
+// ── Arb processing ─────────────────────────────────────────
+function processH2H(oc,gl,sp2,bank,min,allArbs,label,tag,liveFlag){
+  label=label||'Moneyline';tag=tag||'h2h';
+  var bt={};
+  oc.forEach(function(o){if(!bt[o.name])bt[o.name]=[];bt[o.name].push({book:o.book,odds:o.price,link:o.link,limit:o.limit})});
+  var tn=Object.keys(bt);if(tn.length<2)return;
+  var b1=bt[tn[0]].reduce(function(a,b){return a.odds>b.odds?a:b}),b2=bt[tn[1]].reduce(function(a,b){return a.odds>b.odds?a:b});
+  if(b1.book===b2.book||!isTrueArb(b1.odds,b2.odds,min))return;
+  var p1=oP(b1.odds),p2=oP(b2.odds),tot=p1+p2,s1=bank*(p1/tot),s2=bank*(p2/tot),pr=Math.min(s1*oD(b1.odds),s2*oD(b2.odds))-(s1+s2);
+  allArbs.push({game:gl,sport:sp2,market:tag,label:label,middle:false,live:!!liveFlag,edge:(1-tot)*100,roi:(pr/(s1+s2))*100,profit:pr,side1:{name:tn[0],book:b1.book,odds:b1.odds,stake:s1,link:b1.link,limit:b1.limit},side2:{name:tn[1],book:b2.book,odds:b2.odds,stake:s2,link:b2.link,limit:b2.limit},middleNote:''});
+}
 
-// ── Helpers ──────────────────────────────────────────────────────
-function amDec(o) { o = parseFloat(o); if (!o) return null; return o > 0 ? o / 100 + 1 : 100 / Math.abs(o) + 1; }
-function amFmt(o) { o = parseFloat(o); return o > 0 ? '+' + o : '' + o; }
-function sgoName(b) { return SGO_NAMES[b] || b; }
+function process3Way(oc,gl,sp2,bank,min,allArbs,label,tag,liveFlag){
+  label=label||'Moneyline (3-Way)';tag=tag||'h2h';
+  var bt={};
+  oc.forEach(function(o){if(!bt[o.name])bt[o.name]=[];bt[o.name].push({book:o.book,odds:o.price,link:o.link,limit:o.limit})});
+  var outcomes=Object.keys(bt);if(outcomes.length<3)return;
+  var best={};
+  outcomes.forEach(function(name){best[name]=bt[name].reduce(function(a,b){return a.odds>b.odds?a:b})});
+  var names=Object.keys(best);
+  var probs=names.map(function(n){return oP(best[n].odds)});
+  var totalProb=probs.reduce(function(a,b){return a+b},0);
+  var edge=(1-totalProb)*100;
+  if(totalProb>=1.0||edge<min)return;
+  var stakes=names.map(function(n,i){return bank*(probs[i]/totalProb)});
+  var payouts=names.map(function(n,i){return stakes[i]*oD(best[n].odds)});
+  var totalStaked=stakes.reduce(function(a,b){return a+b},0);
+  var profit=Math.min.apply(null,payouts)-totalStaked;
+  var booksUsed=names.map(function(n){return best[n].book});
+  var samebook=new Set(booksUsed).size!==booksUsed.length;
+  var mn='3-way: Bet '+names.map(function(n,i){return n+' $'+stakes[i].toFixed(2)+' ('+best[n].book+')'}).join(', ')+'. All 3 must be covered.';
+  allArbs.push({game:gl,sport:sp2,market:tag,label:label+(samebook?' ⚠️ same book':''),middle:false,live:!!liveFlag,edge:edge,roi:(profit/totalStaked)*100,profit:profit,side1:{name:names[0],book:best[names[0]].book,odds:best[names[0]].odds,stake:stakes[0],link:best[names[0]].link,limit:best[names[0]].limit},side2:{name:names[1]+'/'+names[2],book:best[names[1]].book+'+'+best[names[2]].book,odds:best[names[1]].odds,stake:stakes[1]+stakes[2],link:best[names[1]].link},middleNote:mn});
+}
 
-function fetchJson(url) {
-  return new Promise(function (resolve) {
-    var u = new URL(url);
-    var req = https.request({ hostname: u.hostname, path: u.pathname + u.search, method: 'GET', headers: { 'x-api-key': SGO_API_KEY, 'Accept': 'application/json' } }, function (res) {
-      var data = ''; res.on('data', function (d) { data += d; });
-      res.on('end', function () { try { resolve(JSON.parse(data)); } catch (e) { resolve(null); } });
+function processSpreads(oc,gl,sp2,bank,min,allArbs,label,tag,liveFlag){
+  tag=tag||'spreads';
+  var teams={};oc.forEach(function(o){teams[o.name]=true});
+  var tn=Object.keys(teams);if(tn.length<2)return;
+  var t1l=oc.filter(function(o){return o.name===tn[0]}),t2l=oc.filter(function(o){return o.name===tn[1]});
+  var best=null;
+  t1l.forEach(function(a){t2l.forEach(function(b){
+    if(a.book===b.book)return;
+    if(!((a.point<0&&b.point>0)||(a.point>0&&b.point<0)))return;
+    if(!isTrueArb(a.odds,b.odds,min))return;
+    var p1=oP(a.odds),p2=oP(b.odds),tot=p1+p2,s1=bank*(p1/tot),s2=bank*(p2/tot),pr=Math.min(s1*oD(a.odds),s2*oD(b.odds))-(s1+s2);
+    var mf=(a.point>0&&b.point<0&&a.point>Math.abs(b.point))||(b.point>0&&a.point<0&&b.point>Math.abs(a.point));
+    var mn=mf?'🎯 MIDDLE: win both if margin between '+Math.min(Math.abs(a.point),Math.abs(b.point))+' and '+Math.max(Math.abs(a.point),Math.abs(b.point)):'';
+    if(!best||pr>best.profit)best={game:gl,sport:sp2,market:tag,label:label,middle:mf,live:!!liveFlag,edge:(1-tot)*100,roi:(pr/(s1+s2))*100,profit:pr,side1:{name:tn[0]+' '+fmt(a.point),book:a.book,odds:a.odds,stake:s1,link:a.link,limit:a.limit},side2:{name:tn[1]+' '+fmt(b.point),book:b.book,odds:b.odds,stake:s2,link:b.link,limit:b.limit},middleNote:mn};
+  })});
+  if(best)allArbs.push(best);
+}
+
+function processTotals(oc,gl,sp2,bank,min,allArbs,label,tag,liveFlag){
+  tag=tag||'totals';
+  var ov=oc.filter(function(o){return o.name==='Over'}),un=oc.filter(function(o){return o.name==='Under'});
+  if(!ov.length||!un.length)return;
+  var best=null;
+  ov.forEach(function(a){un.forEach(function(b){
+    if(a.book===b.book||a.point>b.point)return;
+    if(!isTrueArb(a.odds,b.odds,min))return;
+    var p1=oP(a.odds),p2=oP(b.odds),tot=p1+p2,s1=bank*(p1/tot),s2=bank*(p2/tot),pr=Math.min(s1*oD(a.odds),s2*oD(b.odds))-(s1+s2);
+    var mf=b.point>a.point,mn=mf?'🎯 MIDDLE: win both if total between '+a.point+' and '+b.point:'';
+    if(!best||pr>best.profit)best={game:gl,sport:sp2,market:tag,label:label,middle:mf,live:!!liveFlag,edge:(1-tot)*100,roi:(pr/(s1+s2))*100,profit:pr,side1:{name:'Over '+a.point,book:a.book,odds:a.odds,stake:s1,link:a.link,limit:a.limit},side2:{name:'Under '+b.point,book:b.book,odds:b.odds,stake:s2,link:b.link,limit:b.limit},middleNote:mn};
+  })});
+  if(best)allArbs.push(best);
+}
+
+function processProps(bookmakers,gl,sp2,bank,min,allArbs,liveFlag){
+  var byProp={};
+  bookmakers.forEach(function(book){
+    (book.markets||[]).forEach(function(mkt){
+      if(!mkt.key.match(/^(batter_|pitcher_|player_)/))return;
+      (mkt.outcomes||[]).forEach(function(out){
+        var k=mkt.key+'::'+out.description+'::'+out.point;
+        if(!byProp[k])byProp[k]={desc:out.description,market:mkt.key,point:out.point,over:[],under:[]};
+        if(out.name==='Over')byProp[k].over.push({book:book.title,odds:out.price,link:out.link||book.link,limit:out.bet_limit});
+        if(out.name==='Under')byProp[k].under.push({book:book.title,odds:out.price,link:out.link||book.link,limit:out.bet_limit});
+      });
     });
-    req.on('error', function () { resolve(null); });
-    req.end();
+  });
+  Object.keys(byProp).forEach(function(k){
+    var pm=byProp[k];
+    if(!pm.over.length||!pm.under.length)return;
+    var bo=pm.over.reduce(function(a,b){return a.odds>b.odds?a:b}),bu=pm.under.reduce(function(a,b){return a.odds>b.odds?a:b});
+    if(bo.book===bu.book||!isTrueArb(bo.odds,bu.odds,min))return;
+    var p1=oP(bo.odds),p2=oP(bu.odds),tot=p1+p2,s1=bank*(p1/tot),s2=bank*(p2/tot),pr=Math.min(s1*oD(bo.odds),s2*oD(bu.odds))-(s1+s2);
+    var lbl=pm.market.replace(/_alternate/,' Alt').replace(/_/g,' ').replace(/\b\w/g,function(c){return c.toUpperCase()});
+    allArbs.push({game:gl+' — '+pm.desc,sport:sp2,market:'props',label:lbl,propMarketKey:pm.market,propPoint:pm.point,middle:false,live:!!liveFlag,edge:(1-tot)*100,roi:(pr/(s1+s2))*100,profit:pr,side1:{name:'Over '+pm.point,book:bo.book,odds:bo.odds,stake:s1,link:bo.link,limit:bo.limit},side2:{name:'Under '+pm.point,book:bu.book,odds:bu.odds,stake:s2,link:bu.link,limit:bu.limit},middleNote:''});
   });
 }
 
-function isActiveHour() {
-  var et = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
-  var h = et.getHours(); return h >= 6 && h < 22;
-}
-
-async function loadConfig() {
-  var obj = await fetchJson('https://raw.githubusercontent.com/aramsey9/arb/main/scheduler-config.json?t=' + Date.now());
-  return obj || null;
-}
-
-async function sendPushover(title, message, priority) {
-  var payload = JSON.stringify({ token: PUSHOVER_TOKEN, user: PUSHOVER_USER, title: title, message: message, priority: priority || 0, sound: 'cashregister' });
-  return new Promise(function (resolve) {
-    var req = https.request({ hostname: 'api.pushover.net', path: '/1/messages.json', method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) } }, function (res) {
-      var data = ''; res.on('data', function (d) { data += d; });
-      res.on('end', function () { try { var j = JSON.parse(data); console.log('Pushover:', j.status === 1 ? 'sent' : 'failed', data); resolve(j.status === 1); } catch (e) { resolve(false); } });
+function processGameProps(bookmakers,gl,sp2,bank,min,allArbs,gpKeys,liveFlag,sp){
+  var md={};gpKeys.forEach(function(m){md[m]=[]});
+  bookmakers.forEach(function(book){
+    (book.markets||[]).forEach(function(mkt){
+      if(!md[mkt.key])return;
+      (mkt.outcomes||[]).forEach(function(out){md[mkt.key].push({name:out.name,price:out.price,point:out.point,book:book.title,link:out.link||book.link,limit:out.bet_limit})});
     });
-    req.on('error', function (e) { console.log('Pushover error:', e.message); resolve(false); });
-    req.write(payload); req.end();
+  });
+  var isSoccer=sp&&sp.indexOf('soccer_')===0;
+  gpKeys.forEach(function(mkt){
+    var oc=md[mkt];if(!oc||oc.length<2)return;
+    var lbl=GP_LABEL[mkt]||mkt;
+    if(mkt.indexOf('h2h')===0){if(isSoccer)process3Way(oc,gl,sp2,bank,min,allArbs,lbl,'gameprops',liveFlag);else processH2H(oc,gl,sp2,bank,min,allArbs,lbl,'gameprops',liveFlag);}
+    else if(mkt.indexOf('spreads')===0)processSpreads(oc,gl,sp2,bank,min,allArbs,lbl,'gameprops',liveFlag);
+    else if(mkt.indexOf('totals')===0||mkt==='team_totals')processTotals(oc,gl,sp2,bank,min,allArbs,lbl,'gameprops',liveFlag);
   });
 }
 
-// ── BookMaker-vs-domestic arb engine (ported from the Offshore tab) ──
-function bestDomestic(node) {
-  if (!node || !node.byBookmaker) return null;
-  var best = null, decs = [];
-  SGO_DOMESTIC.forEach(function (bk) {
-    var bb = node.byBookmaker[bk]; if (!bb || bb.available === false || bb.odds == null) return;
-    var d = amDec(bb.odds); if (!d || d <= 1) return;
-    decs.push(d);
-    if (!best || d > best.dec) best = { book: bk, am: bb.odds, dec: d, line: (bb.overUnder != null ? bb.overUnder : bb.spread) };
-  });
-  if (best) {
-    decs.sort(function (a, b) { return b - a; });
-    best.nBooks = decs.length;
-    best.second = decs.length > 1 ? decs[1] : null;
-    best.outlier = best.second ? (best.dec >= best.second * STALE_OUTLIER) : false;
-    best.outlierPct = best.second ? ((best.dec / best.second - 1) * 100) : 0;
-  }
-  return best;
+// ── Scores ─────────────────────────────────────────────────
+var SCORES_CACHE={};
+async function fetchScores(key,sports,BOOKS){
+  await Promise.all(sports.map(function(sp){
+    return fetch('https://api.the-odds-api.com/v4/sports/'+sp+'/scores/?apiKey='+key+'&daysFrom=1')
+    .then(function(r){return r.json()}).then(function(data){
+      if(!Array.isArray(data))return;
+      data.forEach(function(ev){SCORES_CACHE[ev.id]=ev});
+    }).catch(function(){});
+  }));
 }
-function bookmakerSide(node) {
-  if (!node || !node.byBookmaker) return null;
-  var bb = node.byBookmaker[SGO_BOOKMAKER]; if (!bb || bb.available === false || bb.odds == null) return null;
-  var d = amDec(bb.odds); if (!d || d <= 1) return null;
-  return { book: SGO_BOOKMAKER, am: bb.odds, dec: d, line: (bb.overUnder != null ? bb.overUnder : bb.spread) };
+function getScoreLine(id){
+  var ev=SCORES_CACHE[id];
+  if(!ev||!ev.scores||ev.completed)return '';
+  return ev.scores.map(function(s){return s.name+' '+s.score}).join(' — ');
 }
 
-function scanEvents(events, minEdge, out, inclProps, inclGameProps) {
-  events.forEach(function (ev) {
-    var odds = ev.odds || {}; if (!odds) return;
-    var live = ev.status && (ev.status.started === true || ev.status.live === true);
-    var ended = ev.status && (ev.status.ended === true || ev.status.completed === true);
-    if (ended || live) return; // upcoming only
-    function tn(t) { if (!t) return ''; if (typeof t === 'string') return t; return (t.names && (t.names.short || t.names.long)) || t.name || t.shortName || ''; }
-    var homeName = tn(ev.teams && ev.teams.home) || 'Home', awayName = tn(ev.teams && ev.teams.away) || 'Away';
-    var leagueName = ev.leagueID || ev.sportID || '';
-    var gl = awayName + ' @ ' + homeName;
-
-    Object.keys(odds).forEach(function (oddID) {
-      var od = odds[oddID]; if (!od) return;
-      var bt = od.betTypeID, side = od.sideID;
-      var primarySides = { ml: 'home', sp: 'home', ou: 'over', yn: 'yes' };
-      var isProp = !!od.playerID;
-      var isGameProp = !isProp && od.periodID && od.periodID !== 'game';
-      if (isProp && !inclProps) return;
-      if (isGameProp && !inclGameProps) return;
-      if (['ml', 'sp', 'ou', 'yn'].indexOf(bt) < 0) return;
-      if (side !== primarySides[bt]) return;
-
-      var oppID = od.opposingOddID; if (!oppID) return;
-      var opp = odds[oppID]; if (!opp) return;
-
-      var bmHere = bookmakerSide(od), domOpp = bestDomestic(opp);
-      var domHere = bestDomestic(od), bmOpp = bookmakerSide(opp);
-
-      function sideName(which) {
-        if (bt === 'ou') return which === 'primary' ? 'Over' : 'Under';
-        if (bt === 'yn') return which === 'primary' ? 'Yes' : 'No';
-        return which === 'primary' ? homeName : awayName;
-      }
-      function withLine(nm, leg) { if (leg && leg.line != null && (bt === 'ou' || bt === 'sp')) return nm + ' ' + (parseFloat(leg.line) > 0 && bt === 'sp' ? '+' : '') + leg.line; return nm; }
-
-      function consider(legBM, legDOM, bmIsSideA, nameA, nameB) {
-        if (!legBM || !legDOM) return;
-        var inv = (1 / legBM.dec) + (1 / legDOM.dec);
-        var edge = (1 - inv) * 100;
-        if (inv >= 1 || edge < minEdge) return;
-        if (edge > EDGE_CEILING) return;                 // data-error guard
-        if (legDOM.outlier) return;                      // stale domestic line -> skip
-        if (bt === 'ou' && legBM.line != null && legDOM.line != null) {
-          var overLine = bmIsSideA ? legBM.line : legDOM.line;
-          var underLine = bmIsSideA ? legDOM.line : legBM.line;
-          if (parseFloat(underLine) < parseFloat(overLine)) return;
-        }
-        if (bt === 'sp' && legBM.line != null && legDOM.line != null) {
-          if ((parseFloat(legBM.line) + parseFloat(legDOM.line)) < 0) return;
-        }
-        var sDOM = DEFAULT_STAKE;
-        var sBM = sDOM * legDOM.dec / legBM.dec;
-        var payout = sDOM * legDOM.dec;
-        var total = sDOM + sBM;
-        var profit = payout - total;
-        var mLabel = od.marketName || (od.statID ? od.statID.replace(/_/g, ' ') : bt.toUpperCase());
-        if (isGameProp && od.periodID) mLabel = od.periodID.toUpperCase() + ' ' + mLabel;
-        var kind = isProp ? 'PROP' : (isGameProp ? 'GAME PROP' : 'MAIN');
-        out.push({
-          game: gl, league: leagueName, edge: edge, profit: profit, roi: (profit / total) * 100, label: mLabel, kind: kind,
-          bmLeg: { book: legBM.book, am: legBM.am, name: nameA },
-          domLeg: { book: legDOM.book, am: legDOM.am, name: nameB }
+// ── Golf ───────────────────────────────────────────────────
+async function scanGolf(key,bank,min,allArbs,filterMode,BOOKS){
+  try{
+    var r=await fetch('https://api.the-odds-api.com/v4/sports/?apiKey='+key);
+    var all=await r.json();
+    if(!Array.isArray(all))return 0;
+    var tours=all.filter(function(s){return s.key&&s.key.indexOf('golf_')===0&&s.active});
+    var count=0;
+    for(var i=0;i<tours.length;i++){
+      var t=tours[i];
+      var res=await fetch('https://api.the-odds-api.com/v4/sports/'+t.key+'/odds/?apiKey='+key+'&regions=us,us2&markets=h2h&oddsFormat=american&bookmakers='+BOOKS+'&includeLinks=true');
+      var data=await res.json();
+      if(!Array.isArray(data))continue;
+      data.forEach(function(matchup){
+        count++;
+        if(!passesFilter(matchup,filterMode))return;
+        var liveFlag=isLive(matchup.commence_time);
+        var gl=(matchup.home_team||'Player A')+' vs '+(matchup.away_team||'Player B')+' — '+t.title;
+        var oc=[];
+        (matchup.bookmakers||[]).forEach(function(book){
+          (book.markets||[]).forEach(function(mkt){
+            if(mkt.key!=='h2h')return;
+            (mkt.outcomes||[]).forEach(function(out){oc.push({name:out.name,price:out.price,book:book.title,link:out.link||book.link})});
+          });
         });
-      }
-      consider(bmHere, domOpp, true, withLine(sideName('primary'), bmHere), withLine(sideName('opp'), domOpp));
-      consider(bmOpp, domHere, false, withLine(sideName('opp'), bmOpp), withLine(sideName('primary'), domHere));
+        var preLen=allArbs.length;
+        if(oc.length>=2)processH2H(oc,gl,'Golf — '+t.title,bank,min,allArbs,'Matchup','golf',liveFlag);
+        for(var ai=preLen;ai<allArbs.length;ai++){allArbs[ai].gameId=matchup.id;allArbs[ai].sportKey=t.key;allArbs[ai].commenceTime=matchup.commence_time;}
+      });
+    }
+    return count;
+  }catch(e){return 0}
+}
+
+// ── Main scan ──────────────────────────────────────────────
+async function scanAll(){
+  var key=document.getElementById('key').value.trim();
+  var bank=parseFloat(document.getElementById('bank').value)||1000;
+  var min=parseFloat(document.getElementById('mine').value)||0.3;
+  var sports=getSports(),markets=getMarkets(),filterMode=getFilter();
+  var BOOKS=getBooks().join(',');
+
+  if(!key){document.getElementById('out').innerHTML='<div class="err">Paste your API key first.</div>';return}
+  if(!sports.length){document.getElementById('out').innerHTML='<div class="err">Select at least one sport.</div>';return}
+  if(!BOOKS){document.getElementById('out').innerHTML='<div class="err">Select at least one sportsbook.</div>';return}
+
+  var doGolf=sports.indexOf('golf')>-1;
+  var stdSports=sports.filter(function(s){return s!=='golf'});
+  var doProps=markets.indexOf('props')>-1;
+  var doGameProps=markets.indexOf('gameprops')>-1;
+  var doAltS=markets.indexOf('alternate_spreads')>-1;
+  var doAltT=markets.indexOf('alternate_totals')>-1;
+  var coreMkts=markets.filter(function(m){return ['props','gameprops','alternate_spreads','alternate_totals'].indexOf(m)===-1});
+
+  setStatus(true,'scanning...');scanCount++;
+  document.getElementById('prog').style.display='block';
+  setProgress(0,'Fetching live scores...');
+  SCORES_CACHE={};
+  if(stdSports.length)await fetchScores(key,stdSports,BOOKS);
+  setProgress(5,'Fetching odds...');
+
+  var allArbs=[],totalGames=0,allGames=[];
+
+  if(stdSports.length){
+    var fetchMkts=coreMkts.length?coreMkts:['h2h'];
+    await Promise.all(stdSports.map(function(sp){
+      return fetch('https://api.the-odds-api.com/v4/sports/'+sp+'/odds/?apiKey='+key+'&regions=us,us2&markets='+fetchMkts.join(',')+'&oddsFormat=american&bookmakers='+BOOKS+'&includeLinks=true&includeBetLimits=true')
+      .then(function(r){return r.json()}).then(function(games){
+        if(!Array.isArray(games))return;
+        games.forEach(function(g){g._sport=sp});
+        var filtered=games.filter(function(g){return passesFilter(g,filterMode)});
+        allGames=allGames.concat(filtered);totalGames+=games.length;
+        if(!coreMkts.length)return;
+        filtered.forEach(function(game){
+          var gl=game.away_team+' @ '+game.home_team,sp2=game.sport_title;
+          var liveFlag=isLive(game.commence_time);
+          var isSoccer=sp.indexOf('soccer_')===0;
+          var md={};coreMkts.forEach(function(m){md[m]=[]});
+          (game.bookmakers||[]).forEach(function(book){(book.markets||[]).forEach(function(mkt){if(!md[mkt.key])return;(mkt.outcomes||[]).forEach(function(out){md[mkt.key].push({name:out.name,price:out.price,point:out.point,book:book.title,link:out.link||book.link,limit:out.bet_limit})})})});
+          var preLen=allArbs.length;
+          coreMkts.forEach(function(mkt){
+            var oc=md[mkt];if(!oc||oc.length<2)return;
+            if(mkt==='h2h'){if(isSoccer)process3Way(oc,gl,sp2,bank,min,allArbs,'Moneyline','h2h',liveFlag);else processH2H(oc,gl,sp2,bank,min,allArbs,'Moneyline','h2h',liveFlag);}
+            else if(mkt==='spreads')processSpreads(oc,gl,sp2,bank,min,allArbs,'Spread','spreads',liveFlag);
+            else if(mkt==='totals')processTotals(oc,gl,sp2,bank,min,allArbs,'Total','totals',liveFlag);
+          });
+          var sl=getScoreLine(game.id);
+          for(var ai=preLen;ai<allArbs.length;ai++){allArbs[ai].scoreLine=sl;allArbs[ai].commenceTime=game.commence_time;allArbs[ai].gameId=game.id;allArbs[ai].sportKey=sp;}
+        });
+      }).catch(function(){});
+    }));
+  }
+
+  setProgress(25,'Processing props & game props...');
+  if((doProps||doGameProps||doAltS||doAltT)&&allGames.length){
+    var altMkts=[];
+    if(doAltS)altMkts.push('alternate_spreads');
+    if(doAltT)altMkts.push('alternate_totals');
+    var done=0,batch=6;
+    for(var i=0;i<allGames.length;i+=batch){
+      var chunk=allGames.slice(i,i+batch);
+      await Promise.all(chunk.map(function(game){
+        var gl=game.away_team+' @ '+game.home_team,sp2=game.sport_title,sp=game._sport;
+        var liveFlag=isLive(game.commence_time);
+        var propKeys=doProps?(PROP_MARKETS[sp]||[]):[];
+        var gpKeys=doGameProps?(GAME_PROP_MARKETS[sp]||[]):[];
+        var mkts=altMkts.concat(propKeys).concat(gpKeys);
+        if(!mkts.length)return Promise.resolve();
+        return fetch('https://api.the-odds-api.com/v4/sports/'+sp+'/events/'+game.id+'/odds?apiKey='+key+'&regions=us,us2&markets='+mkts.join(',')+'&oddsFormat=american&bookmakers='+BOOKS+'&includeLinks=true&includeBetLimits=true')
+        .then(function(r){return r.json()}).then(function(data){
+          if(!data||!data.bookmakers)return;
+          var md={};altMkts.forEach(function(m){md[m]=[]});
+          data.bookmakers.forEach(function(book){(book.markets||[]).forEach(function(mkt){if(!md[mkt.key])return;(mkt.outcomes||[]).forEach(function(out){md[mkt.key].push({name:out.name,price:out.price,point:out.point,book:book.title,link:out.link||book.link,limit:out.bet_limit})})})});
+          var preLen=allArbs.length;
+          if(doAltS&&md['alternate_spreads']&&md['alternate_spreads'].length)processSpreads(md['alternate_spreads'],gl,sp2,bank,min,allArbs,'Alt Spreads','alt',liveFlag);
+          if(doAltT&&md['alternate_totals']&&md['alternate_totals'].length)processTotals(md['alternate_totals'],gl,sp2,bank,min,allArbs,'Alt Totals','alt',liveFlag);
+          if(doProps)processProps(data.bookmakers,gl,sp2,bank,min,allArbs,liveFlag);
+          if(doGameProps&&gpKeys.length)processGameProps(data.bookmakers,gl,sp2,bank,min,allArbs,gpKeys,liveFlag,sp);
+          var sl=getScoreLine(game.id);
+          for(var aj=preLen;aj<allArbs.length;aj++){allArbs[aj].scoreLine=sl;allArbs[aj].commenceTime=game.commence_time;allArbs[aj].gameId=game.id;allArbs[aj].sportKey=sp;}
+        }).catch(function(){});
+      }));
+      done+=chunk.length;
+      setProgress(25+Math.round((done/allGames.length)*55),'Scanning: '+done+'/'+allGames.length+' games...');
+    }
+  }
+
+  if(doGolf){setProgress(85,'Scanning golf...');totalGames+=await scanGolf(key,bank,min,allArbs,filterMode,BOOKS)}
+
+  allArbs.sort(function(a,b){return b.edge-a.edge});
+  if(allArbs.length){playAlert();maybePushoverNotify(allArbs);}
+  ARB_CACHE=allArbs;
+  document.getElementById('prog').style.display='none';
+
+  var THREE_DAYS=3*24*60*60*1000,cutoff=Date.now()+THREE_DAYS;
+  var soonArbs=[],laterArbs=[];
+  allArbs.forEach(function(x){(x.commenceTime&&new Date(x.commenceTime).getTime()>cutoff?laterArbs:soonArbs).push(x)});
+
+  function renderCard(x,idx){
+    var c='<div class="card'+(x.middle?' middle':x.live?' live':x.edge>2?' hot':'')+'"><div class="ctop"><div style="flex:1;min-width:0"><div class="gmeta">'+x.sport+'</div><span class="mktag '+x.market+'">'+x.label+'</span>';
+    if(x.live)c+='<span class="mktag live">🔴 LIVE</span>';
+    if(x.middle)c+='<span class="mktag mid">🎯 Middle</span>';
+    c+='<div class="gtitle">'+x.game+'</div>';
+    if(x.commenceTime)c+='<div class="gdate-tag">'+new Date(x.commenceTime).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+'</div>';
+    if(x.scoreLine)c+='<div class="score-line">⚡ '+x.scoreLine+'</div>';
+    c+='</div><div style="text-align:right;flex-shrink:0"><div class="roi">+'+x.roi.toFixed(2)+'%</div><div class="psub">$'+x.profit.toFixed(2)+' profit</div></div></div><div class="sides">';
+    [x.side1,x.side2].forEach(function(s){
+      c+='<div class="side"><div class="book">'+s.book+'</div><div class="team">'+s.name+'</div><div class="odds">'+fmt(s.odds)+'</div><div class="stake">Bet $'+s.stake.toFixed(2)+'</div>';
+      if(s.limit)c+='<div class="limit-tag">Max: $'+s.limit+(parseFloat(s.limit)<s.stake?' ⚠️':'')+'</div>';
+      if(s.link)c+='<a href="'+s.link+'" target="_blank" class="open-link">Open in '+s.book+' →</a>';
+      c+='</div>';
+    });
+    c+='</div>';
+    c+=placeFirstNote(x.side1.book,x.side2.book);
+    if(x.middleNote)c+='<div class="middle-note">'+x.middleNote+'</div>';
+    c+='<div style="padding:8px 12px;border-top:1px solid #2a2a3d"><button class="lookup-btn" onclick="lookupFromArb('+idx+')">🔍 Find Alternative Lines</button></div>';
+    c+='</div>';
+    return c;
+  }
+
+  var now=new Date().toLocaleTimeString();
+  var h='';
+  if(allArbs.length)h+='<div class="alert-bar">🔔 '+allArbs.length+' arb'+(allArbs.length>1?'s':'')+' found at '+now+'</div>';
+  h+='<div class="stats">Scan #'+scanCount+' · '+totalGames+' games · '+allArbs.length+' arbs · '+now+'</div>';
+  if(!allArbs.length){h+='<div class="msg">No arbs above '+min+'% right now.<br><br>Try lowering Min % to 0.2.</div>'}
+  else{
+    soonArbs.forEach(function(x){h+=renderCard(x,allArbs.indexOf(x))});
+    if(laterArbs.length){h+='<div class="section-divider"><span>📅 Games 3+ Days Away ('+laterArbs.length+')</span></div>';laterArbs.forEach(function(x){h+=renderCard(x,allArbs.indexOf(x))})}
+  }
+  h+='<div class="limit-log"><div class="limit-log-title">📋 Known Book Limits</div><div class="limit-log-entry">🚫 <strong>Bally Bet</strong> — limited to <strong>$255</strong> on player props (Jun 22, 2026)</div><div class="limit-log-entry">🚫 <strong>Bally Bet</strong> — limited to <strong>$46</strong> on MLB player props (Jun 23, 2026)</div><div class="limit-log-entry">🚫 <strong>Hard Rock Bet</strong> — limited to <strong>$280</strong> on WNBA (Jun 22, 2026)</div><div class="limit-log-entry">⚠️ <strong>Hard Rock Bet</strong> — account gubbed Jun 24, 2026. No future promos. Limits may follow.</div><div class="limit-log-entry">🚫 <strong>Bally Bet</strong> — limited to <strong>$10</strong> per bet (Jun 24, 2026)</div><div class="limit-log-entry">🚫 <strong>Hard Rock Bet</strong> — limited to <strong>$10</strong> per bet (Jun 24, 2026)</div></div>';
+  document.getElementById('out').innerHTML=h;
+  setStatus(autoOn,'#'+scanCount+' at '+now+(autoOn?' — next in 60s':''));
+}
+
+// ── Line Lookup ────────────────────────────────────────────
+function lookupFromArb(idx){
+  var x=ARB_CACHE[idx];
+  if(!x||!x.gameId||!x.sportKey){document.getElementById('lout').innerHTML='<div class="err">Run a fresh scan first, then tap this button.</div>';switchTab('lookup');return}
+  switchTab('lookup');
+  document.getElementById('lout').innerHTML='<div class="msg">Loading lines...</div>';
+  var sp=x.sportKey;
+
+  // Figure out which specific markets to fetch and what to filter by
+  var targetMkts=[];
+  var playerFilter=null;
+
+  if(x.market==='props'){
+    // Extract player name from game string e.g. "KC @ TB — Michael Massey"
+    var parts=x.game.split(' — ');
+    playerFilter=parts.length>1?parts[parts.length-1].toLowerCase():null;
+    // Use the exact market key stored on the arb — also include its _alternate variant
+    if(x.propMarketKey){
+      targetMkts=[x.propMarketKey];
+      var altKey=x.propMarketKey.replace(/_alternate$/,'')+'_alternate';
+      if(altKey!==x.propMarketKey)targetMkts.push(altKey);
+    } else {
+      var allPropKeys=PROP_MARKETS[sp]||[];
+      targetMkts=allPropKeys.length?allPropKeys:['batter_hits','player_points'];
+    }
+  } else if(x.market==='gameprops'){
+    // Game prop (half/quarter/period) — fetch all game prop markets
+    targetMkts=GAME_PROP_MARKETS[sp]||[];
+    if(!targetMkts.length)targetMkts=['h2h_h1','totals_h1'];
+  } else if(x.market==='alt'){
+    targetMkts=['alternate_spreads','alternate_totals'];
+  } else if(x.market==='spreads'){
+    targetMkts=['spreads'];
+  } else if(x.market==='totals'){
+    targetMkts=['totals'];
+  } else {
+    // h2h moneyline or golf
+    targetMkts=['h2h'];
+  }
+
+  var gameLabel=x.game.split(' — ')[0];
+  var arbLabel=x.label;
+  fetchEventOdds(x.gameId,sp,targetMkts.filter(function(v,i,a){return a.indexOf(v)===i&&v}).join(','),gameLabel,playerFilter,arbLabel,x.propPoint);
+}
+
+async function runLookup(){
+  var key=document.getElementById('key').value.trim();
+  var sport=document.getElementById('lsport').value;
+  var query=document.getElementById('lquery').value.trim().toLowerCase();
+  var out=document.getElementById('lout');
+  if(!key){out.innerHTML='<div class="err">Paste your API key above first.</div>';return}
+  if(!query){out.innerHTML='<div class="err">Enter a team or player name.</div>';return}
+  out.innerHTML='<div class="msg">Searching...</div>';
+  try{
+    var BOOKS=getBooks().join(',');
+    var res=await fetch('https://api.the-odds-api.com/v4/sports/'+sport+'/odds/?apiKey='+key+'&regions=us,us2&markets=h2h&oddsFormat=american&bookmakers='+BOOKS);
+    var games=await res.json();
+    if(!Array.isArray(games)||!games.length){out.innerHTML='<div class="msg">No games found for this sport.</div>';return}
+    var matched=games.filter(function(g){return g.home_team.toLowerCase().includes(query)||g.away_team.toLowerCase().includes(query)});
+    if(!matched.length){
+      var html='<div class="msg" style="text-align:left;padding:12px">No match. Select a game:</div>';
+      games.forEach(function(g){
+        html+='<div class="lcard" style="cursor:pointer" onclick="fetchEventOddsManual(\''+g.id+'\',\''+sport+'\',\''+encodeURIComponent(g.away_team+' @ '+g.home_team)+'\')"><div><div class="lbook">'+g.sport_title+'</div><div class="lname">'+g.away_team+' @ '+g.home_team+'</div></div><div style="color:#00ff88;font-size:18px">→</div></div>';
+      });
+      out.innerHTML=html;return;
+    }
+    var g=matched[0];
+    var allMkts=['h2h','spreads','totals'].concat(PROP_MARKETS[sport]||[]).concat(GAME_PROP_MARKETS[sport]||[]).filter(function(v,i,a){return a.indexOf(v)===i&&v});
+    await fetchEventOdds(g.id,sport,allMkts.join(','),g.away_team+' @ '+g.home_team);
+  }catch(e){out.innerHTML='<div class="err">Error: '+e.message+'</div>'}
+}
+
+function fetchEventOddsManual(id,sport,labelEncoded){
+  var label=decodeURIComponent(labelEncoded);
+  var allMkts=['h2h','spreads','totals'].concat(PROP_MARKETS[sport]||[]).concat(GAME_PROP_MARKETS[sport]||[]).filter(function(v,i,a){return a.indexOf(v)===i&&v});
+  fetchEventOdds(id,sport,allMkts.join(','),label);
+}
+
+async function fetchEventOdds(eventId,sport,markets,gameLabel,playerFilter,arbLabel,propPoint){
+  var key=document.getElementById('key').value.trim();
+  var BOOKS=getBooks().join(',');
+  var out=document.getElementById('lout');
+  out.innerHTML='<div class="msg">Loading lines...</div>';
+  try{
+    var res=await fetch('https://api.the-odds-api.com/v4/sports/'+sport+'/events/'+eventId+'/odds?apiKey='+key+'&regions=us,us2&markets='+markets+'&oddsFormat=american&bookmakers='+BOOKS+'&includeLinks=true');
+    var data=await res.json();
+    if(!data||!data.bookmakers){out.innerHTML='<div class="msg">No lines returned.</div>';return}
+    var groups={};
+    data.bookmakers.forEach(function(book){
+      (book.markets||[]).forEach(function(mkt){
+        var mktLabel=GP_LABEL[mkt.key]||mkt.key.replace(/_alternate/,' (Alt)').replace(/_/g,' ').replace(/\b\w/g,function(c){return c.toUpperCase()});
+        (mkt.outcomes||[]).forEach(function(out2){
+          if(playerFilter){
+            var hasDesc=out2.description&&out2.description.trim()!=='';
+            var descMatches=hasDesc&&out2.description.toLowerCase().indexOf(playerFilter)>-1;
+            var pointMatches=propPoint!=null&&out2.point==propPoint;
+            // Include if: description matches player, OR (no description AND point matches exactly)
+            if(hasDesc&&!descMatches)return;
+            if(!hasDesc&&!pointMatches)return;
+          }
+          var desc=out2.description?out2.description+' — ':'';
+          var side=out2.name+(out2.point!=null?' '+out2.point:'');
+          var k=mktLabel+'|||'+desc+side;
+          if(!groups[k])groups[k]={label:mktLabel,desc:desc,side:side,lines:[]};
+          groups[k].lines.push({book:book.title,odds:out2.price,link:out2.link||book.link});
+        });
+      });
+    });
+    var keys=Object.keys(groups);
+    if(!keys.length){out.innerHTML='<div class="msg">No lines found for this specific bet. The book may have removed it.</div>';return}
+    keys.forEach(function(k){groups[k].lines.sort(function(a,b){return b.odds-a.odds})});
+    var byMkt={};
+    keys.forEach(function(k){var ml=groups[k].label;if(!byMkt[ml])byMkt[ml]=[];byMkt[ml].push(groups[k])});
+    var titleLine=arbLabel?gameLabel+' — <strong>'+arbLabel+'</strong>':gameLabel;
+    var html='<div class="stats" style="margin-bottom:16px">'+titleLine+'</div>';
+    Object.keys(byMkt).forEach(function(mktLabel){
+      html+='<div class="section-divider" style="margin:16px 0 10px"><span>'+mktLabel+'</span></div>';
+      byMkt[mktLabel].forEach(function(group){
+        html+='<div style="color:#666;font-size:11px;margin:8px 0 4px">'+group.desc+group.side+'</div>';
+        group.lines.forEach(function(l,i){
+          html+='<div class="lcard'+(i===0?' best':'')+'"><div><div class="lbook">'+l.book+'</div>';
+          if(i===0)html+='<div class="lbest">★ Best Available</div>';
+          if(l.link)html+='<a href="'+l.link+'" target="_blank" class="llink">Open in '+l.book+' →</a>';
+          html+='</div><div class="lodds" style="color:'+(l.odds>0?'#00ff88':'#e8e8f0')+'">'+fmt(l.odds)+'</div></div>';
+        });
+      });
+    });
+    out.innerHTML=html;
+  }catch(e){out.innerHTML='<div class="err">Error: '+e.message+'</div>'}
+}
+
+// ── Controls ───────────────────────────────────────────────
+// (Poly Arb tab removed)
+
+function getPSports(){return Array.from(document.querySelectorAll('#psports [data-ps].on')).map(function(b){return b.dataset.ps});}
+function getPBooks(){return Array.from(document.querySelectorAll('#pbooks [data-pb].on')).map(function(b){return b.dataset.pb});}
+
+function setPProgress(pct,text){document.getElementById('pprogText').textContent=text;document.getElementById('pprogFill').style.width=pct+'%';}
+
+// Map Odds API sport keys to keywords for Polymarket matching
+var SPORT_KEYWORDS = {
+  'baseball_mlb': ['mlb','baseball','yankees','red sox','dodgers','cubs','mets','braves','astros','cardinals','phillies','giants','padres','brewers','twins','blue jays','rays','tigers','royals','athletics','mariners','rangers','angels','rockies','diamondbacks','nationals','reds','pirates','orioles','white sox','guardians'],
+  'basketball_nba': ['nba','basketball','lakers','celtics','warriors','nets','bulls','heat','knicks','suns','bucks','76ers','raptors','nuggets','clippers','mavs','mavericks','grizzlies','jazz','blazers','pacers','hawks','hornets','wizards','pistons','cavaliers','thunder','spurs','rockets','magic','pelicans','kings','timberwolves'],
+  'americanfootball_nfl': ['nfl','football','chiefs','eagles','cowboys','patriots','49ers','packers','steelers','ravens','bills','bengals','rams','buccaneers','chargers','raiders','broncos','saints','bears','colts','titans','falcons','seahawks','cardinals','lions','giants','jets','commanders','jaguars','texans','vikings','dolphins','browns','panthers'],
+  'americanfootball_ncaaf': ['ncaa football','college football','cfb','alabama','georgia','ohio state','michigan','clemson','notre dame','oklahoma','lsu','usc','penn state','florida','texas','baylor'],
+  'icehockey_nhl': ['nhl','hockey','bruins','maple leafs','rangers','penguins','blackhawks','red wings','canadiens','avalanche','lightning','oilers','flames','canucks','wild','kings','ducks','sharks','blues','capitals','flyers','devils','islanders','sabres','senators','hurricanes','blue jackets','predators','jets','stars','coyotes','golden knights','kraken'],
+  'soccer_usa_mls': ['mls','major league soccer','galaxy','sounders','portland','atlanta united','nycfc','red bulls','sporting kc','columbus','seattle'],
+  'basketball_wnba': ['wnba','liberty','aces','mercury','fever','mystics','dream','sky','sparks','storm','wings','sun','lynx','valkyries'],
+  'soccer_epl': ['premier league','epl','arsenal','chelsea','liverpool','manchester','man utd','man city','tottenham','spurs','newcastle','aston villa','everton','brighton','west ham','brentford','fulham','wolves','crystal palace','nottingham','leicester','burnley','sheffield'],
+  'mma_mixed_martial_arts': ['ufc','mma','mixed martial arts','conor','khabib','jones','adesanya','poirier','mcgregor','ngannou','volkanovski'],
+  'golf': ['pga','golf','masters','open championship','us open','ryder cup','tour championship','tiger','mcilroy','spieth','koepka','johnson','thomas','cantlay']
+};
+
+// Odds API futures market keys per sport (outright winners)
+var FUTURES_MARKETS = {
+  'baseball_mlb': ['baseball_mlb_world_series_winner','baseball_mlb_division_winner'],
+  'basketball_nba': ['basketball_nba_championship_winner'],
+  'americanfootball_nfl': ['americanfootball_nfl_super_bowl_winner'],
+  'icehockey_nhl': ['icehockey_nhl_championship_winner'],
+  'basketball_wnba': ['basketball_wnba_championship_winner'],
+  'soccer_epl': ['soccer_epl_winner']
+};
+
+function normalizePolyTitle(t) {
+  return (t||'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').trim();
+}
+
+function matchesGameSport(polyTitle, sportKey) {
+  var title = normalizePolyTitle(polyTitle);
+  var keywords = SPORT_KEYWORDS[sportKey] || [];
+  for (var i=0; i<keywords.length; i++) {
+    if (title.indexOf(keywords[i]) > -1) return true;
+  }
+  return false;
+}
+
+// Fetch Polymarket sports markets
+function fetchWithTimeout(url, ms) {
+  return new Promise(function(resolve) {
+    var done = false;
+    var timer = setTimeout(function(){ if(!done){done=true; resolve(null);} }, ms);
+    fetch(url).then(function(res){
+      if (done) return;
+      if (!res.ok) { done=true; clearTimeout(timer); resolve(null); return; }
+      return res.json();
+    }).then(function(data){
+      if (done) return;
+      done=true; clearTimeout(timer); resolve(data);
+    }).catch(function(){
+      if (done) return;
+      done=true; clearTimeout(timer); resolve(null);
     });
   });
 }
 
-async function fetchLeague(sgoLeague, maxGames) {
-  var base = 'https://api.sportsgameodds.com/v2/events';
-  var books = [SGO_BOOKMAKER].concat(SGO_DOMESTIC);
-  var collected = [], cursor = null, pages = 0;
-  do {
-    var url = base + '?apiKey=' + encodeURIComponent(SGO_API_KEY) + '&leagueID=' + encodeURIComponent(sgoLeague)
-      + '&oddsAvailable=true&bookmakerID=' + encodeURIComponent(books.join(',')) + '&limit=' + Math.min(maxGames, 50);
-    if (cursor) url += '&cursor=' + encodeURIComponent(cursor);
-    var resp = await fetchJson(url);
-    if (!resp || typeof resp !== 'object') { console.log(sgoLeague + ': no response'); break; }
-    if (resp.success === false) {
-      var em = (resp.error || '') + '';
-      var m = em.match(/bookmakerID\s+(\S+)\s+is unavailable/i);
-      if (m && books.indexOf(m[1]) > -1 && m[1] !== SGO_BOOKMAKER) {
-        books = books.filter(function (b) { return b !== m[1]; });
-        console.log(sgoLeague + ': dropped gated book ' + m[1] + ', retrying');
-        continue;
-      }
-      console.log(sgoLeague + ' SGO error: ' + em); break;
+// Fetch the LIVE best ask price (what you'd pay to BUY) from CLOB.
+// Per Polymarket docs: side=sell returns the best ask. /price not /book
+// (the /book endpoint serves stale ghost data).
+// Returns the user's Cloudflare Worker URL if set, else ''
+function getWorkerUrl() {
+  try { return (localStorage.getItem('poly_worker')||'').trim().replace(/\/+$/,''); } catch(e) { return ''; }
+}
+
+// Build the list of URLs to try for a given Polymarket target.
+// Worker first (accurate, no cache), then public proxies as fallback.
+function buildProxyList(target) {
+  var busted = target + (target.indexOf('?')>-1?'&':'?') + '_cb=' + Date.now() + Math.floor(Math.random()*9999);
+  var list = [];
+  var worker = getWorkerUrl();
+  if (worker) list.push(worker + '/?url=' + encodeURIComponent(busted));
+  list.push('https://corsproxy.io/?'+encodeURIComponent(busted));
+  list.push('https://api.allorigins.win/raw?url='+encodeURIComponent(busted));
+  return list;
+}
+
+async function fetchPolyJson(url) {
+  var proxies = buildProxyList(url);
+  for (var pi=0; pi<proxies.length; pi++) {
+    var data = await fetchWithTimeout(proxies[pi], 6000);
+    if (data) return data;
+  }
+  return null;
+}
+
+// Return the TRUE price you'd pay to BUY this token = the lowest ASK in the book.
+// We read the full order book and take the lowest ask level. The /price endpoint
+// was returning the bid (a few cents low), making arbs look better than reality.
+// Walk the order book asks to find the TRUE effective price to buy `dollars`
+// worth, plus how much $ depth exists. Returns {price, availableDollars} or null.
+// Polymarket's /book lists asks; the 0.01/0.99 edges are deep parked liquidity,
+// so we sort ascending and fill from the lowest ask upward (real touch).
+async function fetchPolyDepth(tokenId, dollars) {
+  // First get the TRUE live price from /price (accurate, unlike /book which has
+  // ghost data). We'll only count book liquidity near this price — ghost orders
+  // parked at 0.99 are excluded so "available" reflects REAL takeable depth.
+  var anchorAsk = await fetchPolyAsk(tokenId);
+  if (anchorAsk == null) return null;
+
+  var book = await fetchPolyJson('https://clob.polymarket.com/book?token_id='+tokenId);
+  if (!book || !book.asks || !book.asks.length) {
+    // No usable book — return the anchor price but zero real depth
+    return { price: anchorAsk, availableDollars: 0, filled: false };
+  }
+
+  // Only count asks within 5c ABOVE the true anchor price. This is the band you'd
+  // realistically fill in. Anything higher (incl. 0.99 ghosts) is excluded.
+  var band = anchorAsk + 0.05;
+  var asks = book.asks.map(function(a){ return {price:parseFloat(a.price), size:parseFloat(a.size)}; })
+    .filter(function(a){ return a.price >= anchorAsk - 0.02 && a.price <= band && a.size > 0; })
+    .sort(function(a,b){ return a.price - b.price; });
+
+  // Real takeable depth in dollars within the band
+  var availableDollars = 0;
+  for (var i=0; i<asks.length; i++) availableDollars += asks[i].price * asks[i].size;
+
+  // Walk the real (non-ghost) levels to fill `dollars`, computing blended price
+  var remaining = dollars, spent = 0, shares = 0;
+  for (var j=0; j<asks.length && remaining > 0.01; j++) {
+    var lvlCost = asks[j].price * asks[j].size;
+    var take = Math.min(lvlCost, remaining);
+    shares += take / asks[j].price;
+    spent += take;
+    remaining -= take;
+  }
+  var filled = (remaining <= 0.01);
+  // Effective price: blended if we got fills, else the anchor price
+  var effPrice = shares > 0 ? (spent / shares) : anchorAsk;
+  // If we couldn't fill the whole order within the band, it's effectively illiquid
+  return { price: effPrice, availableDollars: availableDollars, filled: filled };
+}
+
+async function fetchPolyAsk(tokenId) {
+  window._lastBookDbg = 'no-book';
+  // Per Polymarket's official CLOB docs, the /book response is:
+  //   { bids:[{price,size}...], asks:[{price,size}...] }
+  // Prices arrive as STRINGS. Asks are ordered; the BEST ask = LOWEST price.
+  // The /book endpoint IS accurate for live markets when read correctly (the
+  // "ghost 0.99" issue is from reading the wrong end of the array).
+  var book = await fetchPolyJson('https://clob.polymarket.com/book?token_id='+tokenId);
+  var bestAsk = null, bestBid = null;
+  if (book) {
+    if (book.asks && book.asks.length) {
+      var askP = book.asks.map(function(a){ return parseFloat(a.price); })
+        .filter(function(p){ return p>0.001 && p<0.999; });
+      if (askP.length) bestAsk = Math.min.apply(null, askP); // best ask = lowest
     }
-    var batch = Array.isArray(resp.data) ? resp.data : [];
+    if (book.bids && book.bids.length) {
+      var bidP = book.bids.map(function(b){ return parseFloat(b.price); })
+        .filter(function(p){ return p>0.001 && p<0.999; });
+      if (bidP.length) bestBid = Math.max.apply(null, bidP); // best bid = highest
+    }
+  }
+
+  // If we got a sane book (ask > bid, reasonable spread), the ASK is what you pay
+  if (bestAsk != null && bestBid != null && bestAsk > bestBid) {
+    window._lastBookDbg = 'bid '+(bestBid*100).toFixed(0)+'/ask '+(bestAsk*100).toFixed(0);
+    return bestAsk;
+  }
+  // If only an ask came back and it's sane, use it
+  if (bestAsk != null && bestBid == null) return bestAsk;
+
+  // Book unusable (ghost/empty). Per docs, when spread >10c the UI shows last
+  // trade, not midpoint — so /price (midpoint) understates the ask. As a safe
+  // fallback, take the midpoint and add a conservative half-spread estimate.
+  var midData = await fetchPolyJson('https://clob.polymarket.com/midpoint?token_id='+tokenId);
+  if (midData && midData.mid != null) {
+    var mid = parseFloat(midData.mid);
+    if (mid > 0.001 && mid < 0.999) {
+      // If we have a bid, derive ask = mid + (mid - bid). Else add 4c buffer.
+      if (bestBid != null && mid > bestBid) return Math.min(mid + (mid - bestBid), 0.99);
+      return Math.min(mid + 0.04, 0.99);
+    }
+  }
+  return null;
+}
+
+async function pmFetch(url) {
+  var worker = getWorkerUrl();
+  var proxies = [];
+  if (worker) proxies.push(worker + '/?url=' + encodeURIComponent(url));
+  proxies.push('https://corsproxy.io/?'+encodeURIComponent(url));
+  proxies.push('https://api.allorigins.win/raw?url='+encodeURIComponent(url));
+  proxies.push(url);
+  for (var pi=0; pi<proxies.length; pi++) {
+    var data = await fetchWithTimeout(proxies[pi], 8000); // 8s max per proxy
+    if (data) return data;
+  }
+  return null;
+}
+
+// Map our sport selections to Polymarket sports-tag slugs
+var POLY_SPORT_SLUGS = {
+  'baseball_mlb':'mlb','basketball_nba':'nba','americanfootball_nfl':'nfl',
+  'americanfootball_ncaaf':'cfb','icehockey_nhl':'nhl','soccer_usa_mls':'mls',
+  'basketball_wnba':'wnba','soccer_epl':'epl','mma_mixed_martial_arts':'ufc','golf':'golf'
+};
+
+async function fetchPolymarketSports(sportKeys) {
+  var allMarkets = [];
+  var seenIds = {};
+
+  // Step 1: get the sports tag metadata to resolve tag IDs
+  var sportsTags = await pmFetch('https://gamma-api.polymarket.com/sports');
+  var tagIdByLabel = {};
+  if (Array.isArray(sportsTags)) {
+    sportsTags.forEach(function(s){
+      var lbl = (s.label||s.slug||'').toLowerCase();
+      var tid = s.tagId||s.tag_id||s.id;
+      if (lbl && tid) tagIdByLabel[lbl] = tid;
+    });
+  }
+
+  // Step 2: for each selected sport, fetch its events (events contain markets)
+  var didGenericFallback = false;
+  for (var si=0; si<sportKeys.length; si++) {
+    var slug = POLY_SPORT_SLUGS[sportKeys[si]];
+    if (!slug) continue;
+    var tagId = tagIdByLabel[slug];
+
+    setPProgress(10+Math.round((si/sportKeys.length)*35), 'Fetching Polymarket '+slug.toUpperCase()+'...');
+
+    var events = null;
+    if (tagId) {
+      events = await pmFetch('https://gamma-api.polymarket.com/events?tag_id='+tagId+'&active=true&closed=false&limit=100');
+    } else {
+      // Try slug-based tag lookup
+      events = await pmFetch('https://gamma-api.polymarket.com/events?tag_slug='+slug+'&active=true&closed=false&limit=100');
+    }
+
+    // If tag approach yielded nothing, do ONE generic high-volume sweep (not per-sport)
+    if ((!Array.isArray(events) || !events.length) && !didGenericFallback) {
+      didGenericFallback = true;
+      events = await pmFetch('https://gamma-api.polymarket.com/events?active=true&closed=false&limit=300&order=volume24hr&ascending=false');
+    }
+
+    if (!Array.isArray(events)) continue;
+
+    events.forEach(function(ev){
+      var mkts = ev.markets || [];
+      mkts.forEach(function(m){
+        if (!m || seenIds[m.id]) return;
+        if (m.closed) return;
+        seenIds[m.id] = true;
+        m._eventTitle = ev.title || '';
+        // Capture event start time for date-matching (try several fields)
+        m._startTime = ev.startDate || ev.startTime || ev.gameStartTime || m.gameStartTime || m.startDate || ev.endDate || m.endDate || null;
+        allMarkets.push(m);
+      });
+    });
+  }
+
+  return allMarkets;
+}
+
+// Convert Polymarket price (0-1) to American odds
+function polyPriceToAmerican(price) {
+  if (!price || price <= 0 || price >= 1) return null;
+  if (price >= 0.5) return Math.round(-price/(1-price)*100);
+  return Math.round((1-price)/price*100);
+}
+
+// Classify what type of bet a Polymarket market represents
+function classifyPolyMarket(title, outcomes) {
+  var t = (title||'').toLowerCase();
+  // SEASON PROPS / win-totals — reject entirely (can't arb vs single game)
+  if (/win more than|win at least|win fewer than|over \d+\.?\d* (wins|games)|under \d+\.?\d* (wins|games)|\d+\.?\d* (wins|games) in the|regular season|make the playoffs|make the postseason|reach the|qualify for/.test(t)) {
+    return {type:'season_prop', valid:false};
+  }
+  // GAME PROPS / micro-markets — reject. These contain question phrasing about
+  // events WITHIN a game (runs, innings, strikeouts, first to score, etc.) and
+  // must never be matched to a moneyline. This was causing 11-13% false arbs.
+  if (/will there be|run scored|first inning|any inning|score in the|first to score|first team to|how many|number of|total (runs|hits|strikeouts|points|goals)|player|home run|grand slam|stolen base|next (team|player)|margin of|exact|race to|reach \d+|by how many|winning margin|method of|both teams|either team|highest scoring|lead after/.test(t)) {
+    return {type:'game_prop', valid:false};
+  }
+  // FUTURES — championship/division/award markets (matched separately against SB futures)
+  if (/championship|champion|division title|conference title|win the.*title|win the.*cup|mvp|cy young|rookie of the year|award|world series|super bowl|stanley cup|nba finals|to win the|pennant|division winner|win the.*east|win the.*west|win the.*central|win the.*conference|win the.*division|win the \d{4}|\d{4} mls|\d{4} nba|\d{4} nfl|\d{4} mlb/.test(t)) {
+    return {type:'futures', valid:true};
+  }
+  // Totals (Over/Under)
+  if (/o\/u|over\/under|total points|total runs|combined/.test(t) || (outcomes[0]||'').toLowerCase()==='over') {
+    var pointMatch = t.match(/(\d+\.?\d*)/);
+    return {type:'totals', valid:true, point: pointMatch?parseFloat(pointMatch[1]):null};
+  }
+  // Moneyline — single-game head to head ONLY, phrased as a clean matchup.
+  // Must contain "vs"/"@" AND must NOT contain a question mark (props are questions).
+  if (/ vs\.? | @ | v /.test(t) && t.indexOf('?') === -1) {
+    return {type:'h2h', valid:true};
+  }
+  // "Will X beat/defeat Y" is a clean moneyline question
+  if (/will .* (beat|defeat) /.test(t)) {
+    return {type:'h2h', valid:true};
+  }
+  return {type:'unknown', valid:false};
+}
+
+// Build a normalized full-team-name set from a Poly title for strict matching
+function teamFullyPresent(teamName, polyNorm) {
+  // Require the team's DISTINCTIVE word (usually the last word: Yankees, Dodgers, Huskies)
+  // AND at least one more word, OR the full city+team to appear
+  var words = teamName.toLowerCase().split(' ').filter(function(w){return w.length>3;});
+  if (!words.length) return false;
+  // The nickname is typically the last word and is the most distinctive
+  var nickname = words[words.length-1];
+  // Must contain the nickname at minimum
+  if (polyNorm.indexOf(nickname) === -1) return false;
+  return true;
+}
+
+// Strict match: BOTH teams' nicknames must appear AND dates must align
+function findMatchingGame(polyTitle, allOddsGames, polyStartTime) {
+  var pNorm = normalizePolyTitle(polyTitle);
+  var polyDate = polyStartTime ? new Date(polyStartTime).getTime() : null;
+  var matches = [];
+  allOddsGames.forEach(function(game) {
+    var homeOk = teamFullyPresent(game.home_team||'', pNorm);
+    var awayOk = teamFullyPresent(game.away_team||'', pNorm);
+    if (!homeOk || !awayOk) return;
+    // DATE CHECK — only reject if we have a VALID poly date that clearly differs.
+    // Window is 36h to allow for timezone/rounding differences while still
+    // separating back-to-back series games (usually 24h apart).
+    if (polyDate && !isNaN(polyDate) && game.commence_time) {
+      var gameDate = new Date(game.commence_time).getTime();
+      if (!isNaN(gameDate)) {
+        var hoursDiff = Math.abs(polyDate - gameDate) / (1000*60*60);
+        // Store the diff so we can pick the CLOSEST game if multiple match
+        matches.push({game:game, hoursDiff:hoursDiff});
+        return;
+      }
+    }
+    // No usable date — fall back to name-only match
+    matches.push({game:game, hoursDiff:null});
+  });
+
+  if (!matches.length) return null;
+  if (matches.length === 1) return matches[0].game;
+
+  // Multiple games with same teams (back-to-back series).
+  // Pick the one closest in time IF we have date info; otherwise ambiguous → skip.
+  var withDates = matches.filter(function(m){return m.hoursDiff != null;});
+  if (withDates.length) {
+    withDates.sort(function(a,b){return a.hoursDiff - b.hoursDiff;});
+    // Only accept if the closest is within 36h AND clearly closer than the next
+    if (withDates[0].hoursDiff <= 36) return withDates[0].game;
+  }
+  // Can't disambiguate safely
+  return null;
+}
+
+async function scanPoly() {
+  var key = document.getElementById('key').value.trim();
+  if (!key) { document.getElementById('pout').innerHTML='<div class="err">Paste your Odds API key at the top first.</div>'; return; }
+  var bank = parseFloat(document.getElementById('pbank').value)||1000;
+  var min = parseFloat(document.getElementById('pmine').value)||0.5;
+  var polyFeePct = parseFloat(document.getElementById('pfee').value)||0;
+  var sbFeePct = parseFloat(document.getElementById('psbfee').value)||0;
+  // Total round-trip fee drag (Poly side + optional book side), as a fraction of stake
+  var feeDrag = (polyFeePct + sbFeePct) / 100;
+  var sportKeys = getPSports();
+  var books = getPBooks().join(',');
+  if (!sportKeys.length) { document.getElementById('pout').innerHTML='<div class="err">Select at least one sport.</div>'; return; }
+  if (!books) { document.getElementById('pout').innerHTML='<div class="err">Select at least one sportsbook.</div>'; return; }
+
+  document.getElementById('pprog').style.display='block';
+  setPProgress(0,'Starting...');
+  document.getElementById('pout').innerHTML='';
+
+  // Fetch Polymarket sports markets
+  var polyMarkets = await fetchPolymarketSports(sportKeys);
+  setPProgress(50,'Fetching sportsbook odds...');
+
+  if (!polyMarkets.length) {
+    document.getElementById('pprog').style.display='none';
+    document.getElementById('pout').innerHTML='<div class="err">No Polymarket sports markets found. Try again in a moment.</div>';
+    return;
+  }
+
+  // Fetch Odds API for all selected sports
+  var allOddsGames = [];
+  for (var si=0; si<sportKeys.length; si++) {
+    try {
+      var sp = sportKeys[si];
+      // Fetch core markets + props
+      var mkts = 'h2h,spreads,totals';
+      var res = await fetch('https://api.the-odds-api.com/v4/sports/'+sp+'/odds/?apiKey='+key+'&regions=us,us2&markets='+mkts+'&oddsFormat=american&bookmakers='+books+'&includeLinks=true');
+      if (res.ok) {
+        var games = await res.json();
+        if (Array.isArray(games)) {
+          games.forEach(function(g){g._sport=sp;});
+          // Upcoming only
+          var upcoming = games.filter(function(g){return new Date(g.commence_time).getTime()>Date.now();});
+          allOddsGames = allOddsGames.concat(upcoming);
+        }
+      }
+    } catch(e) {}
+    setPProgress(50+Math.round(((si+1)/sportKeys.length)*30), 'Fetching odds: '+sportKeys[si]+'...');
+  }
+
+  // Fetch futures (outright winners) for each sport
+  var futuresData = {};  // { 'Team Name': {price, book, market, sport} }
+  for (var fi=0; fi<sportKeys.length; fi++) {
+    var fsp = sportKeys[fi];
+    var fmkts = FUTURES_MARKETS[fsp];
+    if (!fmkts || !fmkts.length) continue;
+    try {
+      var fres = await fetch('https://api.the-odds-api.com/v4/sports/'+fsp+'/odds/?apiKey='+key+'&regions=us,us2&markets='+fmkts.join(',')+'&oddsFormat=american&bookmakers='+books+'&includeLinks=true');
+      if (fres.ok) {
+        var fgames = await fres.json();
+        if (Array.isArray(fgames)) {
+          fgames.forEach(function(fg) {
+            (fg.bookmakers||[]).forEach(function(book) {
+              (book.markets||[]).forEach(function(mkt) {
+                (mkt.outcomes||[]).forEach(function(out) {
+                  var teamKey = (out.name||'').toLowerCase();
+                  if (!futuresData[teamKey] || out.price > futuresData[teamKey].price) {
+                    futuresData[teamKey] = {price:out.price, book:book.title, market:mkt.key, sport:fg.sport_title||fsp, link:out.link||book.link, name:out.name};
+                  }
+                });
+              });
+            });
+          });
+        }
+      }
+    } catch(e) {}
+  }
+
+  setPProgress(85,'Comparing Polymarket vs sportsbooks...');
+
+  var arbs = [];
+
+  // For each Polymarket market, classify it then match to same-type sportsbook outcome
+  polyMarkets.forEach(function(pm) {
+    var pTitle = (pm.question||pm.title||'').trim();
+    var pPrices = [];
+    var pOutcomes = [];
+    try { pPrices = JSON.parse(pm.outcomePrices||'[]'); } catch(e) {}
+    try { pOutcomes = JSON.parse(pm.outcomes||'[]'); } catch(e) {}
+    var pTokenIds = [];
+    try { pTokenIds = JSON.parse(pm.clobTokenIds||'[]'); } catch(e) {}
+    if (pPrices.length < 2 || pOutcomes.length < 2) return;
+
+    var pYesPrice = parseFloat(pPrices[0]||0);
+    var pNoPrice = parseFloat(pPrices[1]||0);
+    var pYesToken = pTokenIds[0]||null;
+    var pNoToken = pTokenIds[1]||null;
+    if (!pYesPrice || !pNoPrice || pYesPrice<=0.01 || pYesPrice>=0.99) return;
+
+    // Classify the Polymarket market type — reject futures/invalid
+    var cls = classifyPolyMarket(pTitle, pOutcomes);
+    if (!cls.valid) return;
+
+    // ── FUTURES — currently skipped ──
+    // A clean futures arb requires betting opposite sides of the SAME championship
+    // outcome. Sportsbooks only offer "team to win" (YES side), and Polymarket's
+    // YES/NO on the same title can't be safely paired against a single sportsbook
+    // outright without a true opposing line. To avoid false arbs, we skip futures.
+    if (cls.type === 'futures') {
+      return;
+    }
+
+    // Match to a single game (both teams must be present)
+    var game = findMatchingGame(pTitle, allOddsGames, pm._startTime);
+    if (!game) return;
+
+    var homeTeam = game.home_team;
+    var awayTeam = game.away_team;
+
+    // Collect sportsbook outcomes BY MARKET TYPE matching the Poly market type
+    function getOutcomesForMarket(mktKey) {
+      var outs = [];
+      (game.bookmakers||[]).forEach(function(book) {
+        (book.markets||[]).forEach(function(mkt) {
+          if (mkt.key !== mktKey) return;
+          (mkt.outcomes||[]).forEach(function(out) {
+            outs.push({name:out.name, price:out.price, point:out.point, book:book.title, market:mkt.key, link:out.link||book.link});
+          });
+        });
+      });
+      return outs;
+    }
+
+    // ── MONEYLINE matching ──
+    if (cls.type === 'h2h') {
+      var h2hOuts = getOutcomesForMarket('h2h');
+      if (!h2hOuts.length) return;
+
+      // CRITICAL: map each Poly outcome to its OWN token+price by index, then
+      // match each outcome's team name to the sportsbook. Never guess YES/NO
+      // from title word order — that attaches the price to the wrong team.
+      // pOutcomes[i] <-> pPrices[i] <-> pTokenIds[i] are index-aligned.
+      function teamMatches(outcomeName, team) {
+        var o = (outcomeName||'').toLowerCase();
+        var tWords = team.toLowerCase().split(' ').filter(function(w){return w.length>3;});
+        return tWords.some(function(w){ return o.indexOf(w) > -1; });
+      }
+
+      // Build a per-outcome structure: which team, what price, what token
+      var polyLegs = [];
+      for (var oi=0; oi<pOutcomes.length; oi++) {
+        var oname = pOutcomes[oi];
+        var oprice = parseFloat(pPrices[oi]||0);
+        var otoken = pTokenIds[oi]||null;
+        var matchedTeam = null;
+        if (teamMatches(oname, homeTeam)) matchedTeam = homeTeam;
+        else if (teamMatches(oname, awayTeam)) matchedTeam = awayTeam;
+        // Handle Yes/No markets: "Yes" = team named in title, "No" = other team
+        if (!matchedTeam && (oname==='Yes'||oname==='No')) {
+          var titleLower2 = pTitle.toLowerCase();
+          var homeWords2 = homeTeam.toLowerCase().split(' ').filter(function(w){return w.length>3;});
+          var awayWords2 = awayTeam.toLowerCase().split(' ').filter(function(w){return w.length>3;});
+          var homeIn = homeWords2.some(function(w){return titleLower2.indexOf(w)>-1;});
+          var awayIn = awayWords2.some(function(w){return titleLower2.indexOf(w)>-1;});
+          // "Yes" refers to the subject team of the title. If only one team is in
+          // the title, Yes=that team. Otherwise we can't safely tell — skip.
+          if (homeIn && !awayIn) matchedTeam = (oname==='Yes') ? homeTeam : awayTeam;
+          else if (awayIn && !homeIn) matchedTeam = (oname==='Yes') ? awayTeam : homeTeam;
+        }
+        if (matchedTeam && oprice>0.01 && oprice<0.99) {
+          polyLegs.push({ team:matchedTeam, price:oprice, token:otoken });
+        }
+      }
+      // Need exactly two legs, one per team, mapped unambiguously
+      if (polyLegs.length !== 2 || polyLegs[0].team === polyLegs[1].team) return;
+
+      // For each Poly leg (betting that team to win), the hedge is the OTHER
+      // team's best moneyline at a sportsbook.
+      polyLegs.forEach(function(leg) {
+        var otherTeam = (leg.team === homeTeam) ? awayTeam : homeTeam;
+        var bestOpp = null;
+        h2hOuts.forEach(function(out){
+          if (out.name === otherTeam && (!bestOpp || out.price > bestOpp.price)) bestOpp = out;
+        });
+        if (!bestOpp) return;
+        var sbProb = oP(bestOpp.price);
+        var tot = leg.price + sbProb;
+        var edge = (1-tot)*100 - feeDrag*100;
+        if (edge >= min && tot < 1.0) {
+          var polyDec = 1/leg.price, sbDec = oD(bestOpp.price);
+          var s1 = bank*(1/polyDec)/tot, s2 = bank*(1/sbDec)/tot;
+          var profit = Math.min(s1*polyDec, s2*sbDec) - (s1+s2) - bank*feeDrag;
+          arbs.push({polyTitle:pTitle, game:awayTeam+' @ '+homeTeam, sport:game.sport_title||game._sport, edge:edge, roi:(profit/(s1+s2))*100, profit:profit, commenceTime:game.commence_time, polySide:leg.team+' wins', polyPrice:leg.price, polyToken:leg.token, polyStake:s1, sbSide:bestOpp.name+' ML', sbBook:bestOpp.book, sbOdds:bestOpp.price, sbStake:s2, sbLink:bestOpp.link, sbMarket:'h2h', polySlug:pm.slug||pm.id});
+        }
+      });
+    }
+
+    // ── TOTALS matching (Over/Under at SAME point) ──
+    if (cls.type === 'totals' && cls.point != null) {
+      var totOuts = getOutcomesForMarket('totals');
+      if (!totOuts.length) return;
+
+      // Poly YES = Over, Poly NO = Under (standard Polymarket O/U format)
+      var polyIsOver = (pOutcomes[0]||'').toLowerCase()==='over' || (pOutcomes[0]||'').toLowerCase()==='yes';
+
+      // Arb: Poly Over + Sportsbook Under at same/higher line  OR  Poly Under + SB Over
+      // Match only EXACT same total point to be safe
+      var bestUnder = null, bestOver = null;
+      totOuts.forEach(function(out){
+        if (out.name==='Under' && Math.abs(out.point - cls.point) < 0.01) {
+          if (!bestUnder || out.price > bestUnder.price) bestUnder = out;
+        }
+        if (out.name==='Over' && Math.abs(out.point - cls.point) < 0.01) {
+          if (!bestOver || out.price > bestOver.price) bestOver = out;
+        }
+      });
+
+      // Poly Over (YES) vs Sportsbook Under
+      if (bestUnder) {
+        var sbP = oP(bestUnder.price);
+        var tt = pYesPrice + sbP;
+        var ed = (1-tt)*100 - feeDrag*100;
+        if (ed >= min && tt < 1.0) {
+          var ss1=bank*(pYesPrice/tt), ss2=bank*(sbP/tt), pr=((bank/tt)-bank) - bank*feeDrag;
+          arbs.push({polyTitle:pTitle, game:awayTeam+' @ '+homeTeam, sport:game.sport_title||game._sport, edge:ed, roi:(pr/bank)*100, profit:pr, commenceTime:game.commence_time, polySide:'Over '+cls.point, polyPrice:pYesPrice, polyToken:pYesToken, polyStake:ss1, sbSide:'Under '+bestUnder.point, sbBook:bestUnder.book, sbOdds:bestUnder.price, sbStake:ss2, sbLink:bestUnder.link, sbMarket:'totals', polySlug:pm.slug||pm.id});
+        }
+      }
+      // Poly Under (NO) vs Sportsbook Over
+      if (bestOver) {
+        var sbP2 = oP(bestOver.price);
+        var tt2 = pNoPrice + sbP2;
+        var ed2 = (1-tt2)*100 - feeDrag*100;
+        if (ed2 >= min && tt2 < 1.0) {
+          var sss1=bank*(pNoPrice/tt2), sss2=bank*(sbP2/tt2), pr2=((bank/tt2)-bank) - bank*feeDrag;
+          arbs.push({polyTitle:pTitle, game:awayTeam+' @ '+homeTeam, sport:game.sport_title||game._sport, edge:ed2, roi:(pr2/bank)*100, profit:pr2, commenceTime:game.commence_time, polySide:'Under '+cls.point, polyPrice:pNoPrice, polyToken:pNoToken, polyStake:sss1, sbSide:'Over '+bestOver.point, sbBook:bestOver.book, sbOdds:bestOver.price, sbStake:sss2, sbLink:bestOver.link, sbMarket:'totals', polySlug:pm.slug||pm.id});
+        }
+      }
+    }
+    // NOTE: spreads intentionally skipped for now — Polymarket rarely has clean spread markets
+    // and matching them safely requires exact line alignment
+  });
+
+    // Sanity filter: real arbs are rarely above 15%. Anything higher is almost
+    // always a bad cross-market match (e.g. season prop matched to a game).
+    var MAX_REALISTIC_EDGE = 8;
+    arbs = arbs.filter(function(x){ return x.edge <= MAX_REALISTIC_EDGE; });
+    arbs.sort(function(a,b){return b.edge-a.edge;});
+
+  // ── LIVE PRICE VERIFICATION ──
+  // Gamma prices are last-trade (stale). Re-check each candidate against the
+  // live CLOB ask (the price you'd actually PAY). side=sell returns best ask.
+  // Only keep arbs that still clear after using the real executable price.
+  if (arbs.length) {
+    // Verify only the top candidates by raw edge (already sorted) to stay fast.
+    var toVerify = arbs.slice(0, 40);
+    setPProgress(90, 'Verifying live prices on '+toVerify.length+' candidates...');
+    var verified = [];
+    for (var vi=0; vi<toVerify.length; vi++) {
+      var a = toVerify[vi];
+      if (!a.polyToken) { continue; } // no token = can't verify = drop
+      setPProgress(90+Math.round((vi/toVerify.length)*9), 'Verifying live prices '+(vi+1)+'/'+toVerify.length+'...');
+      setPProgress(90+Math.round((vi/toVerify.length)*9), 'Checking price & liquidity '+(vi+1)+'/'+toVerify.length+'...');
+      // First get the top-of-book price to size the stake
+      var topAsk = await fetchPolyAsk(a.polyToken);
+      a.dbgBook = window._lastBookDbg;
+      if (topAsk == null) { continue; } // can't price = drop
+
+      // Estimate the Poly stake we'd want (rough, using top price), then check
+      // real depth for that dollar amount to get the true effective fill price.
+      var roughPolyProb = topAsk, roughSbProb = oP(a.sbOdds);
+      var roughTot = roughPolyProb + roughSbProb;
+      var roughPolyStake = bank * (1/(1/topAsk)) / roughTot; // ≈ bank*topAsk/tot
+
+      var depth = await fetchPolyDepth(a.polyToken, roughPolyStake);
+      // DROP if: no book, can't fill the order, or thin available depth
+      // Require enough REAL takeable depth to actually place the Poly stake.
+      // depth.filled means the order fills within the price band (no ghost orders).
+      var MIN_DEPTH = Math.max(100, roughPolyStake * 0.5); // at least half the stake, min $100
+      if (!depth || !depth.filled || depth.availableDollars < MIN_DEPTH) {
+        continue; // illiquid — not a real, executable arb
+      }
+      var liveAsk = depth.price; // TRUE effective price including slippage
+      a.dbgTopAsk = topAsk; a.dbgDepthPrice = depth.price; a.dbgAvail = depth.availableDollars;
+
+      // Recompute EVERYTHING with the REAL effective price you'd pay.
+      var polyProbV = liveAsk;
+      var sbProbV = oP(a.sbOdds);
+      var totV = polyProbV + sbProbV;
+      var edgeV = (1-totV)*100 - feeDrag*100;
+
+      var polyDecimal = 1/liveAsk;
+      var sbDecimal = oD(a.sbOdds);
+      var polyStakeV = bank * (1/polyDecimal) / totV;
+      var sbStakeV   = bank * (1/sbDecimal) / totV;
+      var polyPayout = polyStakeV * polyDecimal;
+      var sbPayout   = sbStakeV * sbDecimal;
+      var totalStaked = polyStakeV + sbStakeV;
+      var worstProfit = Math.min(polyPayout, sbPayout) - totalStaked - bank*feeDrag;
+
+      a.polyPrice = liveAsk;
+      a.polyStake = polyStakeV;
+      a.sbStake = sbStakeV;
+      a.polyAvailable = depth.availableDollars;
+      a.edge = edgeV;
+      a.profit = worstProfit;
+      a.roi = (worstProfit/totalStaked)*100;
+      a.liveVerified = true;
+      a.unverified = false;
+      // Only keep if it's a REAL arb: total < 1.0 AND worst-case profit is positive
+      if (edgeV >= min && totV < 1.0 && worstProfit > 0) verified.push(a);
+    }
+    arbs = verified;
+    arbs.sort(function(a,b){return b.edge-a.edge;});
+  }
+
+  document.getElementById('pprog').style.display='none';
+
+  var now = new Date().toLocaleTimeString();
+  var mktLabels = {'h2h':'Moneyline','spreads':'Spread','totals':'Total','props':'Props','futures':'Futures'};
+  var h = '<div class="stats">'+polyMarkets.length+' Poly markets · '+allOddsGames.length+' games · '+arbs.length+' verified arbs · '+now+'</div>';
+
+  if (!arbs.length) {
+    h += '<div class="msg">No Polymarket vs sportsbook arbs above '+min+'% found.<br><br>Try lowering Min % to 0.2% or adding more sports.</div>';
+  } else {
+    h += '<div class="alert-bar">📊 '+arbs.length+' Poly arb'+(arbs.length>1?'s':'')+' found at '+now+' · edges NET of '+(polyFeePct+sbFeePct).toFixed(2)+'% fees</div>';
+    arbs.forEach(function(x) {
+      var mktLabel = mktLabels[x.sbMarket]||x.sbMarket||'';
+      h += '<div class="card'+(x.edge>2?' hot':'')+'">';
+      h += '<div class="ctop"><div style="flex:1;min-width:0">';
+      h += '<div class="gmeta">'+x.sport+'</div>';
+      h += '<span class="mktag h2h">Poly vs '+x.sbBook+'</span>';
+      if (mktLabel) h += '<span class="mktag totals">'+mktLabel+'</span>';
+      h += '<div class="gtitle">'+x.game+'</div>';
+      h += '<div style="color:#666;font-size:11px;margin-top:2px">Poly: '+x.polyTitle+'</div>';
+      if (x.commenceTime) h += '<div class="gdate-tag">'+new Date(x.commenceTime).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+'</div>';
+      h += '</div><div style="text-align:right;flex-shrink:0">';
+      h += '<div class="roi">+'+x.roi.toFixed(2)+'%</div>';
+      h += '<div class="psub">$'+x.profit.toFixed(2)+' profit</div>';
+      h += '</div></div>';
+      h += '<div class="sides">';
+      // Polymarket side
+      h += '<div class="side">';
+      h += '<div class="book" style="color:#0087ff">POLYMARKET'+(x.liveVerified?' <span style="color:#00ff88">✓ LIVE</span>':(x.unverified?' <span style="color:#ff9500">⚠ UNVERIFIED</span>':''))+'</div>';
+      h += '<div class="team">'+x.polySide+'</div>';
+      if (x.dbgTopAsk != null) h += '<div class="limit-tag" style="color:#888">dbg: '+(x.dbgBook||'?')+' · ask '+(x.dbgTopAsk*100).toFixed(1)+'¢</div>';
+      h += '<div class="odds" style="color:#0087ff">'+(x.polyPrice*100).toFixed(0)+'¢</div>';
+      h += '<div class="stake">Bet $'+x.polyStake.toFixed(2)+'</div>';
+      if (x.polyAvailable != null) h += '<div class="limit-tag">~$'+Math.round(x.polyAvailable)+' available'+(x.polyAvailable < x.polyStake ? ' ⚠️' : '')+'</div>';
+      if (x.polySlug) h += '<a href="https://polymarket.com/event/'+x.polySlug+'" target="_blank" class="open-link" style="color:#0087ff">Open Polymarket →</a>';
+      h += '</div>';
+      // Sportsbook side
+      h += '<div class="side">';
+      h += '<div class="book">'+x.sbBook+'</div>';
+      h += '<div class="team">'+x.sbSide+'</div>';
+      h += '<div class="odds">'+fmt(x.sbOdds)+'</div>';
+      h += '<div class="stake">Bet $'+x.sbStake.toFixed(2)+'</div>';
+      if (x.sbLink) h += '<a href="'+x.sbLink+'" target="_blank" class="open-link">Open in '+x.sbBook+' →</a>';
+      h += '</div>';
+      h += '</div></div>';
+    });
+  }
+  document.getElementById('pout').innerHTML = h;
+}
+
+// ── Scheduler ──────────────────────────────────────────────
+(function(){
+  try{
+    var gt=localStorage.getItem('gh_token');if(gt)document.getElementById('ghToken').value=gt;
+    var pt=localStorage.getItem('po_token');if(pt)document.getElementById('poTokenInput').value=pt;
+    var pu=localStorage.getItem('po_user');if(pu)document.getElementById('poUserInput').value=pu;
+    var pm=localStorage.getItem('po_manual');if(pm==='1')document.getElementById('poManualEnabled').checked=true;
+    // Sync hidden elements used by scanner
+    if(pt){document.getElementById('poToken').textContent=pt;}
+    if(pu){document.getElementById('poUser').textContent=pu;}
+    if(pm==='1')document.getElementById('poEnabled').checked=true;
+  }catch(e){}
+  document.getElementById('ghToken').addEventListener('input',function(){try{localStorage.setItem('gh_token',this.value.trim());}catch(e){}});
+  document.getElementById('poTokenInput').addEventListener('input',function(){
+    try{localStorage.setItem('po_token',this.value.trim());document.getElementById('poToken').textContent=this.value.trim();}catch(e){}
+  });
+  document.getElementById('poUserInput').addEventListener('input',function(){
+    try{localStorage.setItem('po_user',this.value.trim());document.getElementById('poUser').textContent=this.value.trim();}catch(e){}
+  });
+  document.getElementById('poManualEnabled').addEventListener('change',function(){
+    try{localStorage.setItem('po_manual',this.checked?'1':'0');document.getElementById('poEnabled').checked=this.checked;}catch(e){}
+  });
+  document.querySelector('.sch-sports').addEventListener('click',function(e){var b=e.target.closest('[data-ss]');if(b)b.classList.toggle('on');});
+  loadSchedulerSettings();
+})();
+
+async function loadSchedulerSettings(){
+  try{
+    var res=await fetch('https://raw.githubusercontent.com/aramsey9/arb/main/scheduler-config.json?t='+Date.now());
+    if(!res.ok)return;
+    var cfg=await res.json();
+    document.getElementById('schEnabled').checked=!!cfg.enabled;
+    if(cfg.minEdge)document.getElementById('schMinEdge').value=cfg.minEdge;
+    if(cfg.intervalMinutes)document.getElementById('schInterval').value=cfg.intervalMinutes;
+    if(cfg.sports){
+      document.querySelectorAll('[data-ss]').forEach(function(b){
+        b.classList.toggle('on',cfg.sports.indexOf(b.dataset.ss)>-1);
+      });
+    }
+    updateSchStatus(!!cfg.enabled);
+    var d=cfg.lastSaved?new Date(cfg.lastSaved).toLocaleString():'never';
+    document.getElementById('schLog').textContent='Last saved: '+d+(cfg.enabled?' — Scanner ACTIVE':' — Scanner PAUSED');
+  }catch(e){
+    document.getElementById('schLog').textContent='No config yet — save settings to activate.';
+  }
+}
+
+function toggleScheduler(){
+  var en=document.getElementById('schEnabled').checked;
+  updateSchStatus(en);
+}
+
+function updateSchStatus(on){
+  document.getElementById('schEnabled').checked=on;
+  document.getElementById('schStatus').textContent=on?'ON':'OFF';
+  document.getElementById('schStatus').className='sch-status '+(on?'on':'off');
+  document.getElementById('schToggleLabel').textContent='Scanner is '+(on?'ON':'OFF');
+  document.getElementById('schBox').classList.toggle('active',on);
+}
+
+async function saveSchedulerSettings(){
+  var token=document.getElementById('ghToken').value.trim();
+  if(!token){alert('Enter your GitHub Personal Access Token first.');return;}
+  var btn=document.getElementById('schSaveBtn');
+  btn.textContent='Saving...';btn.disabled=true;
+  var enabled=document.getElementById('schEnabled').checked;
+  var sports=Array.from(document.querySelectorAll('[data-ss].on')).map(function(b){return b.dataset.ss});
+  var minEdge=parseFloat(document.getElementById('schMinEdge').value)||0.5;
+  var intervalMinutes=parseInt(document.getElementById('schInterval').value,10)||10;
+  if(intervalMinutes<5)intervalMinutes=5;
+  document.getElementById('schInterval').value=intervalMinutes;
+  var cfg={enabled:enabled,sports:sports,minEdge:minEdge,intervalMinutes:intervalMinutes,lastSaved:new Date().toISOString()};
+  try{
+    var shaRes=await fetch('https://api.github.com/repos/aramsey9/arb/contents/scheduler-config.json',{headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json'}});
+    var sha=null;
+    if(shaRes.ok){var shaData=await shaRes.json();sha=shaData.sha;}
+    var body={message:'Update scheduler config',content:btoa(JSON.stringify(cfg,null,2))};
+    if(sha)body.sha=sha;
+    var res=await fetch('https://api.github.com/repos/aramsey9/arb/contents/scheduler-config.json',{method:'PUT',headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(res.ok){
+      btn.textContent='✓ Saved!';btn.style.background='#7c3aed';btn.style.color='#fff';
+      document.getElementById('schLog').textContent='Saved at '+new Date().toLocaleTimeString()+' — Scanner is '+(enabled?'ACTIVE — every '+intervalMinutes+' min, 6am-10pm ET':'PAUSED');
+      updateSchStatus(enabled);
+      try{localStorage.setItem('gh_token',token);}catch(e){}
+    }else{
+      var err=await res.json();
+      btn.textContent='✗ Failed';btn.style.background='#ff4757';btn.style.color='#fff';
+      document.getElementById('schLog').textContent='Error: '+(err.message||'Check your GitHub token');
+    }
+  }catch(e){
+    btn.textContent='✗ Error';btn.style.background='#ff4757';btn.style.color='#fff';
+    document.getElementById('schLog').textContent='Error: '+e.message;
+  }
+  setTimeout(function(){btn.textContent='💾 Save Settings to GitHub';btn.disabled=false;btn.style.background='#00ff88';btn.style.color='#000';},3000);
+}
+
+function startScan(){scanAll()}
+
+// ── Offshore (SportsGameOdds) — BookMaker.eu LOCKED as one leg ──
+(function(){
+  try{ var k=localStorage.getItem('sgo_key'); if(k)document.getElementById('opkey').value=k; }catch(e){}
+  document.getElementById('opkey').addEventListener('input',function(){
+    try{ localStorage.setItem('sgo_key', this.value.trim()); }catch(e){}
+  });
+  var lc=document.getElementById('oleagues'); if(lc) lc.addEventListener('click',function(e){var b=e.target.closest('[data-l]');if(b)b.classList.toggle('on');});
+  var mc=document.getElementById('omarkets'); if(mc) mc.addEventListener('click',function(e){var b=e.target.closest('[data-om]');if(b)b.classList.toggle('on');});
+  var fc=document.getElementById('ofilters'); if(fc) fc.addEventListener('click',function(e){var b=e.target.closest('[data-of]');if(!b)return;document.querySelectorAll('#ofilters [data-of]').forEach(function(x){x.classList.remove('on')});b.classList.add('on');});
+  var rc=document.getElementById('oround'); if(rc) rc.addEventListener('click',function(e){var b=e.target.closest('[data-r]');if(!b)return;document.querySelectorAll('#oround [data-r]').forEach(function(x){x.classList.remove('on')});b.classList.add('on');});
+})();
+
+var SGO_BOOKMAKER = 'bookmakereu';
+var SGO_DOMESTIC = ['draftkings','fanduel','betmgm','caesars','fanatics','bet365','thescorebet','kalshi','polymarket'];
+var SGO_NAMES = {bookmakereu:'BookMaker.eu',draftkings:'DraftKings',fanduel:'FanDuel',betmgm:'BetMGM',caesars:'Caesars',fanatics:'Fanatics',bet365:'Bet365',thescorebet:'theScore',kalshi:'Kalshi',polymarket:'Polymarket'};
+var SGO_HOME = {bookmakereu:'https://www.bookmaker.eu',draftkings:'https://sportsbook.draftkings.com',fanduel:'https://sportsbook.fanduel.com',betmgm:'https://sports.betmgm.com',caesars:'https://sportsbook.caesars.com',fanatics:'https://sportsbook.fanatics.com',bet365:'https://www.bet365.com',thescorebet:'https://www.thescore.bet',kalshi:'https://kalshi.com',polymarket:'https://polymarket.com'};
+function sgoHome(b){ return SGO_HOME[b]||null; }
+function sgoName(b){ return SGO_NAMES[b]||b; }
+
+async function sgoFetch(url, key){
+  var worker = getWorkerUrl();
+  try{
+    var res = await fetch(url, { headers: { 'x-api-key': key } });
+    var txt = await res.text(); var obj = JSON.parse(txt);
+    if (obj && typeof obj==='object') return obj;
+  }catch(e){}
+  if (worker){
+    try{ var r2 = await fetch(worker + '/?url=' + encodeURIComponent(url)); return JSON.parse(await r2.text()); }catch(e){}
+  }
+  try{ var r3 = await fetch('https://corsproxy.io/?'+encodeURIComponent(url)); return JSON.parse(await r3.text()); }catch(e){}
+  return null;
+}
+
+function oSetProg(t){ document.getElementById('oprog').style.display='block'; document.getElementById('oprogText').textContent=t; }
+function oGetLeagues(){ var s={}; document.querySelectorAll('#oleagues [data-l].on, #oleaguesDynamic [data-l].on').forEach(function(b){ s[b.dataset.l]=true; }); return Object.keys(s); }
+function oGetMarkets(){ return Array.from(document.querySelectorAll('#omarkets [data-om].on')).map(function(b){return b.dataset.om;}); }
+function oGetFilter(){ var el=document.querySelector('#ofilters [data-of].on'); return el?el.dataset.of:'all'; }
+
+function amDec(o){ o=parseFloat(o); if(!o) return null; return o>0 ? o/100+1 : 100/Math.abs(o)+1; }
+function amFmt(o){ o=parseFloat(o); return o>0?'+'+o:''+o; }
+
+// Show every book's price for the specific market of an offshore arb (no extra API call — uses cached event).
+function obCopyBet(btn){
+  var t=btn.getAttribute('data-bet')||'';
+  var done=function(){var o=btn.textContent;btn.textContent='✓ Copied — paste into the book\u2019s search';setTimeout(function(){btn.textContent=o;},1800);};
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(done).catch(function(){obCopyFallback(t,done);});}
+  else obCopyFallback(t,done);
+}
+function obCopyFallback(t,done){
+  var ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.focus();ta.select();
+  try{document.execCommand('copy');done();}catch(e){}
+  document.body.removeChild(ta);
+}
+function showOffshoreLines(idx){
+  var x = OARB_CACHE[idx]; if(!x){ return; }
+  var box = document.getElementById('olines-'+idx);
+  if(box.innerHTML){ box.innerHTML=''; return; } // toggle off
+  var ev = OEVENTS_CACHE[x.eventID];
+  if(!ev||!ev.odds){ box.innerHTML='<div class="msg" style="padding:12px">Run a fresh scan to load lines.</div>'; return; }
+  var od = ev.odds[x.oddID];
+  if(!od){ box.innerHTML='<div class="msg" style="padding:12px">Market no longer in feed.</div>'; return; }
+  var oppID = od.opposingOddID;
+  var opp = oppID? ev.odds[oppID] : null;
+
+  function collect(node){
+    if(!node||!node.byBookmaker) return [];
+    var rows=[];
+    Object.keys(node.byBookmaker).forEach(function(bk){
+      var bb=node.byBookmaker[bk]; if(!bb||bb.available===false||bb.odds==null) return;
+      rows.push({book:bk, am:bb.odds, dec:amDec(bb.odds), link:bb.deeplink||bb.deepLink||bb.link||null, line:(bb.overUnder!=null?bb.overUnder:bb.spread)});
+    });
+    rows.sort(function(a,b){ return b.dec-a.dec; });
+    return rows;
+  }
+  function sideName(node, isOpp){
+    var bt=od.betTypeID;
+    if(bt==='ml') return isOpp? (x.domLeg&&x.game.split(' @ ')[0]||'Away') : (x.game.split(' @ ')[1]||'Home');
+    if(bt==='ou') return isOpp?'Under':'Over';
+    if(bt==='yn') return isOpp?'No':'Yes';
+    return isOpp?'Side B':'Side A';
+  }
+  function render(node, isOpp){
+    var rows=collect(node); if(!rows.length) return '';
+    var h='<div style="color:#666;font-size:11px;margin:8px 0 4px">'+(node.sideID||sideName(node,isOpp))+(node.fairOddsAvailable?'':'')+'</div>';
+    rows.forEach(function(l,i){
+      var isBM = l.book==='bookmakereu';
+      h+='<div class="lcard'+(i===0?' best':'')+'" style="padding:8px 12px"><div><div class="lbook"'+(isBM?' style="color:#38bdf8"':'')+'>'+(isBM?'🌊 ':'')+sgoName(l.book)+(SGO_NAMES[l.book]?'':' ('+l.book+')')+'</div>';
+      if(i===0) h+='<div class="lbest">★ Best</div>';
+      if(l.link) h+='<a href="'+l.link+'" target="_blank" class="llink">Open bet slip →</a>';
+      h+='</div><div class="lodds" style="color:'+(parseFloat(l.am)>0?'#00ff88':'#e8e8f0')+'">'+amFmt(l.am)+(l.line!=null?' <span style="font-size:11px;color:#666">@'+l.line+'</span>':'')+'</div></div>';
+    });
+    return h;
+  }
+  var html='<div style="padding:10px 12px;background:#0d0d14;border-top:1px solid #2a2a3d">';
+  html+='<div class="stats" style="margin-bottom:8px">All books · '+(x.label||'')+'</div>';
+  html+=render(od,false);
+  if(opp) html+=render(opp,true);
+  html+='<div style="font-size:10px;color:#555;margin-top:8px">Sorted best price first. 🌊 = BookMaker.eu. Same feed as the scan (no extra API cost).</div></div>';
+  box.innerHTML=html;
+}
+
+async function discoverLeagues(){
+  var key=document.getElementById('opkey').value.trim();
+  var box=document.getElementById('oleaguesExtra');
+  if(!key){ box.innerHTML='<div class="err">Paste your SportsGameOdds API key first.</div>'; return; }
+  if(box.innerHTML){ box.innerHTML=''; return; } // toggle off
+  box.innerHTML='<div class="prog">Loading your leagues...</div>';
+  var url='https://api.sportsgameodds.com/v2/leagues?apiKey='+encodeURIComponent(key);
+  var resp=await sgoFetch(url, key);
+  if(!resp){ box.innerHTML='<div class="err">Could not load leagues. Check key / Worker.</div>'; return; }
+  if(resp.success===false){ box.innerHTML='<div class="err"><strong>SGO said:</strong> '+(resp.error||'unknown')+'</div>'; return; }
+  var list = Array.isArray(resp.data)?resp.data:(Array.isArray(resp)?resp:[]);
+  if(!list.length){ box.innerHTML='<div class="msg" style="padding:12px">No leagues returned.</div>'; return; }
+  // IDs already shown as buttons
+  var shown={}; document.querySelectorAll('#oleagues [data-l]').forEach(function(b){ shown[b.dataset.l]=true; });
+  // Build a toggleable chip per league
+  var h='<div class="slabel" style="margin-top:4px">Your key supports '+list.length+' leagues — tap to add to scan:</div><div class="sports" id="oleaguesDynamic">';
+  list.forEach(function(lg){
+    var id = lg.leagueID || lg.id || lg.name; if(!id) return;
+    var nm = lg.name || lg.shortName || id;
+    var already = shown[id];
+    h+='<div class="sb'+(already?' on':'')+'" data-l="'+id+'" title="'+id+'">'+nm+(already?' ✓':'')+'</div>';
+  });
+  h+='</div><div style="font-size:10px;color:#555;margin-top:4px">✓ = already in your league list above. Tapping any chip here includes it in the next scan.</div>';
+  box.innerHTML=h;
+  // Wire the dynamic chips into the same selection set
+  var dyn=document.getElementById('oleaguesDynamic');
+  dyn.addEventListener('click',function(e){ var b=e.target.closest('[data-l]'); if(b) b.classList.toggle('on'); });
+}
+
+async function checkSgoUsage(){
+  var key=document.getElementById('opkey').value.trim();
+  var box=document.getElementById('ousage');
+  if(!key){ box.innerHTML='<div class="err">Paste your SportsGameOdds API key first.</div>'; return; }
+  box.innerHTML='<div class="prog">Checking usage...</div>';
+  var url='https://api.sportsgameodds.com/v2/account/usage?apiKey='+encodeURIComponent(key);
+  var resp=await sgoFetch(url, key);
+  if(!resp){ box.innerHTML='<div class="err">Could not reach usage endpoint. Check key / Worker.</div>'; return; }
+  // SGO returns usage data; structure can be {success,data:{...}} or {...}
+  var d = resp.data || resp;
+  function pick(){ for(var i=0;i<arguments.length;i++){ var path=arguments[i].split('.'); var v=d; var ok=true; for(var j=0;j<path.length;j++){ if(v&&typeof v==='object'&&path[j] in v){ v=v[path[j]]; } else { ok=false; break; } } if(ok&&v!=null&&typeof v!=='object') return v; } return null; }
+  // Try common field names for requests + objects
+  var reqUsed = pick('requests.used','rateLimits.perMonth.requests.used','requestsUsed','monthlyRequestsUsed');
+  var reqLimit= pick('requests.max','requests.limit','rateLimits.perMonth.requests.max','requestsMax','monthlyRequestLimit');
+  var objUsed = pick('objects.used','rateLimits.perMonth.objects.used','objectsUsed','monthlyObjectsUsed');
+  var objLimit= pick('objects.max','objects.limit','rateLimits.perMonth.objects.max','objectsMax','monthlyObjectLimit');
+  var tier = pick('tier','plan','planName','subscription.tier','subscription.plan');
+
+  var h='<div class="po-box connected" style="margin-top:6px"><div class="po-title">📊 SportsGameOdds Usage'+(tier?' · '+tier:'')+'<span class="po-status ok">live</span></div>';
+  function bar(label,used,limit){
+    if(used==null) return '';
+    var pct = (limit&&limit>0)? Math.min(100,Math.round(used/limit*100)) : null;
+    var color = pct==null?'#38bdf8':(pct>=90?'#ff4757':pct>=70?'#f59e0b':'#00ff88');
+    var s='<div style="margin:8px 0"><div style="font-size:12px;color:#888;display:flex;justify-content:space-between"><span>'+label+'</span><span style="color:'+color+'">'+used.toLocaleString()+(limit?' / '+limit.toLocaleString():'')+(pct!=null?' ('+pct+'%)':'')+'</span></div>';
+    if(pct!=null) s+='<div class="prog-bar" style="margin-top:4px"><div class="prog-fill" style="width:'+pct+'%;background:'+color+'"></div></div>';
+    s+='</div>'; return s;
+  }
+  var body='';
+  body+=bar('Requests this month', reqUsed, reqLimit);
+  body+=bar('Objects this month', objUsed, objLimit);
+  if(!body){
+    // Fallback: show whatever fields came back
+    body='<div style="font-size:11px;color:#888;font-family:monospace;white-space:pre-wrap;word-break:break-all">'+JSON.stringify(d,null,2).slice(0,800)+'</div>';
+  }
+  h+=body;
+  h+='<div style="font-size:11px;color:#555;margin-top:8px">Resets monthly. Checking usage is free (doesn\'t count against quota).</div></div>';
+  box.innerHTML=h;
+}
+
+// ── Check which bookmaker slugs THIS key can access ───────────────
+// SGO has no "list my bookmakers" endpoint, so we probe empirically:
+// one tiny /v2/events request per candidate slug. SGO either (a) rejects
+// it as not-in-tier ("bookmakerID X is unavailable"), proving it's gated,
+// or (b) accepts it — proving your plan allows it. If accepted AND prices
+// come back, we also show a live count. Probes in-season major leagues so
+// gating is detected regardless of what's on the board today.
+async function checkSgoBooks(){
+  var key=document.getElementById('opkey').value.trim();
+  var box=document.getElementById('obooks');
+  if(!key){ box.innerHTML='<div class="err">Paste your SportsGameOdds API key first.</div>'; return; }
+
+  // Candidates: BookMaker + your domestic set + the two prediction markets
+  // + known premium books as tier markers so you can see where the wall is.
+  var targets=['bookmakereu','draftkings','fanduel','betmgm','caesars','fanatics','bet365','thescorebet','kalshi','polymarket'];
+  var premiumProbe=['pinnacle','prizepicks','circa'];
+  var candidates=targets.concat(premiumProbe).filter(function(v,i,a){return a.indexOf(v)===i;});
+  var probeLeagues='NFL,NBA,MLB,NHL,UFC,EPL'; // whatever's in season returns events
+
+  var NICE={bookmakereu:'BookMaker.eu',draftkings:'DraftKings',fanduel:'FanDuel',betmgm:'BetMGM',caesars:'Caesars',espnbet:'ESPN Bet',thescorebet:'theScore',kalshi:'Kalshi',polymarket:'Polymarket',pinnacle:'Pinnacle',bet365:'Bet365',fanatics:'Fanatics',prizepicks:'PrizePicks',circa:'Circa'};
+  function nm(b){ return NICE[b]||b; }
+
+  var results={}; var done=0;
+  box.innerHTML='<div class="prog">Probing '+candidates.length+' bookmakers (one tiny request each)...</div>';
+
+  for(var ci=0; ci<candidates.length; ci++){
+    var b=candidates[ci];
+    box.querySelector('.prog') && (box.querySelector('.prog').textContent='Probing '+nm(b)+' ('+(ci+1)+'/'+candidates.length+')...');
+    var url='https://api.sportsgameodds.com/v2/events?apiKey='+encodeURIComponent(key)
+            +'&leagueID='+encodeURIComponent(probeLeagues)
+            +'&oddsAvailable=true&bookmakerID='+encodeURIComponent(b)+'&limit=2';
+    var resp=await sgoFetch(url, key);
+    if(!resp){ results[b]={state:'error',note:'no response'}; done++; continue; }
+    if(resp.success===false){
+      var em=(resp.error||'')+'';
+      if(/unavailable|not\s+available|not\s+included|upgrade|tier|plan/i.test(em)) results[b]={state:'gated',note:em};
+      else if(/unknown|invalid|not\s+found|no\s+such/i.test(em)) results[b]={state:'unknown',note:em};
+      else results[b]={state:'error',note:em};
+      done++; continue;
+    }
+    // Accepted by the plan. Now count usable prices for this slug.
+    var evs=Array.isArray(resp.data)?resp.data:[];
+    var cnt=0;
+    evs.forEach(function(ev){
+      var odds=ev.odds||{};
+      Object.keys(odds).forEach(function(oid){
+        var node=odds[oid]; if(!node||!node.byBookmaker) return;
+        var bb=node.byBookmaker[b];
+        if(bb&&bb.available!==false&&bb.odds!=null) cnt++;
+      });
+    });
+    results[b]={state:'ok',count:cnt};
+    done++;
+  }
+
+  // Render
+  function row(b){
+    var r=results[b]||{state:'?'};
+    var col,tag,sub;
+    if(r.state==='ok'&&r.count>0){ col='#00ff88'; tag='✅ Available'; sub=r.count+' live prices now'; }
+    else if(r.state==='ok'){ col='#9aa'; tag='✅ Available'; sub='allowed by your plan · 0 markets on board right now'; }
+    else if(r.state==='gated'){ col='#f59e0b'; tag='🚫 Not in your tier'; sub='upgrade to access'; }
+    else if(r.state==='unknown'){ col='#ff6b6b'; tag='⚠️ Slug not recognized'; sub='SGO didn\'t know this ID — name may differ'; }
+    else { col='#ff6b6b'; tag='❔ Couldn\'t check'; sub=(r.note||'error').slice(0,60); }
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #20202c">'
+      +'<div><div style="font-weight:700;color:'+(b==='bookmakereu'?'#38bdf8':'#e8e8f0')+'">'+(b==='bookmakereu'?'🌊 ':'')+nm(b)+' <span style="color:#555;font-weight:400;font-size:11px">'+b+'</span></div>'
+      +'<div style="font-size:11px;color:#777">'+sub+'</div></div>'
+      +'<div style="color:'+col+';font-size:12px;font-weight:700;text-align:right;flex-shrink:0;margin-left:10px">'+tag+'</div></div>';
+  }
+  var h='<div class="po-box connected" style="margin-top:6px"><div class="po-title">📋 Your accessible books<span class="po-status ok">probed</span></div>';
+  h+='<div style="font-size:11px;color:#a78bfa;margin:4px 0 8px">Your two prediction-market targets:</div>';
+  h+=row('kalshi')+row('polymarket');
+  h+='<div style="font-size:11px;color:#888;margin:10px 0 4px">Your hedge books:</div>';
+  ['bookmakereu','draftkings','fanduel','betmgm','caesars','fanatics','bet365','thescorebet'].forEach(function(b){ h+=row(b); });
+  h+='<div style="font-size:11px;color:#888;margin:10px 0 4px">Premium books (tier markers):</div>';
+  premiumProbe.forEach(function(b){ h+=row(b); });
+  h+='<div style="font-size:11px;color:#555;margin-top:10px">🚫 = your plan blocks it (Pro/All-Star only). ✅ grey = allowed but nothing on the board this moment (try during NFL/NBA hours). This probe used '+candidates.length+' small requests.</div></div>';
+  box.innerHTML=h;
+}
+
+async function scanOffshore(){
+  var key = document.getElementById('opkey').value.trim();
+  var usStake = parseFloat(document.getElementById('obank').value)||300;
+  var roundEl = document.querySelector('#oround [data-r].on');
+  var roundTo = roundEl ? parseInt(roundEl.dataset.r) : 100;
+  var min = parseFloat(document.getElementById('omine').value)||0.5;
+  var maxML = parseFloat(document.getElementById('omaxML').value)||0;
+  var maxTot = parseFloat(document.getElementById('omaxTot').value)||0;
+  var maxProp = parseFloat(document.getElementById('omaxProp').value)||0;
+  var leagues = oGetLeagues();
+  var wantM = oGetMarkets();
+  var filt = oGetFilter();
+  var maxGames = parseInt(document.getElementById('omax').value)||25;
+  var out = document.getElementById('oout');
+  if(!key){ out.innerHTML='<div class="err">Paste your SportsGameOdds API key first.</div>'; return; }
+  if(!leagues.length){ out.innerHTML='<div class="err">Select at least one league.</div>'; return; }
+  if(!wantM.length){ out.innerHTML='<div class="err">Select at least one market.</div>'; return; }
+
+  out.innerHTML=''; oSetProg('Fetching events from SportsGameOdds...');
+
+  var books = [SGO_BOOKMAKER].concat(SGO_DOMESTIC);
+  var wantAlt = wantM.indexOf('alt')>-1;
+  var base = 'https://api.sportsgameodds.com/v2/events';
+  var collected=[], cursor=null, pages=0, droppedBooks=[];
+  do{
+    var url = base+'?apiKey='+encodeURIComponent(key)+'&leagueID='+encodeURIComponent(leagues.join(','))
+            +'&oddsAvailable=true&bookmakerID='+encodeURIComponent(books.join(','))+'&limit='+Math.min(maxGames,50)
+            +(wantAlt?'&includeAltLines=true':'');
+    if(cursor) url += '&cursor='+encodeURIComponent(cursor);
+    var resp = await sgoFetch(url, key);
+    if(!resp || typeof resp!=='object'){ document.getElementById('oprog').style.display='none'; out.innerHTML='<div class="err">No response from SportsGameOdds. Check your key / Worker relay.</div>'; return; }
+    if(resp.success===false){
+      var em = (resp.error||'')+'';
+      // If a specific bookmaker is gated, drop it and retry automatically.
+      var m = em.match(/bookmakerID\s+(\S+)\s+is unavailable/i);
+      if(m && books.indexOf(m[1])>-1 && m[1]!==SGO_BOOKMAKER){
+        droppedBooks.push(m[1]);
+        books = books.filter(function(b){ return b!==m[1]; });
+        oSetProg('Dropped '+m[1]+' (not in your tier), retrying...');
+        continue; // retry same cursor with reduced book list
+      }
+      document.getElementById('oprog').style.display='none';
+      out.innerHTML='<div class="err"><strong>SGO said:</strong> '+em+'</div>';
+      return;
+    }
+    var batch = Array.isArray(resp.data)?resp.data:[];
     collected = collected.concat(batch);
     cursor = resp.nextCursor || null; pages++;
-  } while (cursor && collected.length < maxGames && pages < 6);
-  console.log(sgoLeague + ': ' + collected.length + ' events');
-  return collected.slice(0, maxGames);
-}
+    oSetProg('Fetched '+collected.length+' events...');
+  } while(cursor && collected.length<maxGames && pages<8);
 
-async function main() {
-  console.log('ArbEdge (BookMaker) scanner starting at', new Date().toISOString());
+  var events = collected.slice(0, maxGames);
+  if(!events.length){ document.getElementById('oprog').style.display='none'; out.innerHTML='<div class="msg">No events with odds for the selected leagues.</div>'; return; }
 
-  if (!isActiveHour()) { console.log('Outside active hours (6am-10pm ET) — skipping'); process.exit(0); }
+  oSetProg('Analyzing '+events.length+' events (BookMaker vs domestic)...');
+  var arbs=[]; var sawBookmaker=false;
+  OEVENTS_CACHE={}; events.forEach(function(ev){ if(ev&&(ev.eventID||ev.id)) OEVENTS_CACHE[ev.eventID||ev.id]=ev; });
 
-  var config = await loadConfig();
-  if (!config) { console.log('No config — skipping'); process.exit(0); }
-  if (!config.enabled) { console.log('Scanner disabled in config — skipping'); process.exit(0); }
-
-  var state = loadState();
-  var now = Date.now();
-
-  var intervalMin = Number(config.intervalMinutes) || 10;
-  if (intervalMin < 5) intervalMin = 5;
-  var elapsed = now - (state.lastRun || 0);
-  if (elapsed < intervalMin * 60 * 1000 - 90 * 1000) {
-    console.log('Throttled: ' + Math.round(elapsed / 60000) + 'm since last run, interval ' + intervalMin + 'm — skipping');
-    process.exit(0);
-  }
-  state.lastRun = now;
-
-  var minEdge = config.minEdge || 0.5;
-  var inclProps = config.includeProps !== false;        // default ON
-  var inclGameProps = config.includeGameProps !== false; // default ON
-  var sportKeys = config.sports || ['baseball_mlb', 'basketball_nba', 'americanfootball_nfl'];
-  var leagues = sportKeys.map(function (s) { return SPORT_TO_SGO[s]; }).filter(function (v, i, a) { return v && a.indexOf(v) === i; });
-  if (!leagues.length) { console.log('No SGO-supported leagues selected — skipping'); saveState(state); process.exit(0); }
-  console.log('Leagues:', leagues.join(', '), '· min edge', minEdge + '% · interval', intervalMin + 'm · props', inclProps, '· gameProps', inclGameProps);
-
-  var allArbs = [];
-  for (var i = 0; i < leagues.length; i++) {
-    var events = await fetchLeague(leagues[i], 50);
-    scanEvents(events, minEdge, allArbs, inclProps, inclGameProps);
-    await new Promise(function (r) { setTimeout(r, 300); });
-  }
-  allArbs.sort(function (a, b) { return b.edge - a.edge; });
-  console.log('Found', allArbs.length, 'BookMaker arbs (after stale + sanity filters)');
-
-  // ── Dedup: refresh live arbs, keep only those notified < cap ──
-  if (!state.seen) state.seen = {};
-  allArbs.forEach(function (x) { var s = arbSig(x); if (!state.seen[s]) state.seen[s] = { n: 0, t: now }; state.seen[s].t = now; });
-  var eligible = allArbs.filter(function (x) { return (state.seen[arbSig(x)].n || 0) < NOTIFY_CAP; });
-  Object.keys(state.seen).forEach(function (s) { if (now - (state.seen[s].t || 0) > PRUNE_MS) delete state.seen[s]; });
-
-  if (!eligible.length) {
-    console.log(allArbs.length + ' arbs present, all already notified ' + NOTIFY_CAP + 'x — staying quiet');
-    saveState(state); process.exit(0);
-  }
-
-  var top = eligible.slice(0, 3);
-  top.forEach(function (x) { state.seen[arbSig(x)].n = (state.seen[arbSig(x)].n || 0) + 1; });
-  var lines = top.map(function (x) {
-    var tag = x.kind === 'PROP' ? '🎯 ' : (x.kind === 'GAME PROP' ? '⏱ ' : '');
-    return '+' + x.edge.toFixed(2) + '% | ' + tag + x.game + ' (' + x.league + ')\n' + x.label + '\n🌊 BookMaker ' + amFmt(x.bmLeg.am) + ' ' + x.bmLeg.name + '  vs  ' + sgoName(x.domLeg.book) + ' ' + amFmt(x.domLeg.am) + ' ' + x.domLeg.name + '  | $' + x.profit.toFixed(2) + ' / $100';
+  // ── Per-book coverage diagnostic ──────────────────────────────
+  // Counts every bookmaker SGO actually returned a usable price for,
+  // across the whole feed. This is the only reliable way to know if
+  // Kalshi / Polymarket (or any book) are really coming back vs. being
+  // silently absent. Counts raw slugs so unexpected SGO IDs are exposed.
+  var bookCoverage={};
+  events.forEach(function(ev){
+    var odds=ev.odds||{};
+    Object.keys(odds).forEach(function(oid){
+      var node=odds[oid]; if(!node||!node.byBookmaker) return;
+      Object.keys(node.byBookmaker).forEach(function(bk){
+        var bb=node.byBookmaker[bk];
+        if(!bb||bb.available===false||bb.odds==null) return;
+        bookCoverage[bk]=(bookCoverage[bk]||0)+1;
+      });
+    });
   });
-  var more = eligible.length - top.length;
-  var msg = lines.join('\n\n') + (more > 0 ? '\n...and ' + more + ' more new' : '') + '\n\n⚠️ Place BookMaker first — sharp side moves fastest.';
-  var title = '🌊 ' + eligible.length + ' BookMaker Arb' + (eligible.length > 1 ? 's' : '') + ' — ArbEdge';
-  var priority = eligible[0].edge >= 1 ? 1 : 0;
 
-  await sendPushover(title, msg, priority);
-  saveState(state);
-  console.log('Done — notified ' + top.length + ', tracking ' + Object.keys(state.seen).length + ' sigs');
+  // Build a clean, search-ready bet string for the Copy-bet button.
+  function obBetStr(x, which){
+    var leg = which==='bm' ? x.bmLeg : x.domLeg;
+    var bookNm = which==='bm' ? 'BookMaker.eu' : sgoName(x.domLeg.book);
+    return x.game + ' — ' + x.label + ' — ' + leg.name + ' (' + amFmt(leg.am) + ') @ ' + bookNm;
+  }
+  function obEsc(s){ return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function bestDomestic(node){
+    if(!node || !node.byBookmaker) return null;
+    var best=null, decs=[];
+    SGO_DOMESTIC.forEach(function(bk){
+      var bb=node.byBookmaker[bk]; if(!bb||bb.available===false||bb.odds==null) return;
+      var d=amDec(bb.odds); if(!d||d<=1) return;
+      decs.push(d);
+      if(!best||d>best.dec) best={book:bk,am:bb.odds,dec:d,line:(bb.overUnder!=null?bb.overUnder:bb.spread),link:bb.deeplink||bb.deepLink||bb.link||null};
+    });
+    if(best){
+      // Stale-line detector: how far the winning price sits above the next
+      // domestic book on the SAME outcome. A book that's 5%+ longer than its
+      // peers is usually a stale/error quote, not a real edge.
+      decs.sort(function(a,b){return b-a;});
+      best.nBooks=decs.length;
+      best.second=decs.length>1?decs[1]:null;
+      best.outlier=best.second?(best.dec>=best.second*1.05):false;
+      best.outlierPct=best.second?((best.dec/best.second-1)*100):0;
+    }
+    return best;
+  }
+  function bookmakerSide(node){
+    if(!node||!node.byBookmaker) return null;
+    var bb=node.byBookmaker[SGO_BOOKMAKER]; if(!bb||bb.available===false||bb.odds==null) return null;
+    var d=amDec(bb.odds); if(!d||d<=1) return null;
+    return {book:SGO_BOOKMAKER,am:bb.odds,dec:d,line:(bb.overUnder!=null?bb.overUnder:bb.spread),link:bb.deeplink||bb.deepLink||bb.link||null};
+  }
+
+  events.forEach(function(ev){
+    var odds=ev.odds||{}; if(!odds) return;
+    var live = ev.status&&(ev.status.started===true||ev.status.live===true);
+    var ended = ev.status&&(ev.status.ended===true||ev.status.completed===true);
+    if(ended) return;
+    if(filt==='live'&&!live) return;
+    if(filt==='upcoming'&&live) return;
+    var home=ev.teams&&ev.teams.home, away=ev.teams&&ev.teams.away;
+    function tn(t){ if(!t)return ''; if(typeof t==='string')return t; return (t.names&&(t.names.short||t.names.long))||t.name||t.shortName||''; }
+    var homeName=tn(home)||'Home', awayName=tn(away)||'Away';
+    var start=ev.status&&(ev.status.startsAt||ev.status.startTime)||ev.scheduled||null;
+    var leagueName = ev.leagueID || (ev.league&&(ev.league.name||ev.league.shortName)) || ev.sportID || '';
+    var gl=awayName+' @ '+homeName;
+
+    Object.keys(odds).forEach(function(oddID){
+      var od=odds[oddID]; if(!od) return;
+      var bt=od.betTypeID, side=od.sideID;
+      var primarySides={ml:'home',sp:'home',ou:'over',yn:'yes'};
+      var isProp = !!od.playerID;
+      var isGameProp = !isProp && od.periodID && od.periodID!=='game'; // halves/quarters/periods
+      // market gating
+      if(isProp){ if(wantM.indexOf('props')<0) return; }
+      else if(isGameProp){ if(wantM.indexOf('gameprops')<0) return; }
+      else {
+        if(bt==='ml'&&wantM.indexOf('ml')<0) return;
+        if(bt==='sp'&&wantM.indexOf('sp')<0) return;
+        if(bt==='ou'&&wantM.indexOf('ou')<0) return;
+      }
+      if(['ml','sp','ou','yn'].indexOf(bt)<0) return;
+      if(side!==primarySides[bt]) return;
+
+      var oppID = od.opposingOddID; if(!oppID) return;
+      var opp = odds[oppID]; if(!opp) return;
+
+      var bmHere=bookmakerSide(od), domOpp=bestDomestic(opp);
+      var domHere=bestDomestic(od), bmOpp=bookmakerSide(opp);
+      if(bmHere||bmOpp) sawBookmaker=true;
+
+      function consider(legBM, legDOM, bmIsSideA, nameA, nameB){
+        if(!legBM||!legDOM) return;
+        var inv=(1/legBM.dec)+(1/legDOM.dec);
+        var edge=(1-inv)*100;
+        if(inv>=1||edge<min) return;
+        if((bt==='ou')&&legBM.line!=null&&legDOM.line!=null){
+          var overLine = bmIsSideA?legBM.line:legDOM.line;
+          var underLine= bmIsSideA?legDOM.line:legBM.line;
+          if(parseFloat(underLine)<parseFloat(overLine)) return;
+        }
+        if(bt==='sp'&&legBM.line!=null&&legDOM.line!=null){
+          if((parseFloat(legBM.line)+parseFloat(legDOM.line))<0) return;
+        }
+        // Fix the DOMESTIC stake at a round number; size BookMaker to balance.
+        var sDOM = usStake;
+        if(roundTo>0) sDOM = Math.round(usStake/roundTo)*roundTo;
+        if(sDOM<=0) sDOM = roundTo>0?roundTo:usStake;
+        // Equal-payout hedge: sBM * decBM = sDOM * decDOM
+        var sBM = sDOM*legDOM.dec/legBM.dec;
+        var payout = sDOM*legDOM.dec; // == sBM*legBM.dec
+        var totalStaked = sDOM + sBM;
+        var profit = payout - totalStaked;
+        var roi = (profit/totalStaked)*100;
+        // Which BookMaker max applies to this market?
+        var cap = isProp ? maxProp : (bt==='ou' ? maxTot : maxML);
+        var overMax = (cap>0 && sBM>cap);
+        // If over the cap, compute the largest arb that FITS: cap BookMaker, shrink domestic.
+        var fit=null;
+        if(overMax){
+          var fitBM = cap;
+          var fitDOM = fitBM*legBM.dec/legDOM.dec; // balance back to domestic
+          var fitPayout = fitBM*legBM.dec;
+          var fitTotal = fitDOM+fitBM;
+          fit={ bm:fitBM, dom:fitDOM, profit:fitPayout-fitTotal, total:fitTotal };
+        }
+        var mLabel = od.marketName || (od.statID? (od.statID.replace(/_/g,' ')) : bt.toUpperCase());
+        if(isGameProp && od.periodID){ mLabel = (od.periodID).toUpperCase()+' '+mLabel; }
+        arbs.push({
+          game:gl, league:leagueName, eventID:ev.eventID||ev.id, oddID:oddID, isProp:isProp, isGameProp:isGameProp, live:!!live, start:start, edge:edge, profit:profit, roi:roi, totalStaked:totalStaked,
+          cap:cap, overMax:overMax, fit:fit, label:mLabel,
+          domOutlier:!!legDOM.outlier, domOutlierPct:legDOM.outlierPct||0, domNBooks:legDOM.nBooks||1,
+          bmLeg:{book:legBM.book,am:legBM.am,stake:sBM,line:legBM.line,link:legBM.link,name:nameA},
+          domLeg:{book:legDOM.book,am:legDOM.am,stake:sDOM,line:legDOM.line,link:legDOM.link,name:nameB}
+        });
+      }
+
+      function sideName(which){
+        if(bt==='ml') return which==='primary'?homeName:awayName;
+        if(bt==='sp') return which==='primary'?homeName:awayName;
+        if(bt==='ou') return which==='primary'?'Over':'Under';
+        if(bt==='yn') return which==='primary'?'Yes':'No';
+        return which;
+      }
+      var nmPrimary=sideName('primary'), nmOpp=sideName('opp');
+      function withLine(nm, leg){ if(leg&&leg.line!=null&&(bt==='ou'||bt==='sp')) return nm+' '+(parseFloat(leg.line)>0&&bt==='sp'?'+':'')+leg.line; return nm; }
+
+      consider(bmHere, domOpp, true, withLine(nmPrimary,bmHere), withLine(nmOpp,domOpp));
+      consider(bmOpp, domHere, false, withLine(nmOpp,bmOpp), withLine(nmPrimary,domHere));
+    });
+  });
+
+  document.getElementById('oprog').style.display='none';
+  var seen={}; arbs=arbs.filter(function(a){var k=a.game+'|'+a.label+'|'+a.bmLeg.am+'|'+a.domLeg.book; if(seen[k])return false; seen[k]=1; return true;});
+  arbs.sort(function(a,b){ return b.edge-a.edge; });
+  OARB_CACHE=arbs;
+
+  var now2=new Date().toLocaleTimeString();
+  var h='<div class="stats">Scanned '+events.length+' events · '+arbs.length+' BookMaker arbs · '+now2+'</div>';
+
+  // Coverage strip: green = book returned prices, red = requested but 0.
+  var reqBooks=[SGO_BOOKMAKER].concat(SGO_DOMESTIC);
+  var covParts=reqBooks.map(function(b){
+    if(droppedBooks.indexOf(b)>-1) return '<span style="color:#f59e0b">'+sgoName(b)+' dropped</span>';
+    var n=bookCoverage[b]||0;
+    return '<span style="color:'+(n>0?'#00ff88':'#ff4757')+'">'+sgoName(b)+' '+n+'</span>';
+  });
+  var extra=Object.keys(bookCoverage).filter(function(b){return reqBooks.indexOf(b)<0;});
+  h+='<div class="stats" style="font-size:11px;line-height:1.8;text-align:left">📡 Book coverage (usable prices this scan): '+covParts.join(' · ')
+    +(extra.length?'<br><span style="color:#888">Other slugs SGO returned: '+extra.map(function(b){return b+' ('+bookCoverage[b]+')';}).join(', ')+'</span>':'')
+    +'<br><span style="color:#666">Red = 0 prices returned. If Kalshi/Polymarket show 0 with no amber "dropped" tag, SGO has no overlapping markets in these leagues right now (or the slug differs — check "Other slugs" above).</span></div>';
+
+  if(droppedBooks.length) h+='<div class="alert-bar" style="background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.3);color:#f59e0b">⚠️ Skipped (not in your tier): '+droppedBooks.join(', ')+'</div>';
+  h+='<div class="alert-bar" style="background:rgba(56,189,248,.1);border-color:rgba(56,189,248,.3);color:#38bdf8">'+(sawBookmaker?'✓ BookMaker.eu present — locked as one leg of every arb below':'⚠️ No BookMaker.eu odds in feed (check plan/leagues)')+'</div>';
+
+  if(!arbs.length){ h+='<div class="msg">No BookMaker arbs above '+min+'% right now.<br><br>BookMaker is sharp, so edges are rare and small — try lowering Min % to 0.2, enabling props, or adding leagues.</div>'; }
+  else {
+    arbs.forEach(function(x,idx){
+      h+='<div class="card'+(x.overMax?' live':x.edge>2?' hot':x.live?' live':'')+'"><div class="ctop"><div style="flex:1;min-width:0"><div class="gmeta">🔒 '+(x.league?x.league+' · ':'')+'BOOKMAKER'+(x.isProp?' · PROP':x.isGameProp?' · GAME PROP':'')+'</div><span class="mktag '+(x.isProp?'props':x.isGameProp?'gameprops':'h2h')+'">'+x.label+'</span>';
+      if(x.overMax) h+='<span class="mktag live">🚫 OVER MAX</span>';
+      if(x.live) h+='<span class="mktag live">🔴 LIVE</span>';
+      if(x.domOutlier) h+='<span class="mktag live">⚠️ STALE? '+sgoName(x.domLeg.book)+' +'+x.domOutlierPct.toFixed(0)+'% vs other books</span>';
+      h+='<div class="gtitle">'+x.game+'</div>';
+      if(x.start) h+='<div class="gdate-tag">'+new Date(x.start).toLocaleString()+'</div>';
+      h+='</div><div style="text-align:right;flex-shrink:0"><div class="roi">+'+x.edge.toFixed(2)+'%</div><div class="psub">$'+x.profit.toFixed(2)+' profit</div><div class="psub">on $'+x.totalStaked.toFixed(0)+' staked</div></div></div><div class="sides">';
+      // BookMaker leg (exact hedge), then domestic leg (round stake)
+      h+='<div class="side"><div class="book" style="color:#38bdf8">🌊 BookMaker.eu</div><div class="team">'+x.bmLeg.name+'</div><div class="odds">'+amFmt(x.bmLeg.am)+'</div><div class="stake">Bet $'+x.bmLeg.stake.toFixed(2)+'</div>';
+      if(x.bmLeg.link) h+='<a href="'+x.bmLeg.link+'" target="_blank" class="open-link">Open bet slip →</a>';
+      else h+='<a href="'+sgoHome('bookmakereu')+'" target="_blank" class="open-link">Open BookMaker.eu →</a>';
+      h+='<button class="copy-bet" data-bet="'+obEsc(obBetStr(x,'bm'))+'" onclick="obCopyBet(this)">📋 Copy bet</button>';
+      h+='</div>';
+      h+='<div class="side"><div class="book">'+sgoName(x.domLeg.book)+'</div><div class="team">'+x.domLeg.name+'</div><div class="odds">'+amFmt(x.domLeg.am)+'</div><div class="stake" style="color:#fbbf24;font-weight:700">Bet $'+x.domLeg.stake.toFixed(0)+'</div>';
+      if(x.domLeg.link) h+='<a href="'+x.domLeg.link+'" target="_blank" class="open-link">Open bet slip →</a>';
+      else if(sgoHome(x.domLeg.book)) h+='<a href="'+sgoHome(x.domLeg.book)+'" target="_blank" class="open-link">Open '+sgoName(x.domLeg.book)+' →</a>';
+      h+='<button class="copy-bet" data-bet="'+obEsc(obBetStr(x,'dom'))+'" onclick="obCopyBet(this)">📋 Copy bet</button>';
+      h+='</div>';
+      h+='</div>';
+      h+='<div class="place-first-note">⚠️ '+sgoName(x.domLeg.book)+' is your fixed $'+x.domLeg.stake.toFixed(0)+' leg. Place <strong>BookMaker.eu first</strong> ($'+x.bmLeg.stake.toFixed(2)+') — sharp side moves fastest — then lock '+sgoName(x.domLeg.book)+'.</div>';
+      if(x.overMax){
+        h+='<div class="middle-note" style="background:rgba(255,71,87,.12);border-top:1px solid rgba(255,71,87,.4);color:#ff6b6b">🚫 BookMaker hedge $'+x.bmLeg.stake.toFixed(2)+' exceeds your max ($'+x.cap.toFixed(0)+').';
+        if(x.fit) h+=' To fit: bet <strong>$'+x.fit.bm.toFixed(2)+'</strong> on BookMaker + <strong>$'+x.fit.dom.toFixed(2)+'</strong> on '+sgoName(x.domLeg.book)+' → $'+x.fit.profit.toFixed(2)+' profit.';
+        h+='</div>';
+      }
+      if(x.domOutlier){
+        h+='<div class="middle-note" style="background:rgba(245,158,11,.12);border-top:1px solid rgba(245,158,11,.4);color:#fbbf24">⚠️ '+sgoName(x.domLeg.book)+'\u2019s price is '+x.domOutlierPct.toFixed(0)+'% longer than the next domestic book on this exact outcome — that\u2019s often a stale/error line, not a real edge. Tap \u201cShow all book lines\u201d below and confirm '+sgoName(x.domLeg.book)+' is actually offering it before betting.</div>';
+      }
+      h+='<div style="padding:8px 12px;border-top:1px solid #2a2a3d"><button class="lookup-btn" onclick="showOffshoreLines('+idx+')">📋 Show all book lines for this market</button></div>';
+      h+='<div id="olines-'+idx+'"></div>';
+      h+='</div>';
+    });
+  }
+  out.innerHTML=h;
 }
 
-main().catch(function (e) { console.error('Fatal error:', e); process.exit(1); });
+function toggleAuto(){
+  autoOn=!autoOn;var btn=document.getElementById('autoBtn');
+  if(autoOn){btn.textContent='⏹ Stop';btn.style.background='#ff4757';btn.style.color='#fff';scanAll();timer=setInterval(scanAll,60000)}
+  else{btn.textContent='⏱ Auto';btn.style.background='#00ff88';btn.style.color='#000';clearInterval(timer);setStatus(false,'auto stopped')}
+}
+</script>
+<script>
+// ── TrueLine tab (Module 1: true odds + hold/EV, on The Odds API) ──
+(function(){
+  function tlKey(){ return (document.getElementById('key').value||'').trim(); }
+  function tlAmDec(p){p=parseFloat(p);if(!p)return null;return p>0?p/100+1:100/Math.abs(p)+1;}
+  function tlDecAm(d){if(!d||d<=1)return null;return d>=2?'+'+Math.round((d-1)*100):''+Math.round(-100/(d-1));}
+  function tlMedian(a){if(!a.length)return null;var s=a.slice().sort(function(x,y){return x-y;});var m=Math.floor(s.length/2);return s.length%2?s[m]:(s[m-1]+s[m])/2;}
+  function tlEsc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  function tlErr(m){document.getElementById('tlErr').innerHTML='<div class="err">'+tlEsc(m)+'</div>';}
+  function tlClrErr(){document.getElementById('tlErr').innerHTML='';}
+  function tlCredits(res){try{var r=res.headers.get('x-requests-remaining');if(r!=null)document.getElementById('tlCredits').textContent='· '+r+' credits left';}catch(e){}}
+
+  var tlSportsLoaded=false, TL=[];
+
+  window.tlInit=function(){
+    if(!tlSportsLoaded && tlKey()) tlLoadSports();
+  };
+
+  async function tlLoadSports(){
+    var key=tlKey(); if(!key){return;}
+    try{
+      var res=await fetch('https://api.the-odds-api.com/v4/sports/?apiKey='+encodeURIComponent(key));
+      tlCredits(res);
+      if(res.status===401){tlErr('Odds API key was rejected — check the key up top.');return;}
+      var data=await res.json();
+      if(!Array.isArray(data)){tlErr('Unexpected response loading sports.');return;}
+      tlClrErr(); tlSportsLoaded=true;
+      var order=['americanfootball_nfl','basketball_nba','baseball_mlb','icehockey_nhl','americanfootball_ncaaf','basketball_ncaab','basketball_wnba','mma_mixed_martial_arts','soccer_epl'];
+      data.sort(function(a,b){var ia=order.indexOf(a.key),ib=order.indexOf(b.key);return (ia<0?99:ia)-(ib<0?99:ib);});
+      var opts=data.filter(function(s){return !s.has_outrights;}).map(function(s){return '<option value="'+tlEsc(s.key)+'">'+tlEsc(s.title)+'</option>';}).join('');
+      document.getElementById('tlSport').innerHTML=opts||'<option value="">No active sports</option>';
+    }catch(e){tlErr('Network error loading sports.');}
+  }
+
+  window.tlLoadGames=async function(){
+    var key=tlKey(); if(!key){tlErr('Paste your Odds API key up top first.');return;}
+    if(!tlSportsLoaded){await tlLoadSports();}
+    var sport=document.getElementById('tlSport').value; if(!sport){return;}
+    document.getElementById('tlGames').innerHTML='<div class="tl-empty"><span class="tl-spin"></span>Loading games…</div>';
+    document.getElementById('tlAnalysis').innerHTML='';
+    try{
+      var res=await fetch('https://api.the-odds-api.com/v4/sports/'+sport+'/odds/?apiKey='+encodeURIComponent(key)+'&regions=us,us2&markets=h2h&oddsFormat=american');
+      tlCredits(res);
+      if(res.status===401){document.getElementById('tlGames').innerHTML='';tlErr('Key rejected.');return;}
+      if(res.status===422){document.getElementById('tlGames').innerHTML='';tlErr('No moneyline available for this sport right now.');return;}
+      var data=await res.json();
+      if(!Array.isArray(data)||!data.length){document.getElementById('tlGames').innerHTML='<div class="tl-empty"><div class="tl-big">No games on the board</div>Nothing upcoming here — try another sport.</div>';return;}
+      tlClrErr(); TL=data;
+      document.getElementById('tlGames').innerHTML=data.map(function(g,i){
+        var t=new Date(g.commence_time);
+        var when=t.toLocaleDateString([], {weekday:'short',month:'short',day:'numeric'})+' · '+t.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
+        var nb=(g.bookmakers||[]).length;
+        return '<div class="tl-game" id="tlg'+i+'" onclick="tlAnalyze('+i+')"><div><div class="tl-teams">'+tlEsc(g.away_team)+' <span style="color:#5C6675">@</span> '+tlEsc(g.home_team)+'</div><div class="tl-when">'+tlEsc(when)+' · '+nb+' books</div></div><div class="tl-chev">analyze →</div></div>';
+      }).join('');
+    }catch(e){document.getElementById('tlGames').innerHTML='';tlErr('Network error loading games.');}
+  };
+
+  window.tlAnalyze=function(i){
+    var g=TL[i]; if(!g)return;
+    document.querySelectorAll('#view-trueline .tl-game').forEach(function(x){x.classList.remove('sel');});
+    var gel=document.getElementById('tlg'+i); if(gel)gel.classList.add('sel');
+
+    var names=[], perBook=[];
+    (g.bookmakers||[]).forEach(function(bk){
+      var mkt=(bk.markets||[]).filter(function(m){return m.key==='h2h';})[0];
+      if(!mkt||!mkt.outcomes||mkt.outcomes.length<2)return;
+      var q={},decs={},tot=0,ok=true;
+      mkt.outcomes.forEach(function(o){var d=tlAmDec(o.price);if(!d){ok=false;return;}decs[o.name]=d;q[o.name]=1/d;tot+=1/d;if(names.indexOf(o.name)<0)names.push(o.name);});
+      if(!ok||tot<=0)return;
+      var fair={};Object.keys(q).forEach(function(n){fair[n]=q[n]/tot;});
+      perBook.push({book:bk.title,fair:fair,hold:(tot-1)*100,dec:decs});
+    });
+    if(perBook.length<1||names.length<2){document.getElementById('tlAnalysis').innerHTML='<div class="err">Not enough book data to de-vig this game yet.</div>';return;}
+
+    var cons={};names.forEach(function(n){var arr=perBook.filter(function(b){return b.fair[n]!=null;}).map(function(b){return b.fair[n];});cons[n]=tlMedian(arr)||0;});
+    var cs=0;names.forEach(function(n){cs+=cons[n];});names.forEach(function(n){cons[n]=cons[n]/cs;});
+
+    var best={};names.forEach(function(n){var bd=0,bb='';perBook.forEach(function(b){if(b.dec[n]&&b.dec[n]>bd){bd=b.dec[n];bb=b.book;}});best[n]={dec:bd,book:bb,ev:(cons[n]*(bd-1)-(1-cons[n]))*100};});
+    var holdMed=tlMedian(perBook.map(function(b){return b.hold;}));
+    var minHold=Math.min.apply(null,perBook.map(function(b){return b.hold;}));
+
+    var three=names.length>=3;
+    var t=new Date(g.commence_time);
+    var when=t.toLocaleDateString([], {weekday:'short',month:'short',day:'numeric'})+' · '+t.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
+
+    var cards=names.map(function(n){var p=cons[n],b=best[n],pos=b.ev>0.01;
+      return '<div class="tl-fo"><div class="tl-name">'+tlEsc(n)+'</div><div class="tl-prob">'+(p*100).toFixed(1)+'<span>%</span></div>'+
+        '<div class="tl-odds">fair '+tlDecAm(1/p)+'</div><div class="tl-bestp">best <b>'+tlDecAm(b.dec)+'</b> @ '+tlEsc(b.book||'—')+'</div>'+
+        '<span class="tl-ev '+(pos?'pos':'neg')+'">'+(pos?'+EV '+b.ev.toFixed(1)+'%':'no edge')+'</span></div>';
+    }).join('');
+
+    var sc=['s0','s1','s2'];
+    var segs=names.slice().sort(function(a,b){return cons[b]-cons[a];}).map(function(n,idx){var w=cons[n]*100;return '<div class="tl-seg '+sc[idx]+'" data-w="'+w+'" style="width:0%">'+(w>14?Math.round(w)+'%':'')+'</div>';}).join('');
+
+    var rows=perBook.slice().sort(function(a,b){return a.hold-b.hold;}).map(function(b){
+      var cheap=Math.abs(b.hold-minHold)<0.001;
+      var px=names.map(function(n){var isB=best[n].book===b.book&&best[n].dec===b.dec[n];return '<span class="tl-px" style="'+(isB?'color:var(--fav)':'')+'">'+tlDecAm(b.dec[n])+'</span>';});
+      var hc=b.hold>=holdMed+1?'hi':(cheap?'lo':'');
+      return '<div class="tl-brow"><div class="tl-bk">'+tlEsc(b.book)+(cheap?' <span class="tl-flag">LOW VIG</span>':'')+'</div><div style="display:flex;gap:12px;justify-content:flex-end">'+px.join('')+'</div><div class="tl-hdc '+hc+'">'+b.hold.toFixed(1)+'%</div></div>';
+    }).join('');
+
+    var bev=names.slice().sort(function(a,b){return best[b].ev-best[a].ev;})[0];
+    var take = best[bev].ev>0.01
+      ? '<b>'+tlEsc(bev)+'</b> at '+tlDecAm(best[bev].dec)+' ('+tlEsc(best[bev].book)+') beats its fair price — about <b style="color:var(--value)">+'+best[bev].ev.toFixed(1)+'%</b> per $100. Real edges are small; confirm the line is still live.'
+      : 'No book is priced above the fair line — every side is −EV once vig is counted. Cheapest vig here is <b>'+minHold.toFixed(1)+'%</b>; anything more is extra tax.';
+
+    document.getElementById('tlAnalysis').innerHTML=
+      '<div class="tl-card"><div class="tl-chead"><div class="tl-mkt">Moneyline · no-vig</div><div class="tl-match">'+tlEsc(g.away_team)+' @ '+tlEsc(g.home_team)+'</div><div class="tl-sub">'+tlEsc(when)+' · consensus of '+perBook.length+' books</div></div>'+
+      '<div class="tl-hero"><div class="tl-fg'+(three?' three':'')+'">'+cards+'</div>'+
+      '<div class="tl-splitwrap"><div class="tl-splitlbl"><span>True probability (vig removed)</span><span>100%</span></div><div class="tl-split" id="tlSplit">'+segs+'</div></div>'+
+      '<div class="tl-vig"><div class="tl-vigtop"><span class="n">'+holdMed.toFixed(1)+'%</span><span class="l">typical vig on this game — the books\u2019 built-in tax</span></div>'+
+      '<div class="tl-vigmeter"><i id="tlVig" style="width:0%"></i></div><div class="tl-vigscale"><span>0%</span><span>fair</span><span>5%</span><span>gouging</span><span>10%+</span></div>'+
+      '<div class="tl-take">'+take+'</div></div>'+
+      '<div class="tl-books"><h3>Every book — price &amp; its vig</h3>'+rows+'</div></div></div>';
+
+    requestAnimationFrame(function(){setTimeout(function(){
+      document.querySelectorAll('#tlSplit .tl-seg').forEach(function(s){s.style.width=s.getAttribute('data-w')+'%';});
+      var vf=document.getElementById('tlVig'); if(vf)vf.style.width=Math.min(holdMed/10*100,100)+'%';
+    },60);});
+  };
+})();
+</script>
+</body>
+</html>
