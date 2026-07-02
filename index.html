@@ -2034,9 +2034,9 @@ function startScan(){scanAll()}
 })();
 
 var SGO_BOOKMAKER = 'bookmakereu';
-var SGO_DOMESTIC = ['draftkings','fanduel','betmgm','caesars','espnbet','thescorebet','kalshi','polymarket'];
-var SGO_NAMES = {bookmakereu:'BookMaker.eu',draftkings:'DraftKings',fanduel:'FanDuel',betmgm:'BetMGM',caesars:'Caesars',espnbet:'ESPN Bet',thescorebet:'theScore',kalshi:'Kalshi',polymarket:'Polymarket'};
-var SGO_HOME = {bookmakereu:'https://www.bookmaker.eu',draftkings:'https://sportsbook.draftkings.com',fanduel:'https://sportsbook.fanduel.com',betmgm:'https://sports.betmgm.com',caesars:'https://sportsbook.caesars.com',espnbet:'https://espnbet.com',thescorebet:'https://www.thescore.bet',kalshi:'https://kalshi.com',polymarket:'https://polymarket.com'};
+var SGO_DOMESTIC = ['draftkings','fanduel','betmgm','caesars','fanatics','bet365','thescorebet','kalshi','polymarket'];
+var SGO_NAMES = {bookmakereu:'BookMaker.eu',draftkings:'DraftKings',fanduel:'FanDuel',betmgm:'BetMGM',caesars:'Caesars',fanatics:'Fanatics',bet365:'Bet365',thescorebet:'theScore',kalshi:'Kalshi',polymarket:'Polymarket'};
+var SGO_HOME = {bookmakereu:'https://www.bookmaker.eu',draftkings:'https://sportsbook.draftkings.com',fanduel:'https://sportsbook.fanduel.com',betmgm:'https://sports.betmgm.com',caesars:'https://sportsbook.caesars.com',fanatics:'https://sportsbook.fanatics.com',bet365:'https://www.bet365.com',thescorebet:'https://www.thescore.bet',kalshi:'https://kalshi.com',polymarket:'https://polymarket.com'};
 function sgoHome(b){ return SGO_HOME[b]||null; }
 function sgoName(b){ return SGO_NAMES[b]||b; }
 
@@ -2204,8 +2204,8 @@ async function checkSgoBooks(){
 
   // Candidates: BookMaker + your domestic set + the two prediction markets
   // + known premium books as tier markers so you can see where the wall is.
-  var targets=['bookmakereu','draftkings','fanduel','betmgm','caesars','espnbet','thescorebet','kalshi','polymarket'];
-  var premiumProbe=['pinnacle','bet365','fanatics','prizepicks','circa'];
+  var targets=['bookmakereu','draftkings','fanduel','betmgm','caesars','fanatics','bet365','thescorebet','kalshi','polymarket'];
+  var premiumProbe=['pinnacle','prizepicks','circa'];
   var candidates=targets.concat(premiumProbe).filter(function(v,i,a){return a.indexOf(v)===i;});
   var probeLeagues='NFL,NBA,MLB,NHL,UFC,EPL'; // whatever's in season returns events
 
@@ -2263,7 +2263,7 @@ async function checkSgoBooks(){
   h+='<div style="font-size:11px;color:#a78bfa;margin:4px 0 8px">Your two prediction-market targets:</div>';
   h+=row('kalshi')+row('polymarket');
   h+='<div style="font-size:11px;color:#888;margin:10px 0 4px">Your hedge books:</div>';
-  ['bookmakereu','draftkings','fanduel','betmgm','caesars','espnbet','thescorebet'].forEach(function(b){ h+=row(b); });
+  ['bookmakereu','draftkings','fanduel','betmgm','caesars','fanatics','bet365','thescorebet'].forEach(function(b){ h+=row(b); });
   h+='<div style="font-size:11px;color:#888;margin:10px 0 4px">Premium books (tier markers):</div>';
   premiumProbe.forEach(function(b){ h+=row(b); });
   h+='<div style="font-size:11px;color:#555;margin-top:10px">🚫 = your plan blocks it (Pro/All-Star only). ✅ grey = allowed but nothing on the board this moment (try during NFL/NBA hours). This probe used '+candidates.length+' small requests.</div></div>';
