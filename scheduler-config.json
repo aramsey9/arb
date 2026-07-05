@@ -10,7 +10,7 @@
     "soccer_epl",
     "boxing_boxing"
   ],
-  "minEdge": 0.5,
-  "intervalMinutes": 6,
-  "lastSaved": "2026-07-05T13:24:23.365Z"
+  "minEdge": 0.1,
+  "intervalMinutes": 5,
+  "lastSaved": "2026-07-05T14:07:06.814Z"
 }
