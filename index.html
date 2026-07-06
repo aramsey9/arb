@@ -288,6 +288,7 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
     <div class="sb" data-l="IT_SERIE_A">⚽ Serie A</div>
     <div class="sb" data-l="FR_LIGUE_1">⚽ Ligue 1</div>
     <div class="sb" data-l="LIGA_MX">⚽ Liga MX</div>
+    <div class="sb on" data-l="INTERNATIONAL_SOCCER">🌍 Intl / World Cup</div>
   </div>
   <button onclick="discoverLeagues()" style="background:#1a1a26;color:#38bdf8;border:1px solid #38bdf8;border-radius:8px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;width:100%;margin-bottom:8px">🔍 Show all leagues my key supports</button>
   <div id="oleaguesExtra"></div>
@@ -2091,6 +2092,7 @@ async function sgoFetch(url, key){
 }
 
 function oSetProg(t){ document.getElementById('oprog').style.display='block'; document.getElementById('oprogText').textContent=t; }
+function oSoccerScope(periodID){var p=(periodID||'game').toLowerCase();if(p==='reg')return " \u00b7 REG 90'";if(p==='ot')return ' \u00b7 EXTRA TIME';if(p==='so')return ' \u00b7 PENALTIES';if(p==='game')return ' \u00b7 FULL EVENT';return ' \u00b7 '+p.toUpperCase();}
 function oGetLeagues(){ var s={}; document.querySelectorAll('#oleagues [data-l].on, #oleaguesDynamic [data-l].on').forEach(function(b){ s[b.dataset.l]=true; }); return Object.keys(s); }
 function oGetMarkets(){ return Array.from(document.querySelectorAll('#omarkets [data-om].on')).map(function(b){return b.dataset.om;}); }
 function oGetFilter(){ var el=document.querySelector('#ofilters [data-of].on'); return el?el.dataset.of:'all'; }
@@ -2430,6 +2432,8 @@ async function scanOffshore(){
     var homeName=tn(home)||'Home', awayName=tn(away)||'Away';
     var start=ev.status&&(ev.status.startsAt||ev.status.startTime)||ev.scheduled||null;
     var leagueName = ev.leagueID || (ev.league&&(ev.league.name||ev.league.shortName)) || ev.sportID || '';
+    var oSportID = ev.sportID||'';
+    var oIsSoccer = (oSportID==='SOCCER')||leagueName==='INTERNATIONAL_SOCCER'||String(leagueName).toUpperCase().indexOf('SOCCER')>-1;
     var gl=awayName+' @ '+homeName;
 
     Object.keys(odds).forEach(function(oddID){
@@ -2447,6 +2451,7 @@ async function scanOffshore(){
         if(bt==='ou'&&wantM.indexOf('ou')<0) return;
       }
       if(['ml','sp','ou','yn'].indexOf(bt)<0) return;
+      if(oIsSoccer&&(bt==='ml'||bt==='yn')) return; // soccer ML is 3-way (draw) — not a clean 2-leg hedge
       if(side!==primarySides[bt]) return;
 
       var oppID = od.opposingOddID; if(!oppID) return;
@@ -2492,7 +2497,8 @@ async function scanOffshore(){
           fit={ bm:fitBM, dom:fitDOM, profit:fitPayout-fitTotal, total:fitTotal };
         }
         var mLabel = od.marketName || (od.statID? (od.statID.replace(/_/g,' ')) : bt.toUpperCase());
-        if(isGameProp && od.periodID){ mLabel = (od.periodID).toUpperCase()+' '+mLabel; }
+        if(oIsSoccer){ mLabel += oSoccerScope(od.periodID); }
+        else if(isGameProp && od.periodID){ mLabel = (od.periodID).toUpperCase()+' '+mLabel; }
         arbs.push({
           game:gl, league:leagueName, eventID:ev.eventID||ev.id, oddID:oddID, isProp:isProp, isGameProp:isGameProp, live:!!live, start:start, edge:edge, profit:profit, roi:roi, totalStaked:totalStaked,
           cap:cap, overMax:overMax, fit:fit, label:mLabel,
