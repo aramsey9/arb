@@ -366,6 +366,8 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
     <input type="text" id="poTokenInput" placeholder="App API Token (from pushover.net)" />
     <div class="slabel">Pushover User Key</div>
     <input type="text" id="poUserInput" placeholder="User Key (from pushover.net)" />
+    <button id="poTestBtn2" onclick="testPushoverVisible()" style="background:#ff6600;color:#fff;border:none;border-radius:8px;padding:11px 16px;font-size:13px;font-weight:700;cursor:pointer;width:100%;margin-bottom:6px">🔔 Send Test Notification</button>
+    <div style="font-size:10px;color:#666;margin-bottom:10px">Tap to confirm Pushover reaches your phone. Turn on “Notify on manual scans too” below to get pinged when you run a scan.</div>
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
       <label style="font-size:12px;color:#888;flex:1">Notify on manual scans too</label>
       <label class="switch"><input type="checkbox" id="poManualEnabled" /><span class="slider"></span></label>
@@ -560,29 +562,63 @@ async function testPushover(){
   setTimeout(function(){btn.textContent='Test';btn.disabled=false;btn.style.background='#ff6600';btn.style.color='#fff';},3000);
 }
 
+// ── Send Test Notification (visible button on Notify tab) ──
+async function testPushoverVisible(){
+  var btn=document.getElementById('poTestBtn2');
+  if(btn){ btn.textContent='Sending…'; btn.disabled=true; }
+  var ok=await sendPushover('🔔 ArbEdge Test','Pushover is connected — you will now receive arb alerts on your iPhone and Apple Watch.',0);
+  if(btn){
+    btn.textContent = ok ? '✓ Sent! Check your phone' : '✗ Failed — check token/user key';
+    btn.style.background = ok ? '#00ff88' : '#ff4757';
+    btn.style.color = ok ? '#000' : '#fff';
+    setTimeout(function(){ btn.textContent='🔔 Send Test Notification'; btn.disabled=false; btn.style.background='#ff6600'; btn.style.color='#fff'; },3500);
+  }
+}
+
+function _notifyBook(name){ try{ return (typeof sgoName==='function' && name) ? sgoName(name) : (name||''); }catch(e){ return name||''; } }
+function _notifyMinEdge(){
+  var el=document.getElementById('schMinEdge')||document.getElementById('poMinEdge');
+  var v=el?parseFloat(el.value):0; return isNaN(v)?0:v;
+}
+
 var LAST_ARB_IDS=new Set();
 async function maybePushoverNotify(arbs){
-  if(!document.getElementById('poEnabled').checked)return;
+  // Only notify on manual scans when the visible "Notify on manual scans too" toggle is ON.
+  var manualEl=document.getElementById('poManualEnabled');
+  if(!manualEl||!manualEl.checked) return;
   var token=localStorage.getItem('po_token')||'';
   var user=localStorage.getItem('po_user')||'';
-  if(!token||!user)return;
-  var minEdge=parseFloat(document.getElementById('poMinEdge').value)||0;
-  var newArbs=arbs.filter(function(x){
-    var id=x.game+'|'+x.market+'|'+x.side1.book+'|'+x.side2.book;
-    return x.edge>=minEdge&&!LAST_ARB_IDS.has(id);
+  if(!token||!user) return;
+  if(!arbs||!arbs.length) return;
+  var minEdge=_notifyMinEdge();
+  // Normalize both arb shapes: domestic (side1/side2/market) and offshore (bmLeg/domLeg/label).
+  var norm=arbs.map(function(x){
+    var isOff=!!x.bmLeg;
+    return {
+      game:x.game||'',
+      market:x.market||x.label||'',
+      book1:isOff?'BookMaker.eu':((x.side1&&x.side1.book)||''),
+      book2:isOff?_notifyBook(x.domLeg&&x.domLeg.book):((x.side2&&x.side2.book)||''),
+      edge:(typeof x.edge==='number'?x.edge:0),
+      roi:(typeof x.roi==='number'?x.roi:(typeof x.edge==='number'?x.edge:0)),
+      profit:(typeof x.profit==='number'?x.profit:0),
+      stale:!!x.domOutlier
+    };
   });
-  if(!newArbs.length)return;
-  // Update seen set
-  arbs.forEach(function(x){LAST_ARB_IDS.add(x.game+'|'+x.market+'|'+x.side1.book+'|'+x.side2.book)});
-  // Send one notification summarizing all new arbs (batch to avoid spam)
+  var newArbs=norm.filter(function(x){
+    var id=x.game+'|'+x.market+'|'+x.book1+'|'+x.book2;
+    return !x.stale && x.edge>=minEdge && !LAST_ARB_IDS.has(id);
+  });
+  if(!newArbs.length) return;
+  norm.forEach(function(x){ LAST_ARB_IDS.add(x.game+'|'+x.market+'|'+x.book1+'|'+x.book2); });
+  newArbs.sort(function(a,b){ return b.edge-a.edge; });
   var top=newArbs.slice(0,3);
   var lines=top.map(function(x){
-    return '+'+x.roi.toFixed(2)+'% | '+x.game.split(' — ')[0]+'\n'+x.side1.book+' vs '+x.side2.book+' | $'+x.profit.toFixed(2)+' profit';
+    return '+'+x.roi.toFixed(2)+'% | '+x.game.split(' — ')[0]+'\n'+x.book1+' vs '+x.book2+' | $'+x.profit.toFixed(2)+' profit';
   });
   var extra=newArbs.length>3?'\n...and '+(newArbs.length-3)+' more':'';
   var msg=lines.join('\n\n')+extra;
   var title='🔔 '+newArbs.length+' Arb'+(newArbs.length>1?'s':'')+' Found — ArbEdge';
-  // High priority if best arb is over 1%
   var priority=newArbs[0].edge>=1?1:0;
   await sendPushover(title,msg,priority);
 }
@@ -2541,6 +2577,7 @@ async function scanOffshore(){
     });
   }
   out.innerHTML=h;
+  try{ maybePushoverNotify(arbs); }catch(e){}
 }
 
 function toggleAuto(){
