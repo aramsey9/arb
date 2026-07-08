@@ -136,6 +136,7 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
   <button class="tab-btn" id="tab-offshore" onclick="switchTab('offshore')">🌊 Offshore</button>
   <button class="tab-btn" id="tab-notify" onclick="switchTab('notify')">🔔 Notify</button>
   <button class="tab-btn" id="tab-trueline" onclick="switchTab('trueline')">🎯 TrueLine</button>
+  <button class="tab-btn" id="tab-ev" onclick="switchTab('ev')">💎 +EV</button>
 </div>
 
 <div id="view-scanner" class="view active">
@@ -461,6 +462,111 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
   <div id="tlAnalysis"></div>
 </div>
 
+<div id="view-ev" class="view">
+<style>
+#view-ev .ev-note{background:rgba(61,220,151,.07);border:1px solid rgba(61,220,151,.25);border-radius:10px;padding:11px 13px;font-size:11.5px;color:#9fe7c4;line-height:1.55;margin-bottom:12px}
+#view-ev .ev-note b{color:#3DDC97}
+#view-ev .ev-lbl{color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.8px;margin:12px 0 6px}
+#view-ev .ev-anchor{display:flex;align-items:center;justify-content:space-between;background:#12121a;border:1px solid #2a2a3d;border-radius:10px;padding:12px 14px;margin-bottom:10px}
+#view-ev .ev-anchor .l{font-size:12px;color:#cbd5e1}
+#view-ev .ev-anchor .s{font-size:10px;color:#666;margin-top:2px}
+#view-ev .ev-card{background:#12121a;border:1px solid #2a2a3d;border-radius:12px;margin-bottom:12px;overflow:hidden}
+#view-ev .ev-card.pos{border-color:#3DDC97;box-shadow:0 0 16px rgba(61,220,151,.09)}
+#view-ev .ev-card.arb{border-color:#00ff88;box-shadow:0 0 16px rgba(0,255,136,.15)}
+#view-ev .ev-card.warn{border-color:#f59e0b}
+#view-ev .ev-top{padding:12px 14px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+#view-ev .ev-meta{color:#7c8698;font-size:10px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+#view-ev .ev-game{font-size:14px;font-weight:600;line-height:1.3;color:#e8e8f0}
+#view-ev .ev-when{color:#666;font-size:10px;font-family:monospace;margin-top:3px}
+#view-ev .ev-pct{color:#3DDC97;font-size:22px;font-weight:bold;font-family:'JetBrains Mono',monospace;white-space:nowrap;text-align:right}
+#view-ev .ev-pct.arb{color:#00ff88}
+#view-ev .ev-pct.warn{color:#f59e0b}
+#view-ev .ev-pctsub{color:#666;font-size:10px;text-align:right;text-transform:uppercase}
+#view-ev .ev-body{background:#1a1a26;border-top:1px solid #2a2a3d;padding:12px 14px}
+#view-ev .ev-pick{font-size:15px;font-weight:700;color:#e8e8f0;margin-bottom:2px}
+#view-ev .ev-book{color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase}
+#view-ev .ev-line{display:flex;justify-content:space-between;align-items:baseline;margin-top:8px;gap:10px}
+#view-ev .ev-odds{font-size:20px;font-weight:bold;font-family:'JetBrains Mono',monospace;color:#3DDC97}
+#view-ev .ev-fair{font-size:11px;color:#7c8698;font-family:monospace}
+#view-ev .ev-stake{margin-top:10px;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.25);border-radius:8px;padding:9px 11px;font-size:13px;color:#00ff88;font-weight:700}
+#view-ev .ev-stake span{color:#7c8698;font-weight:400;font-size:11px}
+#view-ev .ev-arbleg{border-top:1px solid #2a2a3d;padding:10px 14px;font-size:12px;color:#cbd5e1}
+#view-ev .ev-arbleg b{color:#00ff88}
+#view-ev .ev-flag{margin-top:9px;font-size:11px;color:#f59e0b;background:rgba(245,158,11,.08);border-radius:7px;padding:7px 9px;line-height:1.4}
+#view-ev .ev-open{display:block;margin-top:9px;color:#a78bfa;font-size:11px;font-weight:700;text-decoration:none}
+#view-ev .ev-select{background:#1a1a26;border:1px solid #2a2a3d;color:#e8e8f0;border-radius:8px;padding:12px;font-size:14px;width:100%;margin-bottom:10px;font-family:monospace}
+</style>
+
+<div class="ev-note">
+<b>+EV mode.</b> De-vigs <b>Pinnacle</b> to get the true odds, then flags every <b>TN book</b> paying more than that fair price. Pinnacle is used for the math only — you never bet it; you only place on your TN books. Main markets only (moneyline, spreads, totals) to stay off the books' radar. Sizes each bet for you. Uses your <b>SportsGameOdds key</b> (same one as the Offshore tab). Read the <b>EV for Dummies</b> guide once first.
+</div>
+
+<div class="row">
+  <input type="number" id="evBank" value="10000" placeholder="Bankroll $" />
+  <select id="evKelly" class="ev-select" style="margin-bottom:0">
+    <option value="0.125">Stake: 1/8 Kelly (safest)</option>
+    <option value="0.25" selected>Stake: 1/4 Kelly (recommended)</option>
+    <option value="0.5">Stake: 1/2 Kelly (aggressive)</option>
+    <option value="flat">Stake: Flat $ (simplest)</option>
+  </select>
+</div>
+<div class="row">
+  <input type="number" id="evMin" value="2" placeholder="Min EV %" step="0.5" />
+  <input type="number" id="evMax" value="250" placeholder="Max bet $" step="25" />
+</div>
+<div class="row" id="evFlatWrap" style="display:none">
+  <input type="number" id="evFlat" value="50" placeholder="Flat stake $ per bet" />
+</div>
+
+<div class="ev-lbl">Leagues (turn off what's out of season)</div>
+<div class="sports" id="evSports">
+  <div class="sb on" data-es="MLB">⚾ MLB</div>
+  <div class="sb on" data-es="WNBA">🏀 WNBA</div>
+  <div class="sb" data-es="NBA">🏀 NBA</div>
+  <div class="sb" data-es="NFL">🏈 NFL</div>
+  <div class="sb" data-es="NCAAF">🏈 NCAAF</div>
+  <div class="sb" data-es="NHL">🏒 NHL</div>
+  <div class="sb" data-es="NCAAB">🏀 NCAAB</div>
+</div>
+
+<div class="ev-lbl">Your TN books (bet targets)</div>
+<div class="sports" id="evBooks">
+  <div class="sb on" data-eb="draftkings">DraftKings</div>
+  <div class="sb on" data-eb="fanduel">FanDuel</div>
+  <div class="sb on" data-eb="betmgm">BetMGM</div>
+  <div class="sb on" data-eb="caesars">Caesars</div>
+  <div class="sb on" data-eb="fanatics">Fanatics</div>
+  <div class="sb on" data-eb="espnbet">ESPN Bet</div>
+  <div class="sb on" data-eb="betrivers">BetRivers</div>
+  <div class="sb on" data-eb="bet365">Bet365</div>
+  <div class="sb on" data-eb="hardrockbet">Hard Rock</div>
+  <div class="sb on" data-eb="ballybet">Bally Bet</div>
+</div>
+
+<div class="ev-lbl">Markets (main only — props stay off by design)</div>
+<div class="markets" id="evMarkets">
+  <div class="mb on" data-em="ml">💰 Moneyline</div>
+  <div class="mb on" data-em="sp">📊 Spreads</div>
+  <div class="mb on" data-em="ou">🔢 Totals</div>
+</div>
+
+<div class="ev-anchor" id="evAnchorBox">
+  <div>
+    <div class="l">Fair-line anchor: <b id="evAnchorMode" style="color:#3DDC97">Pinnacle → consensus</b></div>
+    <div class="s">De-vigged Pinnacle is the truth source. If a game has no Pinnacle price, falls back to a no-vig consensus of your books (higher edge required).</div>
+  </div>
+  <label class="switch"><input type="checkbox" id="evUsePinn" checked><span class="slider"></span></label>
+</div>
+<div style="font-size:11px;color:#666;margin:-2px 0 12px">Max games per league <input type="number" id="evMaxGames" value="30" style="width:64px;display:inline-block;margin:0 0 0 6px;padding:6px;font-size:12px"> · lower this to save SGO objects</div>
+
+<button class="scan" onclick="evScan()" style="background:#3DDC97">💎 Find +EV Bets</button>
+<div id="evProg" style="display:none" class="prog">
+  <span id="evProgText">Initializing…</span>
+  <div class="prog-bar"><div class="prog-fill" id="evProgFill" style="width:0%;background:#3DDC97"></div></div>
+</div>
+<div id="evOut"></div>
+</div>
+
 <div class="ticker">
   <div class="ticker-info"><span class="tdot" id="dot"></span><span id="ttext">idle</span></div>
   <div style="display:flex;gap:8px;flex-shrink:0">
@@ -476,13 +582,14 @@ var OARB_CACHE=[]; var OEVENTS_CACHE={};
 
 // ── Tab switching ──────────────────────────────────────────
 function switchTab(tab){
-  ['scanner','lookup','offshore','notify','trueline'].forEach(function(t){
+  ['scanner','lookup','offshore','notify','trueline','ev'].forEach(function(t){
     document.getElementById('tab-'+t).classList.remove('active');
     document.getElementById('view-'+t).classList.remove('active');
   });
   document.getElementById('tab-'+tab).classList.add('active');
   document.getElementById('view-'+tab).classList.add('active');
   if(tab==='trueline' && window.tlInit) tlInit();
+  if(tab==='ev' && window.evInit) evInit();
 }
 
 // ── Filter toggle listeners ────────────────────────────────
@@ -2712,6 +2819,253 @@ function toggleAuto(){
       var vf=document.getElementById('tlVig'); if(vf)vf.style.width=Math.min(holdMed/10*100,100)+'%';
     },60);});
   };
+})();
+
+// ══════════════════════════════════════════════════════════
+//  +EV ENGINE  — SGO feed, Pinnacle-anchored, TN books, sizing
+//  Pinnacle is used for MATH ONLY. You never bet Pinnacle.
+// ══════════════════════════════════════════════════════════
+(function(){
+  var EV_HOME={draftkings:'https://sportsbook.draftkings.com',fanduel:'https://sportsbook.fanduel.com',betmgm:'https://sports.betmgm.com',caesars:'https://sportsbook.caesars.com',fanatics:'https://sportsbook.fanatics.com',espnbet:'https://espnbet.com',betrivers:'https://www.betrivers.com',bet365:'https://www.bet365.com',hardrockbet:'https://app.hardrock.bet',ballybet:'https://play.ballybet.com'};
+  var EV_NAME={draftkings:'DraftKings',fanduel:'FanDuel',betmgm:'BetMGM',caesars:'Caesars',fanatics:'Fanatics',espnbet:'ESPN Bet',betrivers:'BetRivers',bet365:'Bet365',hardrockbet:'Hard Rock',ballybet:'Bally Bet'};
+
+  function evKey(){return (document.getElementById('opkey')&&document.getElementById('opkey').value||'').trim();} // SGO key (shared w/ Offshore)
+  function evAmDec(p){p=parseFloat(p);if(isNaN(p))return null;if(p>0)return p/100+1;if(p<0)return 100/Math.abs(p)+1;return null;}
+  function evDecAm(d){if(!d||d<=1)return '—';return d>=2?'+'+Math.round((d-1)*100):''+Math.round(-100/(d-1));}
+  function evAmFmt(x){x=parseFloat(x);if(isNaN(x))return '—';return (x>0?'+':'')+x;}
+  function evMedian(a){if(!a.length)return null;var s=a.slice().sort(function(x,y){return x-y;});var m=Math.floor(s.length/2);return s.length%2?s[m]:(s[m-1]+s[m])/2;}
+  function evEsc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  function evDevig2(dA,dB){if(!dA||!dB||dA<=1||dB<=1)return null;var iA=1/dA,iB=1/dB,t=iA+iB;if(t<=0)return null;return {a:iA/t,b:iB/t,hold:(t-1)*100};}
+  function evSel(id,attr){return Array.from(document.querySelectorAll('#'+id+' [data-'+attr+'].on')).map(function(x){return x.dataset[attr];});}
+  function evLine(bb){ if(!bb)return null; if(bb.overUnder!=null)return parseFloat(bb.overUnder); if(bb.spread!=null)return parseFloat(bb.spread); return null; }
+  function evLink(bb,bk){ return (bb&&(bb.deeplink||bb.deepLink||bb.link))||EV_HOME[bk]||'#'; }
+
+  function evRoundStake(x,maxBet){
+    if(x<=0)return 0;
+    var r = x<40 ? Math.round(x/5)*5 : (x<100 ? Math.round(x/10)*10 : Math.round(x/25)*25);
+    if(r<10)r=10;
+    if(r>maxBet)r=Math.floor(maxBet/25)*25||maxBet;
+    return r;
+  }
+  function evStake(fairP,dec,bank,kfrac,flat,flatVal,maxBet){
+    if(flat)return Math.min(flatVal,maxBet);
+    var fFull=(fairP*dec-1)/(dec-1); if(fFull<=0)return 0;
+    return evRoundStake(Math.min(bank*kfrac*fFull,maxBet),maxBet);
+  }
+
+  window.evInit=function(){
+    var ks=document.getElementById('evKelly');
+    if(ks && !ks._wired){ks._wired=true;ks.addEventListener('change',function(){document.getElementById('evFlatWrap').style.display=this.value==='flat'?'flex':'none';});}
+    var up=document.getElementById('evUsePinn');
+    if(up && !up._wired){up._wired=true;up.addEventListener('change',function(){document.getElementById('evAnchorMode').textContent=this.checked?'Pinnacle → consensus':'Consensus only (ML)';});}
+    ['evSports','evBooks','evMarkets'].forEach(function(id){
+      var el=document.getElementById(id);
+      if(el && !el._wired){el._wired=true;el.addEventListener('click',function(e){var b=e.target.closest('[data-es],[data-eb],[data-em]');if(b)b.classList.toggle('on');});}
+    });
+  };
+
+  function evProg(t,pct){document.getElementById('evProg').style.display='block';document.getElementById('evProgText').textContent=t;if(pct!=null)document.getElementById('evProgFill').style.width=pct+'%';}
+  function evHideProg(){document.getElementById('evProg').style.display='none';}
+
+  window.evScan=async function(){
+    var key=evKey(), out=document.getElementById('evOut');
+    if(!key){out.innerHTML='<div class="err">No SportsGameOdds key found. Open the 🌊 Offshore tab and paste your SGO key there once — it\u2019s shared with this tab.</div>';return;}
+    var bank=parseFloat(document.getElementById('evBank').value)||10000;
+    var kmode=document.getElementById('evKelly').value, flat=kmode==='flat', kfrac=flat?0:parseFloat(kmode);
+    var flatVal=parseFloat(document.getElementById('evFlat').value)||50;
+    var minEV=parseFloat(document.getElementById('evMin').value); if(isNaN(minEV))minEV=2;
+    var maxBet=parseFloat(document.getElementById('evMax').value)||250;
+    var usePinn=document.getElementById('evUsePinn').checked;
+    var maxGames=parseInt(document.getElementById('evMaxGames').value)||30;
+
+    var leagues=evSel('evSports','es'), books=evSel('evBooks','eb'), markets=evSel('evMarkets','em');
+    if(!leagues.length){out.innerHTML='<div class="err">Turn on at least one league.</div>';return;}
+    if(!books.length){out.innerHTML='<div class="err">Turn on at least one TN book.</div>';return;}
+    if(!markets.length){out.innerHTML='<div class="err">Turn on at least one market.</div>';return;}
+
+    out.innerHTML=''; var plays=[], arbs=[], gamesSeen=0, errs=[], pinnMissing=false;
+
+    for(var li=0;li<leagues.length;li++){
+      var lg=leagues[li];
+      evProg('Scanning '+lg+' … ('+(li+1)+'/'+leagues.length+')', Math.round(li/leagues.length*100));
+      var bks=books.slice(); if(usePinn)bks.push('pinnacle');
+      var collected=[], cursor=null, pages=0, guard=0;
+      do{
+        guard++;
+        var url='https://api.sportsgameodds.com/v2/events?apiKey='+encodeURIComponent(key)+'&leagueID='+encodeURIComponent(lg)+'&oddsAvailable=true&bookmakerID='+encodeURIComponent(bks.join(','))+'&limit='+Math.min(maxGames,50);
+        if(cursor)url+='&cursor='+encodeURIComponent(cursor);
+        var resp=await sgoFetch(url,key);
+        if(!resp||typeof resp!=='object'){errs.push(lg+': no response (check SGO key / Worker relay)');break;}
+        if(resp.success===false){
+          var em=(resp.error||'')+'';
+          var m=em.match(/bookmakerID\s+(\S+)\s+is unavailable/i);
+          if(m && bks.indexOf(m[1])>-1){ if(m[1]==='pinnacle')pinnMissing=true; bks=bks.filter(function(b){return b!==m[1];}); continue; }
+          errs.push(lg+': '+em); break;
+        }
+        var batch=Array.isArray(resp.data)?resp.data:[];
+        collected=collected.concat(batch);
+        cursor=resp.nextCursor||null; pages++;
+      } while(cursor && collected.length<maxGames && pages<6 && guard<12);
+      var events=collected.slice(0,maxGames);
+      var pinnOn = usePinn && bks.indexOf('pinnacle')>-1;
+      events.forEach(function(ev){ gamesSeen++; evEvent(ev,lg,books,markets,pinnOn,minEV,bank,kfrac,flat,flatVal,maxBet,plays,arbs); });
+    }
+
+    evHideProg();
+    plays.sort(function(a,b){return b.evpct-a.evpct;});
+    arbs.sort(function(a,b){return b.profit-a.profit;});
+
+    var head='<div class="stats">Scanned <b style="color:#e8e8f0">'+gamesSeen+'</b> games · <b style="color:#3DDC97">'+plays.length+'</b> +EV play'+(plays.length===1?'':'s')+' · <b style="color:#00ff88">'+arbs.length+'</b> arb'+(arbs.length===1?'':'s')+'</div>';
+    if(pinnMissing)head+='<div class="ev-flag" style="color:#f59e0b;background:rgba(245,158,11,.08);margin-bottom:12px">Pinnacle wasn\u2019t returned for some/all leagues on your SGO tier — those fell back to book consensus (moneyline only, 3%+ edge). If this persists, check your SGO plan includes Pinnacle.</div>';
+    var body='';
+    if(errs.length)body+='<div class="err">'+errs.map(evEsc).join('<br>')+'</div>';
+    arbs.slice(0,20).forEach(function(a){body+=evArbCard(a);});
+    if(plays.length){ plays.slice(0,80).forEach(function(p){body+=evCard(p);}); }
+    else if(!arbs.length){ body+='<div class="msg">No +EV bets at or above '+minEV+'% right now.<br><br>Normal — main-market edges are small and fleeting. Rescan in a bit, lower Min EV toward 1.5%, or turn on more leagues.</div>'; }
+    out.innerHTML=head+body;
+  };
+
+  function evTeam(t){ if(!t)return ''; if(typeof t==='string')return t; return (t.names&&(t.names.short||t.names.long))||t.name||t.shortName||''; }
+
+  function evEvent(ev,league,books,markets,usePinn,minEV,bank,kfrac,flat,flatVal,maxBet,plays,arbs){
+    if(!ev)return;
+    var st=ev.status||{};
+    if(st.ended===true||st.completed===true)return;
+    var odds=ev.odds; if(!odds)return;
+    var home=evTeam(ev.teams&&ev.teams.home)||'Home', away=evTeam(ev.teams&&ev.teams.away)||'Away';
+    var when=st.startsAt||st.startTime||ev.scheduled||null;
+    var sportID=ev.sportID||'';
+    var isSoccer=(sportID==='SOCCER')||String(league).toUpperCase().indexOf('SOCCER')>-1;
+    var gl=away+' @ '+home;
+    var primary={ml:'home',sp:'home',ou:'over'};
+
+    Object.keys(odds).forEach(function(oddID){
+      var od=odds[oddID]; if(!od)return;
+      var bt=od.betTypeID, side=od.sideID;
+      if(['ml','sp','ou'].indexOf(bt)<0)return;
+      if(markets.indexOf(bt)<0)return;
+      if(od.playerID)return;                             // no player props
+      if(od.periodID && od.periodID!=='game')return;     // full-game main lines only
+      if(side!==primary[bt])return;                      // handle each pair once
+      if(isSoccer && bt==='ml')return;                   // soccer ML is 3-way
+      var oppID=od.opposingOddID; if(!oppID)return;
+      var opp=odds[oppID]; if(!opp)return;
+
+      // ---- fair line ----
+      var fairA=null,fairB=null,anchor='',anchorN=0,fLineA=null,fLineB=null;
+      if(usePinn){
+        var pa=od.byBookmaker&&od.byBookmaker.pinnacle, pb=opp.byBookmaker&&opp.byBookmaker.pinnacle;
+        if(pa&&pb&&pa.available!==false&&pb.available!==false&&pa.odds!=null&&pb.odds!=null){
+          var dv=evDevig2(evAmDec(pa.odds),evAmDec(pb.odds));
+          if(dv){fairA=dv.a;fairB=dv.b;anchor='Pinnacle';fLineA=evLine(pa);fLineB=evLine(pb);}
+        }
+      }
+      if(!fairA && bt==='ml'){ // consensus fallback: moneyline only (no line-matching risk)
+        var arrA=[],arrB=[];
+        books.forEach(function(bk){
+          var sa=od.byBookmaker&&od.byBookmaker[bk], sb=opp.byBookmaker&&opp.byBookmaker[bk];
+          if(sa&&sb&&sa.odds!=null&&sb.odds!=null&&sa.available!==false&&sb.available!==false){
+            var d=evDevig2(evAmDec(sa.odds),evAmDec(sb.odds)); if(d){arrA.push(d.a);arrB.push(d.b);}
+          }
+        });
+        if(arrA.length>=2){var mA=evMedian(arrA),mB=evMedian(arrB),t=mA+mB;fairA=mA/t;fairB=mB/t;anchor='consensus';anchorN=arrA.length;}
+      }
+      if(!fairA)return;
+      var pinnAnchored=anchor==='Pinnacle';
+      var effMin=pinnAnchored?minEV:Math.max(minEV,3);
+
+      var sides=[
+        {node:od, fp:fairA, fline:fLineA, name:evSideName(bt,'primary',home,away)},
+        {node:opp,fp:fairB, fline:fLineB, name:evSideName(bt,'opp',home,away)}
+      ];
+      sides.forEach(function(S){
+        if(!S.node.byBookmaker)return;
+        books.forEach(function(bk){
+          var bb=S.node.byBookmaker[bk]; if(!bb||bb.available===false||bb.odds==null)return;
+          var dec=evAmDec(bb.odds); if(!dec||dec<=1)return;
+          var bl=evLine(bb);
+          if(bt!=='ml' && S.fline!=null && bl!=null && Math.abs(parseFloat(bl)-parseFloat(S.fline))>0.001)return; // line must match fair line
+          var ev=S.fp*(dec-1)-(1-S.fp), evpct=ev*100;
+          if(evpct<effMin)return;
+          if(evpct>60)return;
+          var stake=evStake(S.fp,dec,bank,kfrac,flat,flatVal,maxBet); if(stake<=0)return;
+          plays.push({sport:league,game:gl,when:when,mkt:bt,label:evPickLabel(bt,S.name,bl),
+            book:bk,bookTitle:EV_NAME[bk]||bk,am:bb.odds,dec:dec,fairP:S.fp,fairAm:evDecAm(1/S.fp),
+            evpct:evpct,stake:stake,link:evLink(bb,bk),anchor:anchor,anchorN:anchorN});
+        });
+      });
+
+      // ---- opportunistic arb (two TN books cross on matching lines) ----
+      var bestA=evBestBook(od,books,fLineA,bt), bestB=evBestBook(opp,books,fLineB,bt);
+      if(bestA&&bestB&&bestA.book!==bestB.book){
+        var inv=1/bestA.dec+1/bestB.dec;
+        if(inv<1){
+          arbs.push({sport:league,game:gl,when:when,mkt:bt,mktLabel:evMktLabel(bt),profit:(1/inv-1)*100,
+            legA:{pick:evPickLabel(bt,evSideName(bt,'primary',home,away),bestA.line),book:EV_NAME[bestA.book]||bestA.book,am:evAmFmt(bestA.am),link:bestA.link},
+            legB:{pick:evPickLabel(bt,evSideName(bt,'opp',home,away),bestB.line),book:EV_NAME[bestB.book]||bestB.book,am:evAmFmt(bestB.am),link:bestB.link}});
+        }
+      }
+    });
+  }
+
+  function evBestBook(node,books,fline,bt){
+    if(!node||!node.byBookmaker)return null;
+    var best=null;
+    books.forEach(function(bk){
+      var bb=node.byBookmaker[bk]; if(!bb||bb.available===false||bb.odds==null)return;
+      var dec=evAmDec(bb.odds); if(!dec||dec<=1)return;
+      var bl=evLine(bb);
+      if(bt!=='ml' && fline!=null && bl!=null && Math.abs(parseFloat(bl)-parseFloat(fline))>0.001)return;
+      if(!best||dec>best.dec)best={book:bk,dec:dec,am:bb.odds,line:bl,link:evLink(bb,bk)};
+    });
+    return best;
+  }
+  function evSideName(bt,which,home,away){
+    if(bt==='ou')return which==='primary'?'Over':'Under';
+    return which==='primary'?home:away;
+  }
+  function evPickLabel(bt,name,line){
+    if(bt==='ml')return name+' ML';
+    if(bt==='sp')return name+' '+(line>0?'+':'')+(line==null?'':line);
+    if(bt==='ou')return name+' '+(line==null?'':line);
+    return name;
+  }
+  function evMktLabel(bt){return bt==='ml'?'Moneyline':bt==='sp'?'Spread':'Total';}
+  function evWhen(iso){ try{var t=new Date(iso);return t.toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'})+' · '+t.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});}catch(e){return '';} }
+
+  function evCard(p){
+    var warn=p.evpct>10, cls=warn?'ev-card warn':'ev-card pos', pcls=warn?'ev-pct warn':'ev-pct', flag='';
+    if(warn)flag='<div class="ev-flag">⚠ '+p.evpct.toFixed(1)+'% is unusually high — almost always a stale line or a rule/period difference. Open the book and confirm the exact market before betting.</div>';
+    else if(p.anchor==='consensus')flag='<div class="ev-flag" style="color:#7c8698;background:rgba(124,134,152,.08)">Fair price from a '+p.anchorN+'-book no-vig consensus (no Pinnacle on this game). A touch less precise — treat thin edges with care.</div>';
+    var kv=document.getElementById('evKelly').value;
+    var stakeLine=p.stake>0?('<div class="ev-stake">Bet ~$'+p.stake+' <span>· '+(kv==='flat'?'flat stake':'\u00bc-Kelly, rounded')+'</span></div>'):'';
+    return '<div class="'+cls+'">'+
+      '<div class="ev-top"><div>'+
+        '<div class="ev-meta">'+evEsc(p.sport)+' · '+evMktLabel(p.mkt)+(p.anchor==='Pinnacle'?' · vs Pinnacle':'')+'</div>'+
+        '<div class="ev-game">'+evEsc(p.game)+'</div>'+
+        '<div class="ev-when">'+evWhen(p.when)+'</div>'+
+      '</div><div><div class="'+pcls+'">+'+p.evpct.toFixed(1)+'%</div><div class="ev-pctsub">EV</div></div></div>'+
+      '<div class="ev-body">'+
+        '<div class="ev-book">'+evEsc(p.bookTitle)+'</div>'+
+        '<div class="ev-pick">'+evEsc(p.label)+'</div>'+
+        '<div class="ev-line"><div class="ev-odds">'+evAmFmt(p.am)+'</div><div class="ev-fair">fair '+p.fairAm+' · '+(p.fairP*100).toFixed(1)+'%</div></div>'+
+        stakeLine+flag+
+        '<a class="ev-open" href="'+evEsc(p.link)+'" target="_blank" rel="noopener">Open '+evEsc(p.bookTitle)+' \u2197</a>'+
+      '</div></div>';
+  }
+
+  function evArbCard(a){
+    return '<div class="ev-card arb">'+
+      '<div class="ev-top"><div>'+
+        '<div class="ev-meta">'+evEsc(a.sport)+' · '+evEsc(a.mktLabel)+' · \uD83D\uDD12 ARB</div>'+
+        '<div class="ev-game">'+evEsc(a.game)+'</div>'+
+        '<div class="ev-when">'+evWhen(a.when)+'</div>'+
+      '</div><div><div class="ev-pct arb">'+a.profit.toFixed(2)+'%</div><div class="ev-pctsub">locked</div></div></div>'+
+      '<div class="ev-arbleg">Leg 1 · <b>'+evEsc(a.legA.book)+'</b> — '+evEsc(a.legA.pick)+' <b>'+a.legA.am+'</b> · <a class="ev-open" style="display:inline;margin:0" href="'+evEsc(a.legA.link)+'" target="_blank" rel="noopener">open \u2197</a></div>'+
+      '<div class="ev-arbleg">Leg 2 · <b>'+evEsc(a.legB.book)+'</b> — '+evEsc(a.legB.pick)+' <b>'+a.legB.am+'</b> · <a class="ev-open" style="display:inline;margin:0" href="'+evEsc(a.legB.link)+'" target="_blank" rel="noopener">open \u2197</a></div>'+
+      '<div class="ev-flag" style="color:#00ff88;background:rgba(0,255,136,.07)">Bet BOTH sides across the two books. Confirm both lines are still live before firing the second leg.</div>'+
+      '</div>';
+  }
 })();
 </script>
 </body>
