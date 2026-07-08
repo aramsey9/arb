@@ -2972,6 +2972,11 @@ function toggleAuto(){
       if(markets.indexOf(bt)<0)return;
       if(od.playerID)return;                             // no player props
       if(od.periodID && od.periodID!=='game')return;     // full-game main lines only
+      if(bt==='ou'){                                     // totals: keep only the COMBINED game total
+        var _seg=String(oddID).split('-');
+        var _ent=od.statEntityID||(_seg.length>=5?_seg[1]:'');
+        if(_ent==='home'||_ent==='away')return;          // drop team totals (e.g. "Over 5.5" for one side)
+      }
       if(side!==primary[bt])return;                      // handle each pair once
       if(isSoccer && bt==='ml')return;                   // soccer ML is 3-way
       var oppID=od.opposingOddID; if(!oppID)return;
@@ -3093,6 +3098,7 @@ function toggleAuto(){
       '</div>';
   }
 })();
+
 </script>
 </body>
 </html>
