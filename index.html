@@ -494,6 +494,7 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
 #view-ev .ev-arbleg b{color:#00ff88}
 #view-ev .ev-flag{margin-top:9px;font-size:11px;color:#f59e0b;background:rgba(245,158,11,.08);border-radius:7px;padding:7px 9px;line-height:1.4}
 #view-ev .ev-open{display:block;margin-top:9px;color:#a78bfa;font-size:11px;font-weight:700;text-decoration:none}
+#view-ev .ev-livepill{display:inline-block;background:rgba(255,71,87,.18);color:#ff6b6b;font-size:9px;font-weight:800;letter-spacing:.5px;padding:2px 6px;border-radius:5px;margin-left:7px;vertical-align:middle;animation:pulse 2s infinite}
 #view-ev .ev-select{background:#1a1a26;border:1px solid #2a2a3d;color:#e8e8f0;border-radius:8px;padding:12px;font-size:14px;width:100%;margin-bottom:10px;font-family:monospace}
 </style>
 
@@ -502,7 +503,7 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
 </div>
 
 <div class="row">
-  <input type="number" id="evBank" value="10000" placeholder="Bankroll $" />
+  <input type="number" id="evBank" value="13000" placeholder="Bankroll $" />
   <select id="evKelly" class="ev-select" style="margin-bottom:0">
     <option value="0.125">Stake: 1/8 Kelly (safest)</option>
     <option value="0.25" selected>Stake: 1/4 Kelly (recommended)</option>
@@ -512,7 +513,7 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
 </div>
 <div class="row">
   <input type="number" id="evMin" value="2" placeholder="Min EV %" step="0.5" />
-  <input type="number" id="evMax" value="250" placeholder="Max bet $" step="25" />
+  <input type="number" id="evMax" value="325" placeholder="Max bet $" step="25" />
 </div>
 <div class="row" id="evFlatWrap" style="display:none">
   <input type="number" id="evFlat" value="50" placeholder="Flat stake $ per bet" />
@@ -529,15 +530,15 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
   <div class="sb" data-es="NCAAB">🏀 NCAAB</div>
 </div>
 
-<div class="ev-lbl">Your TN books (bet targets)</div>
+<div class="ev-lbl">Your books (bet targets)</div>
 <div class="sports" id="evBooks">
+  <div class="sb on" data-eb="bookmakereu">🔒 BookMaker</div>
   <div class="sb on" data-eb="draftkings">DraftKings</div>
   <div class="sb on" data-eb="fanduel">FanDuel</div>
   <div class="sb on" data-eb="betmgm">BetMGM</div>
   <div class="sb on" data-eb="caesars">Caesars</div>
   <div class="sb on" data-eb="fanatics">Fanatics</div>
   <div class="sb on" data-eb="espnbet">ESPN Bet</div>
-  <div class="sb on" data-eb="betrivers">BetRivers</div>
   <div class="sb on" data-eb="bet365">Bet365</div>
   <div class="sb on" data-eb="hardrockbet">Hard Rock</div>
   <div class="sb on" data-eb="ballybet">Bally Bet</div>
@@ -558,6 +559,13 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
   <label class="switch"><input type="checkbox" id="evUsePinn" checked><span class="slider"></span></label>
 </div>
 <div style="font-size:11px;color:#666;margin:-2px 0 12px">Max games per league <input type="number" id="evMaxGames" value="30" style="width:64px;display:inline-block;margin:0 0 0 6px;padding:6px;font-size:12px"> · lower this to save SGO objects</div>
+
+<div class="ev-lbl">Show</div>
+<div class="filters" id="evFilter">
+  <div class="fb" data-ef="all">🌐 All</div>
+  <div class="fb on" data-ef="pre">📅 Pre-game</div>
+  <div class="fb" data-ef="live">🔴 Live</div>
+</div>
 
 <button class="scan" onclick="evScan()" style="background:#3DDC97">💎 Find +EV Bets</button>
 <div id="evProg" style="display:none" class="prog">
@@ -2826,8 +2834,8 @@ function toggleAuto(){
 //  Pinnacle is used for MATH ONLY. You never bet Pinnacle.
 // ══════════════════════════════════════════════════════════
 (function(){
-  var EV_HOME={draftkings:'https://sportsbook.draftkings.com',fanduel:'https://sportsbook.fanduel.com',betmgm:'https://sports.betmgm.com',caesars:'https://sportsbook.caesars.com',fanatics:'https://sportsbook.fanatics.com',espnbet:'https://espnbet.com',betrivers:'https://www.betrivers.com',bet365:'https://www.bet365.com',hardrockbet:'https://app.hardrock.bet',ballybet:'https://play.ballybet.com'};
-  var EV_NAME={draftkings:'DraftKings',fanduel:'FanDuel',betmgm:'BetMGM',caesars:'Caesars',fanatics:'Fanatics',espnbet:'ESPN Bet',betrivers:'BetRivers',bet365:'Bet365',hardrockbet:'Hard Rock',ballybet:'Bally Bet'};
+  var EV_HOME={bookmakereu:'https://www.bookmaker.eu',draftkings:'https://sportsbook.draftkings.com',fanduel:'https://sportsbook.fanduel.com',betmgm:'https://sports.betmgm.com',caesars:'https://sportsbook.caesars.com',fanatics:'https://sportsbook.fanatics.com',espnbet:'https://espnbet.com',bet365:'https://www.bet365.com',hardrockbet:'https://app.hardrock.bet',ballybet:'https://play.ballybet.com'};
+  var EV_NAME={bookmakereu:'BookMaker',draftkings:'DraftKings',fanduel:'FanDuel',betmgm:'BetMGM',caesars:'Caesars',fanatics:'Fanatics',espnbet:'ESPN Bet',bet365:'Bet365',hardrockbet:'Hard Rock',ballybet:'Bally Bet'};
 
   function evKey(){return (document.getElementById('opkey')&&document.getElementById('opkey').value||'').trim();} // SGO key (shared w/ Offshore)
   function evAmDec(p){p=parseFloat(p);if(isNaN(p))return null;if(p>0)return p/100+1;if(p<0)return 100/Math.abs(p)+1;return null;}
@@ -2862,7 +2870,11 @@ function toggleAuto(){
       var el=document.getElementById(id);
       if(el && !el._wired){el._wired=true;el.addEventListener('click',function(e){var b=e.target.closest('[data-es],[data-eb],[data-em]');if(b)b.classList.toggle('on');});}
     });
+    var ef=document.getElementById('evFilter');
+    if(ef && !ef._wired){ef._wired=true;ef.addEventListener('click',function(e){var b=e.target.closest('[data-ef]');if(!b)return;Array.from(ef.querySelectorAll('[data-ef]')).forEach(function(x){x.classList.remove('on');});b.classList.add('on');evRender();});}
   };
+  function evFilterVal(){var el=document.querySelector('#evFilter [data-ef].on');return el?el.dataset.ef:'all';}
+  var EV_LAST={plays:[],arbs:[],games:0,pinnMissing:false,errs:[]};
 
   function evProg(t,pct){document.getElementById('evProg').style.display='block';document.getElementById('evProgText').textContent=t;if(pct!=null)document.getElementById('evProgFill').style.width=pct+'%';}
   function evHideProg(){document.getElementById('evProg').style.display='none';}
@@ -2914,16 +2926,29 @@ function toggleAuto(){
     evHideProg();
     plays.sort(function(a,b){return b.evpct-a.evpct;});
     arbs.sort(function(a,b){return b.profit-a.profit;});
+    EV_LAST={plays:plays,arbs:arbs,games:gamesSeen,pinnMissing:pinnMissing,errs:errs};
+    evRender();
+  };
 
-    var head='<div class="stats">Scanned <b style="color:#e8e8f0">'+gamesSeen+'</b> games · <b style="color:#3DDC97">'+plays.length+'</b> +EV play'+(plays.length===1?'':'s')+' · <b style="color:#00ff88">'+arbs.length+'</b> arb'+(arbs.length===1?'':'s')+'</div>';
-    if(pinnMissing)head+='<div class="ev-flag" style="color:#f59e0b;background:rgba(245,158,11,.08);margin-bottom:12px">Pinnacle wasn\u2019t returned for some/all leagues on your SGO tier — those fell back to book consensus (moneyline only, 3%+ edge). If this persists, check your SGO plan includes Pinnacle.</div>';
+  function evRender(){
+    var out=document.getElementById('evOut'); if(!out)return;
+    var f=evFilterVal();
+    var match=function(x){ return f==='all' || (f==='live'?x.live:!x.live); };
+    var plays=EV_LAST.plays.filter(match), arbs=EV_LAST.arbs.filter(match);
+    var liveN=EV_LAST.plays.filter(function(x){return x.live;}).length;
+    var preN=EV_LAST.plays.length-liveN;
+    var head='<div class="stats">Scanned <b style="color:#e8e8f0">'+EV_LAST.games+'</b> games · <b style="color:#3DDC97">'+EV_LAST.plays.length+'</b> +EV ('+preN+' pre · '+liveN+' live) · <b style="color:#00ff88">'+EV_LAST.arbs.length+'</b> arb'+(EV_LAST.arbs.length===1?'':'s')+'</div>';
+    if(EV_LAST.pinnMissing)head+='<div class="ev-flag" style="color:#f59e0b;background:rgba(245,158,11,.08);margin-bottom:12px">Pinnacle wasn\u2019t returned for some/all leagues on your SGO tier — those fell back to book consensus (moneyline only, 3%+ edge). If this persists, check your SGO plan includes Pinnacle.</div>';
     var body='';
-    if(errs.length)body+='<div class="err">'+errs.map(evEsc).join('<br>')+'</div>';
+    if(EV_LAST.errs.length)body+='<div class="err">'+EV_LAST.errs.map(evEsc).join('<br>')+'</div>';
     arbs.slice(0,20).forEach(function(a){body+=evArbCard(a);});
     if(plays.length){ plays.slice(0,80).forEach(function(p){body+=evCard(p);}); }
-    else if(!arbs.length){ body+='<div class="msg">No +EV bets at or above '+minEV+'% right now.<br><br>Normal — main-market edges are small and fleeting. Rescan in a bit, lower Min EV toward 1.5%, or turn on more leagues.</div>'; }
+    else if(!arbs.length){
+      var why = EV_LAST.plays.length? 'No '+(f==='live'?'live':'pre-game')+' +EV bets right now — try the other filter.' : 'No +EV bets at or above your Min EV right now.<br><br>Normal — main-market edges are small and fleeting. Rescan in a bit, lower Min EV toward 1.5%, or turn on more leagues.';
+      body+='<div class="msg">'+why+'</div>';
+    }
     out.innerHTML=head+body;
-  };
+  }
 
   function evTeam(t){ if(!t)return ''; if(typeof t==='string')return t; return (t.names&&(t.names.short||t.names.long))||t.name||t.shortName||''; }
 
@@ -2931,6 +2956,7 @@ function toggleAuto(){
     if(!ev)return;
     var st=ev.status||{};
     if(st.ended===true||st.completed===true)return;
+    var live=(st.started===true||st.live===true)&&!(st.ended===true||st.completed===true);
     var odds=ev.odds; if(!odds)return;
     var home=evTeam(ev.teams&&ev.teams.home)||'Home', away=evTeam(ev.teams&&ev.teams.away)||'Away';
     var when=st.startsAt||st.startTime||ev.scheduled||null;
@@ -2989,7 +3015,7 @@ function toggleAuto(){
           if(evpct<effMin)return;
           if(evpct>60)return;
           var stake=evStake(S.fp,dec,bank,kfrac,flat,flatVal,maxBet); if(stake<=0)return;
-          plays.push({sport:league,game:gl,when:when,mkt:bt,label:evPickLabel(bt,S.name,bl),
+          plays.push({sport:league,game:gl,when:when,live:live,mkt:bt,label:evPickLabel(bt,S.name,bl),
             book:bk,bookTitle:EV_NAME[bk]||bk,am:bb.odds,dec:dec,fairP:S.fp,fairAm:evDecAm(1/S.fp),
             evpct:evpct,stake:stake,link:evLink(bb,bk),anchor:anchor,anchorN:anchorN});
         });
@@ -3000,7 +3026,7 @@ function toggleAuto(){
       if(bestA&&bestB&&bestA.book!==bestB.book){
         var inv=1/bestA.dec+1/bestB.dec;
         if(inv<1){
-          arbs.push({sport:league,game:gl,when:when,mkt:bt,mktLabel:evMktLabel(bt),profit:(1/inv-1)*100,
+          arbs.push({sport:league,game:gl,when:when,live:live,mkt:bt,mktLabel:evMktLabel(bt),profit:(1/inv-1)*100,
             legA:{pick:evPickLabel(bt,evSideName(bt,'primary',home,away),bestA.line),book:EV_NAME[bestA.book]||bestA.book,am:evAmFmt(bestA.am),link:bestA.link},
             legB:{pick:evPickLabel(bt,evSideName(bt,'opp',home,away),bestB.line),book:EV_NAME[bestB.book]||bestB.book,am:evAmFmt(bestB.am),link:bestB.link}});
         }
@@ -3042,8 +3068,8 @@ function toggleAuto(){
     return '<div class="'+cls+'">'+
       '<div class="ev-top"><div>'+
         '<div class="ev-meta">'+evEsc(p.sport)+' · '+evMktLabel(p.mkt)+(p.anchor==='Pinnacle'?' · vs Pinnacle':'')+'</div>'+
-        '<div class="ev-game">'+evEsc(p.game)+'</div>'+
-        '<div class="ev-when">'+evWhen(p.when)+'</div>'+
+        '<div class="ev-game">'+evEsc(p.game)+(p.live?'<span class="ev-livepill">🔴 LIVE</span>':'')+'</div>'+
+        '<div class="ev-when">'+(p.live?'<span style="color:#ff6b6b">In progress · line moving fast, confirm before betting</span>':evWhen(p.when))+'</div>'+
       '</div><div><div class="'+pcls+'">+'+p.evpct.toFixed(1)+'%</div><div class="ev-pctsub">EV</div></div></div>'+
       '<div class="ev-body">'+
         '<div class="ev-book">'+evEsc(p.bookTitle)+'</div>'+
@@ -3058,8 +3084,8 @@ function toggleAuto(){
     return '<div class="ev-card arb">'+
       '<div class="ev-top"><div>'+
         '<div class="ev-meta">'+evEsc(a.sport)+' · '+evEsc(a.mktLabel)+' · \uD83D\uDD12 ARB</div>'+
-        '<div class="ev-game">'+evEsc(a.game)+'</div>'+
-        '<div class="ev-when">'+evWhen(a.when)+'</div>'+
+        '<div class="ev-game">'+evEsc(a.game)+(a.live?'<span class="ev-livepill">🔴 LIVE</span>':'')+'</div>'+
+        '<div class="ev-when">'+(a.live?'<span style="color:#ff6b6b">In progress · confirm both lines before firing</span>':evWhen(a.when))+'</div>'+
       '</div><div><div class="ev-pct arb">'+a.profit.toFixed(2)+'%</div><div class="ev-pctsub">locked</div></div></div>'+
       '<div class="ev-arbleg">Leg 1 · <b>'+evEsc(a.legA.book)+'</b> — '+evEsc(a.legA.pick)+' <b>'+a.legA.am+'</b> · <a class="ev-open" style="display:inline;margin:0" href="'+evEsc(a.legA.link)+'" target="_blank" rel="noopener">open \u2197</a></div>'+
       '<div class="ev-arbleg">Leg 2 · <b>'+evEsc(a.legB.book)+'</b> — '+evEsc(a.legB.pick)+' <b>'+a.legB.am+'</b> · <a class="ev-open" style="display:inline;margin:0" href="'+evEsc(a.legB.link)+'" target="_blank" rel="noopener">open \u2197</a></div>'+
