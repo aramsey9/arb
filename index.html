@@ -605,6 +605,7 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
 </div>
 
 <div class="bt-chart"><div class="ct">Profit trend</div><div id="btChart"></div></div>
+<div id="btClv" style="display:none;background:#12121a;border:1px solid #2a2a3d;border-radius:11px;padding:11px 13px;margin-bottom:12px;font-size:12.5px;color:#cbd5e1"></div>
 
 <div class="bt-break">
   <div class="bt-tbl"><div class="h">By book</div><div id="btByBook"><div class="r" style="color:#666">—</div></div></div>
@@ -3239,6 +3240,7 @@ function toggleAuto(){
   function btProfit(b){if(b.status==='win')return b.stake*(btDec(b.odds)-1);if(b.status==='loss')return -b.stake;return 0;}
   function btEsc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
   function btCls(n){return n>0?'pos':n<0?'neg':'neu';}
+  function btClvSpan(b){ if(b.clvPct==null)return ''; var c=b.clvPct>=0?'#3DDC97':'#ff6b6b'; return ' · <span style="color:'+c+';font-weight:700">CLV '+(b.clvPct>=0?'+':'')+b.clvPct+'%</span>'; }
   function btKey(){return (document.getElementById('opkey')&&document.getElementById('opkey').value||'').trim();}
 
   // ---- 1-tap logging from +EV cards ----
@@ -3333,6 +3335,18 @@ function toggleAuto(){
     btBreakRisk('btRiskBook',bets,function(b){return BN[b.book]||b.book;});
     btBreakRisk('btRiskSport',bets,function(b){return b.league||'—';});
 
+    // ── CLV summary (vs Pinnacle close) ──
+    var clvEl=document.getElementById('btClv');
+    if(clvEl){
+      var cb=bets.filter(function(b){return b.clvPct!=null;});
+      if(cb.length){
+        var avg=cb.reduce(function(s,b){return s+b.clvPct;},0)/cb.length;
+        var beat=cb.filter(function(b){return b.clvPct>0;}).length;
+        clvEl.innerHTML='📈 <b>CLV vs Pinnacle close:</b> <b class="'+btCls(avg)+'">'+(avg>=0?'+':'')+avg.toFixed(1)+'% avg</b> · beat close <b>'+Math.round(beat/cb.length*100)+'%</b> <span style="color:#666">('+cb.length+' graded)</span>';
+        clvEl.style.display='block';
+      } else clvEl.style.display='none';
+    }
+
     // exposure map over OPEN bets (same game + same pick)
     var expo={};
     open.forEach(function(b){var k=b.game+'|'+b.pick;expo[k]=expo[k]||{n:0,amt:0};expo[k].n++;expo[k].amt+=b.stake;});
@@ -3347,7 +3361,7 @@ function toggleAuto(){
         var sb=lv?'<div class="bt-live">🔴 '+btEsc(lv.text)+(lv.period?' · '+btEsc(String(lv.period).toUpperCase()):'')+(lv.score?' · <b>'+btEsc(lv.score)+'</b>':'')+'</div>':'';
         h+='<div class="bt-bet">'+
           '<div class="top"><div><div class="pk">'+btEsc(b.pick)+'</div>'+
-          '<div class="mt">'+btEsc(BN[b.book]||b.book)+' · '+btMoney(b.stake)+' @ '+(b.odds>0?'+':'')+b.odds+(b.game?' · '+btEsc(b.game):'')+'</div>'+sb+btLeagueSel(b)+ex+'</div>'+
+          '<div class="mt">'+btEsc(BN[b.book]||b.book)+' · '+btMoney(b.stake)+' @ '+(b.odds>0?'+':'')+b.odds+(b.game?' · '+btEsc(b.game):'')+btClvSpan(b)+'</div>'+sb+btLeagueSel(b)+ex+'</div>'+
           '<div class="pf neu">'+btMoney(b.stake*(btDec(b.odds)-1))+'<div style="font-size:9px;color:#666;text-align:right">to win</div></div></div>'+
           '<div class="bt-btns"><button class="g-win" onclick="btSettle(\''+b.id+'\',\'win\')">Won</button>'+
           '<button class="g-loss" onclick="btSettle(\''+b.id+'\',\'loss\')">Lost</button>'+
@@ -3367,7 +3381,7 @@ function toggleAuto(){
         var pf=btProfit(b);
         items+='<div class="bt-bet '+b.status+'">'+
           '<div class="top"><div><div class="pk">'+btEsc(b.pick)+' <span style="font-size:10px;color:#7c8698">'+b.status.toUpperCase()+'</span></div>'+
-          '<div class="mt">'+btEsc(BN[b.book]||b.book)+' · '+btMoney(b.stake)+' @ '+(b.odds>0?'+':'')+b.odds+(b.game?' · '+btEsc(b.game):'')+(b.finalNote?' · '+btEsc(b.finalNote):'')+'</div>'+btLeagueSel(b)+'</div>'+
+          '<div class="mt">'+btEsc(BN[b.book]||b.book)+' · '+btMoney(b.stake)+' @ '+(b.odds>0?'+':'')+b.odds+(b.game?' · '+btEsc(b.game):'')+(b.finalNote?' · '+btEsc(b.finalNote):'')+btClvSpan(b)+'</div>'+btLeagueSel(b)+'</div>'+
           '<div class="pf '+btCls(pf)+'">'+(pf>0?'+':'')+btMoney(pf)+'</div></div>'+
           '<div class="bt-btns"><button class="g-push" onclick="btSettle(\''+b.id+'\',\'open\')">Undo</button>'+
           '<button class="g-edit" onclick="btEdit(\''+b.id+'\')">✏️</button>'+
