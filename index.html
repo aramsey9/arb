@@ -127,7 +127,7 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
 </head>
 <body>
 <h1>ArbEdge</h1>
-<div class="sub">FanDuel · DraftKings · BetMGM · Caesars · Fanatics · theScore · ESPN Bet · Bet365</div>
+<div class="sub">FanDuel · DraftKings · BetMGM · Caesars · Fanatics · theScore · Bet365</div>
 <input type="text" id="key" placeholder="Paste Odds API key..." />
 
 <div class="tab-bar">
@@ -189,7 +189,6 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
   <div class="sb on" data-b="williamhill_us">Caesars</div>
   <div class="sb on" data-b="fanatics">Fanatics</div>
   <div class="sb on" data-b="thescore">theScore Bet</div>
-  <div class="sb on" data-b="espnbet">ESPN Bet</div>
   <div class="sb on" data-b="bet365">Bet365</div>
 </div>
 <div class="slabel">Game Status</div>
@@ -539,7 +538,6 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
   <div class="sb on" data-eb="betmgm">BetMGM</div>
   <div class="sb on" data-eb="caesars">Caesars</div>
   <div class="sb on" data-eb="fanatics">Fanatics</div>
-  <div class="sb on" data-eb="espnbet">ESPN Bet</div>
   <div class="sb on" data-eb="bet365">Bet365</div>
   <div class="sb on" data-eb="hardrockbet">Hard Rock</div>
   <div class="sb on" data-eb="ballybet">Bally Bet</div>
@@ -642,7 +640,6 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
       <option value="betmgm">BetMGM</option>
       <option value="caesars">Caesars</option>
       <option value="fanatics">Fanatics</option>
-      <option value="espnbet">ESPN Bet</option>
       <option value="bet365">Bet365</option>
       <option value="hardrockbet">Hard Rock</option>
       <option value="ballybet">Bally Bet</option>
@@ -665,7 +662,12 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
   <button onclick="document.getElementById('btImport').click()">⬆ Restore</button>
   <input type="file" id="btImport" accept=".json" style="display:none" onchange="btImport(event)" />
 </div>
-<div style="font-size:11px;color:#666;margin-bottom:8px">Saved on this device — export a backup now and then. Starting bankroll <input type="number" id="btStart" value="13000" style="width:80px;display:inline-block;margin-left:4px;padding:6px;font-size:12px"></div>
+<div style="background:#12121a;border:1px solid #2a2a3d;border-radius:11px;padding:11px 12px;margin-bottom:8px">
+  <div style="font-size:12px;color:#cbd5e1;margin-bottom:7px">☁️ Cloud backup — <span id="btSync" style="color:#666">checking…</span></div>
+  <input type="text" id="btWorker" placeholder="Your Worker URL (…workers.dev)" style="background:#1a1a26;border:1px solid #2a2a3d;color:#e8e8f0;border-radius:8px;padding:10px;font-size:12px;width:100%;margin-bottom:8px;font-family:monospace" />
+  <button onclick="btCloudSaveUrl()" style="background:#3DDC97;color:#04120b;border:0;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:800;cursor:pointer;width:100%">Connect / sync now</button>
+  <div style="font-size:11px;color:#666;margin-top:8px">Once connected, every bet saves to your Cloudflare KV automatically — survives clearing your browser and syncs across devices. Starting bankroll <input type="number" id="btStart" value="13000" style="width:78px;display:inline-block;margin-left:4px;padding:6px;font-size:12px"></div>
+</div>
 <div style="font-size:11px;color:#7c8698;line-height:1.5;background:#12121a;border:1px solid #2a2a3d;border-radius:10px;padding:11px 12px">Log bets with the <b style="color:#3DDC97">＋ Log</b> button on any +EV card — no typing. Tap <b>Auto-settle</b> after games finish and it grades wins/losses from the SGO results feed. Anything it can't grade yet gets a one-tap Won/Lost/Push.</div>
 </div>
 
@@ -2457,7 +2459,7 @@ async function checkSgoBooks(){
   var candidates=targets.concat(premiumProbe).filter(function(v,i,a){return a.indexOf(v)===i;});
   var probeLeagues='NFL,NBA,MLB,NHL,UFC,EPL'; // whatever's in season returns events
 
-  var NICE={bookmakereu:'BookMaker.eu',draftkings:'DraftKings',fanduel:'FanDuel',betmgm:'BetMGM',caesars:'Caesars',espnbet:'ESPN Bet',thescorebet:'theScore',kalshi:'Kalshi',polymarket:'Polymarket',pinnacle:'Pinnacle',bet365:'Bet365',fanatics:'Fanatics',prizepicks:'PrizePicks',circa:'Circa'};
+  var NICE={bookmakereu:'BookMaker.eu',draftkings:'DraftKings',fanduel:'FanDuel',betmgm:'BetMGM',caesars:'Caesars',thescorebet:'theScore',kalshi:'Kalshi',polymarket:'Polymarket',pinnacle:'Pinnacle',bet365:'Bet365',fanatics:'Fanatics',prizepicks:'PrizePicks',circa:'Circa'};
   function nm(b){ return NICE[b]||b; }
 
   var results={}; var done=0;
@@ -2929,8 +2931,8 @@ function toggleAuto(){
 //  Pinnacle is used for MATH ONLY. You never bet Pinnacle.
 // ══════════════════════════════════════════════════════════
 (function(){
-  var EV_HOME={bookmakereu:'https://www.bookmaker.eu',draftkings:'https://sportsbook.draftkings.com',fanduel:'https://sportsbook.fanduel.com',betmgm:'https://sports.betmgm.com',caesars:'https://sportsbook.caesars.com',fanatics:'https://sportsbook.fanatics.com',espnbet:'https://espnbet.com',bet365:'https://www.bet365.com',hardrockbet:'https://app.hardrock.bet',ballybet:'https://play.ballybet.com'};
-  var EV_NAME={bookmakereu:'BookMaker',draftkings:'DraftKings',fanduel:'FanDuel',betmgm:'BetMGM',caesars:'Caesars',fanatics:'Fanatics',espnbet:'ESPN Bet',bet365:'Bet365',hardrockbet:'Hard Rock',ballybet:'Bally Bet'};
+  var EV_HOME={bookmakereu:'https://www.bookmaker.eu',draftkings:'https://sportsbook.draftkings.com',fanduel:'https://sportsbook.fanduel.com',betmgm:'https://sports.betmgm.com',caesars:'https://sportsbook.caesars.com',fanatics:'https://sportsbook.fanatics.com',bet365:'https://www.bet365.com',hardrockbet:'https://app.hardrock.bet',ballybet:'https://play.ballybet.com'};
+  var EV_NAME={bookmakereu:'BookMaker',draftkings:'DraftKings',fanduel:'FanDuel',betmgm:'BetMGM',caesars:'Caesars',fanatics:'Fanatics',bet365:'Bet365',hardrockbet:'Hard Rock',ballybet:'Bally Bet'};
 
   function evKey(){return (document.getElementById('opkey')&&document.getElementById('opkey').value||'').trim();} // SGO key (shared w/ Offshore)
   function evAmDec(p){p=parseFloat(p);if(isNaN(p))return null;if(p>0)return p/100+1;if(p<0)return 100/Math.abs(p)+1;return null;}
@@ -3222,9 +3224,37 @@ function toggleAuto(){
 //  BETS TRACKER — 1-tap log, SGO auto-grade, by book/sport
 // ══════════════════════════════════════════════════════════
 (function(){
-  var BN={bookmakereu:'BookMaker',draftkings:'DraftKings',fanduel:'FanDuel',betmgm:'BetMGM',caesars:'Caesars',fanatics:'Fanatics',espnbet:'ESPN Bet',bet365:'Bet365',hardrockbet:'Hard Rock',ballybet:'Bally Bet',other:'Other'};
+  var BN={bookmakereu:'BookMaker',draftkings:'DraftKings',fanduel:'FanDuel',betmgm:'BetMGM',caesars:'Caesars',fanatics:'Fanatics',bet365:'Bet365',hardrockbet:'Hard Rock',ballybet:'Bally Bet',other:'Other'};
   function btLoad(){try{return JSON.parse(localStorage.getItem('arb_bets')||'[]');}catch(e){return [];}}
-  function btSave(a){try{localStorage.setItem('arb_bets',JSON.stringify(a));}catch(e){}}
+  var btPutTimer=null;
+  function btSave(a){try{localStorage.setItem('arb_bets',JSON.stringify(a));}catch(e){} if(btPutTimer)clearTimeout(btPutTimer); btPutTimer=setTimeout(btCloudPut,700);}
+
+  // ---- cloud sync via Cloudflare Worker + KV ----
+  var BT_DEFAULT_WORKER='https://arb-scanner.andrewramsey14.workers.dev';
+  function btWorker(){ try{ var el=document.getElementById('btWorker'); var v=((el&&el.value)||localStorage.getItem('poly_worker')||'').trim().replace(/\/+$/,''); return v; }catch(e){return '';} }
+  function btSyncStatus(t,c){ var e=document.getElementById('btSync'); if(e){e.textContent=t; e.style.color=c||'#666';} }
+  async function btCloudGet(){ var w=btWorker(); if(!w)return null; try{var r=await fetch(w+'/betlog',{cache:'no-store'}); if(!r.ok)return null; return await r.json();}catch(e){return null;} }
+  async function btCloudPut(){
+    var w=btWorker(); if(!w){btSyncStatus('not connected (saved on device)','#f59e0b');return;}
+    try{ btSyncStatus('saving…','#7c8698');
+      var r=await fetch(w+'/betlog',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({bets:btLoad(),startBank:btStart()})});
+      var j=await r.json(); btSyncStatus(j&&j.ok?'saved to cloud ✓':'save failed — still on device', j&&j.ok?'#3DDC97':'#ff6b6b');
+    }catch(e){ btSyncStatus('offline — saved on device','#f59e0b'); }
+  }
+  window.btCloudSaveUrl=function(){ var w=btWorker(); if(!w){alert('Paste your Worker URL first (…workers.dev).');return;} try{localStorage.setItem('poly_worker',w);}catch(e){} btCloudSync(); };
+  async function btCloudSync(){
+    var w=btWorker(); if(!w){btSyncStatus('not connected (saved on device)','#f59e0b');return;}
+    btSyncStatus('connecting…','#7c8698');
+    var cloud=await btCloudGet();
+    if(cloud===null){ btSyncStatus('couldn\u2019t reach Worker — check the URL','#ff6b6b'); return; }
+    var cloudBets=Array.isArray(cloud.bets)?cloud.bets:[], local=btLoad();
+    if(cloudBets.length===0 && local.length>0){ await btCloudPut(); btRender(); }   // first time: push local up
+    else {
+      try{ localStorage.setItem('arb_bets',JSON.stringify(cloudBets)); if(cloud.startBank)localStorage.setItem('arb_startbank',cloud.startBank); }catch(e){}
+      var si=document.getElementById('btStart'); if(si&&cloud.startBank)si.value=cloud.startBank;
+      btRender(); btSyncStatus('synced ✓ · '+cloudBets.length+' bets in cloud','#3DDC97');
+    }
+  }
   function btStart(){try{return parseFloat(localStorage.getItem('arb_startbank'))||13000;}catch(e){return 13000;}}
   function btDec(am){am=parseFloat(am);if(isNaN(am)||am===0)return null;return am>0?am/100+1:100/Math.abs(am)+1;}
   function btMoney(n){var s=n<0?'-':'';return s+'$'+Math.abs(n).toLocaleString(undefined,{maximumFractionDigits:0});}
@@ -3266,9 +3296,12 @@ function toggleAuto(){
   };
 
   window.btInit=function(){
+    var wi=document.getElementById('btWorker');
+    if(wi && !wi._wired){ wi._wired=true; if(!wi.value){ wi.value=(localStorage.getItem('poly_worker')||BT_DEFAULT_WORKER); } }
     var s=document.getElementById('btStart');
-    if(s && !s._wired){s._wired=true;s.value=btStart();s.addEventListener('change',function(){try{localStorage.setItem('arb_startbank',parseFloat(this.value)||13000);}catch(e){}btRender();});}
+    if(s && !s._wired){s._wired=true;s.value=btStart();s.addEventListener('change',function(){try{localStorage.setItem('arb_startbank',parseFloat(this.value)||13000);}catch(e){}btRender();btCloudPut();});}
     btRender();
+    if(btWorker()) btCloudSync();
   };
 
   window.btSettle=function(id,status){
