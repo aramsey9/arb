@@ -3231,7 +3231,7 @@ function toggleAuto(){
 
   // ---- cloud sync via Cloudflare Worker + KV ----
   var BT_DEFAULT_WORKER='https://arb-scanner.andrewramsey14.workers.dev';
-  function btWorker(){ try{ var el=document.getElementById('btWorker'); var v=((el&&el.value)||localStorage.getItem('poly_worker')||'').trim().replace(/\/+$/,''); return v; }catch(e){return '';} }
+  function btWorker(){ try{ var el=document.getElementById('btWorker'); var v=((el&&el.value)||localStorage.getItem('bet_worker')||'').trim().replace(/\/+$/,''); return v; }catch(e){return '';} }
   function btSyncStatus(t,c){ var e=document.getElementById('btSync'); if(e){e.textContent=t; e.style.color=c||'#666';} }
   async function btCloudGet(){ var w=btWorker(); if(!w)return null; try{var r=await fetch(w+'/betlog',{cache:'no-store'}); if(!r.ok)return null; return await r.json();}catch(e){return null;} }
   async function btCloudPut(){
@@ -3241,7 +3241,7 @@ function toggleAuto(){
       var j=await r.json(); btSyncStatus(j&&j.ok?'saved to cloud ✓':'save failed — still on device', j&&j.ok?'#3DDC97':'#ff6b6b');
     }catch(e){ btSyncStatus('offline — saved on device','#f59e0b'); }
   }
-  window.btCloudSaveUrl=function(){ var w=btWorker(); if(!w){alert('Paste your Worker URL first (…workers.dev).');return;} try{localStorage.setItem('poly_worker',w);}catch(e){} btCloudSync(); };
+  window.btCloudSaveUrl=function(){ var w=btWorker(); if(!w){alert('Paste your Worker URL first (…workers.dev).');return;} try{localStorage.setItem('bet_worker',w);}catch(e){} btCloudSync(); };
   async function btCloudSync(){
     var w=btWorker(); if(!w){btSyncStatus('not connected (saved on device)','#f59e0b');return;}
     btSyncStatus('connecting…','#7c8698');
@@ -3297,7 +3297,7 @@ function toggleAuto(){
 
   window.btInit=function(){
     var wi=document.getElementById('btWorker');
-    if(wi && !wi._wired){ wi._wired=true; if(!wi.value){ wi.value=(localStorage.getItem('poly_worker')||BT_DEFAULT_WORKER); } }
+    if(wi && !wi._wired){ wi._wired=true; wi.value=(localStorage.getItem('bet_worker')||BT_DEFAULT_WORKER); }
     var s=document.getElementById('btStart');
     if(s && !s._wired){s._wired=true;s.value=btStart();s.addEventListener('change',function(){try{localStorage.setItem('arb_startbank',parseFloat(this.value)||13000);}catch(e){}btRender();btCloudPut();});}
     btRender();
