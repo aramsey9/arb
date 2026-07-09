@@ -474,6 +474,8 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
 #view-ev .ev-flag{margin-top:9px;font-size:11px;color:#f59e0b;background:rgba(245,158,11,.08);border-radius:7px;padding:7px 9px;line-height:1.4}
 #view-ev .ev-open{display:block;margin-top:9px;color:#a78bfa;font-size:11px;font-weight:700;text-decoration:none}
 #view-ev .ev-livepill{display:inline-block;background:rgba(255,71,87,.18);color:#ff6b6b;font-size:9px;font-weight:800;letter-spacing:.5px;padding:2px 6px;border-radius:5px;margin-left:7px;vertical-align:middle;animation:pulse 2s infinite}
+#view-ev .ev-card.placed{opacity:.62}
+#view-ev .ev-placed{background:rgba(124,134,152,.16);color:#a8b3c4;font-size:11px;font-weight:800;border-radius:7px;padding:7px 10px;margin-bottom:9px;text-align:center}
 #view-ev .ev-select{background:#1a1a26;border:1px solid #2a2a3d;color:#e8e8f0;border-radius:8px;padding:12px;font-size:14px;width:100%;margin-bottom:10px;font-family:monospace}
 </style>
 
@@ -2898,6 +2900,21 @@ function toggleAuto(){
   function evEsc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
   function evDevig2(dA,dB){if(!dA||!dB||dA<=1||dB<=1)return null;var iA=1/dA,iB=1/dB,t=iA+iB;if(t<=0)return null;return {a:iA/t,b:iB/t,hold:(t-1)*100};}
   function evSel(id,attr){return Array.from(document.querySelectorAll('#'+id+' [data-'+attr+'].on')).map(function(x){return x.dataset[attr];});}
+  function evNormMatch(s){if(!s)return'';var t=String(s).toLowerCase().split(/[^a-z0-9]+/).filter(function(w){return w.length>=2;});if(!t.length)return'';t.sort();return t.join('|');}
+  function evBetGameSet(){
+    var set={};
+    try{
+      var bets=JSON.parse(localStorage.getItem('arb_bets')||'[]'), cutoff=Date.now()-22*60*60*1000;
+      bets.forEach(function(b){
+        if(!b)return;
+        var active=(b.status==='open')||(b.ts&&b.ts>cutoff)||(b.settledTs&&b.settledTs>cutoff);
+        if(!active)return;
+        if(b.eventID)set[b.eventID]=1;
+        var m=evNormMatch(b.game); if(m)set['m:'+m]=1;
+      });
+    }catch(e){}
+    return set;
+  }
   function evLine(bb){ if(!bb)return null; if(bb.overUnder!=null)return parseFloat(bb.overUnder); if(bb.spread!=null)return parseFloat(bb.spread); return null; }
   function evLink(bb,bk){ return (bb&&(bb.deeplink||bb.deepLink||bb.link))||EV_HOME[bk]||'#'; }
 
@@ -2986,6 +3003,7 @@ function toggleAuto(){
   };
 
   function evRender(){
+    window.__EV_BETSET=evBetGameSet();
     var out=document.getElementById('evOut'); if(!out)return;
     var f=evFilterVal();
     var match=function(x){ return f==='all' || (f==='live'?x.live:!x.live); };
@@ -3146,13 +3164,15 @@ function toggleAuto(){
     else if(p.anchor==='consensus')flag='<div class="ev-flag" style="color:#7c8698;background:rgba(124,134,152,.08)">Fair price from a '+p.anchorN+'-book no-vig consensus (no Pinnacle on this game). A touch less precise — treat thin edges with care.</div>';
     var kv=document.getElementById('evKelly').value;
     var stakeLine=p.stake>0?('<div class="ev-stake">Bet ~$'+p.stake+' <span>· '+(kv==='flat'?'flat stake':'\u00bc-Kelly, rounded')+'</span></div>'):'';
-    return '<div class="'+cls+'">'+
+    var already=window.__EV_BETSET&&(window.__EV_BETSET[p.eventID]||window.__EV_BETSET['m:'+evNormMatch(p.game)]);
+    var placed=already?'<div class="ev-placed">✓ Already placed a wager on this game</div>':'';
+    return '<div class="'+cls+(already?' placed':'')+'">'+
       '<div class="ev-top"><div>'+
         '<div class="ev-meta">'+evEsc(p.sport)+' · '+evMktLabel(p.mkt)+(p.anchor==='Pinnacle'?' · vs Pinnacle':'')+'</div>'+
         '<div class="ev-game">'+evEsc(p.game)+(p.live?'<span class="ev-livepill">🔴 LIVE</span>':'')+'</div>'+
         '<div class="ev-when">'+(p.live?'<span style="color:#ff6b6b">In progress · line moving fast, confirm before betting</span>':evWhen(p.when))+'</div>'+
       '</div><div><div class="'+pcls+'">+'+p.evpct.toFixed(1)+'%</div><div class="ev-pctsub">EV</div></div></div>'+
-      '<div class="ev-body">'+
+      '<div class="ev-body">'+placed+
         '<div class="ev-book">'+evEsc(p.bookTitle)+'</div>'+
         '<div class="ev-pick">'+evEsc(p.label)+'</div>'+
         '<div class="ev-line"><div class="ev-odds">'+evAmFmt(p.am)+'</div><div class="ev-fair">fair '+p.fairAm+' · '+(p.fairP*100).toFixed(1)+'%</div></div>'+
@@ -3340,10 +3360,12 @@ function toggleAuto(){
 
     var hh=document.getElementById('btHistory');
     if(settled.length){
-      var h2='<div class="bt-lbl">History ('+settled.length+')</div>';
-      settled.slice().reverse().forEach(function(b){
+      var openHist=!!window.__BT_HISTOPEN;
+      var h2='<div class="bt-lbl" style="cursor:pointer;user-select:none" onclick="btToggleHist()"><span>History ('+settled.length+') '+(openHist?'▾':'▸')+'</span><span style="color:#666;font-weight:400;text-transform:none;letter-spacing:0">tap to '+(openHist?'hide':'expand')+'</span></div>';
+      var items='';
+      settled.slice().sort(function(a,b){return (b.settledTs||b.ts||0)-(a.settledTs||a.ts||0);}).forEach(function(b){
         var pf=btProfit(b);
-        h2+='<div class="bt-bet '+b.status+'">'+
+        items+='<div class="bt-bet '+b.status+'">'+
           '<div class="top"><div><div class="pk">'+btEsc(b.pick)+' <span style="font-size:10px;color:#7c8698">'+b.status.toUpperCase()+'</span></div>'+
           '<div class="mt">'+btEsc(BN[b.book]||b.book)+' · '+btMoney(b.stake)+' @ '+(b.odds>0?'+':'')+b.odds+(b.game?' · '+btEsc(b.game):'')+(b.finalNote?' · '+btEsc(b.finalNote):'')+'</div>'+btLeagueSel(b)+'</div>'+
           '<div class="pf '+btCls(pf)+'">'+(pf>0?'+':'')+btMoney(pf)+'</div></div>'+
@@ -3351,9 +3373,10 @@ function toggleAuto(){
           '<button class="g-edit" onclick="btEdit(\''+b.id+'\')">✏️</button>'+
           '<button class="g-del" onclick="btDelete(\''+b.id+'\')">🗑</button></div></div>';
       });
-      hh.innerHTML=h2;
+      hh.innerHTML=h2+'<div id="btHistItems" style="display:'+(openHist?'block':'none')+'">'+items+'</div>';
     } else hh.innerHTML='';
   }
+  window.btToggleHist=function(){ window.__BT_HISTOPEN=!window.__BT_HISTOPEN; var el=document.getElementById('btHistItems'); if(el){el.style.display=window.__BT_HISTOPEN?'block':'none';} btRender(); };
 
   function btBreakRisk(id,bets,keyFn){
     var box=document.getElementById(id); if(!box)return;
