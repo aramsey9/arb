@@ -607,6 +607,11 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
 #view-bets .g-push{background:rgba(124,134,152,.16);color:#a8b3c4}
 #view-bets .g-del{background:rgba(124,134,152,.1);color:#7c8698;flex:0 0 40px}
 #view-bets .bt-io{display:flex;gap:8px;margin:12px 0}
+#view-bets .bt-form{background:#12121a;border:1px solid #2a2a3d;border-radius:12px;padding:12px;margin-bottom:10px}
+#view-bets .bt-form input,#view-bets .bt-form select{background:#1a1a26;border:1px solid #2a2a3d;color:#e8e8f0;border-radius:8px;padding:11px;font-size:14px;width:100%;margin-bottom:8px;font-family:inherit}
+#view-bets .bt-form .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#view-bets .bt-form .addbtn{background:#3DDC97;color:#04120b;border:0;border-radius:9px;padding:12px;font-size:14px;font-weight:800;width:100%;cursor:pointer}
+#view-bets .bt-addtoggle{background:#1a1a26;border:1px dashed #3a3a4d;color:#a8b3c4;border-radius:9px;padding:11px;font-size:12px;font-weight:700;width:100%;cursor:pointer;margin:6px 0 10px}
 #view-bets .bt-io button{flex:1;background:#1a1a26;border:1px solid #2a2a3d;color:#a78bfa;border-radius:8px;padding:11px;font-size:12px;font-weight:700;cursor:pointer}
 </style>
 
@@ -625,6 +630,32 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
 </div>
 
 <div class="bt-lbl"><span>Open bets</span><button class="bt-settle" onclick="btAutoSettle()">⏱ Auto-settle finished</button></div>
+<button class="bt-addtoggle" onclick="btToggleAdd()">＋ Add a bet manually (for ones not on the board)</button>
+<div class="bt-form" id="btAddForm" style="display:none">
+  <input id="btmPick" placeholder="Pick — e.g. SF Giants ML" />
+  <div class="row2">
+    <input id="btmGame" placeholder="Game — e.g. MLB TOR@SF" />
+    <select id="btmBook">
+      <option value="bookmakereu">BookMaker</option>
+      <option value="draftkings">DraftKings</option>
+      <option value="fanduel">FanDuel</option>
+      <option value="betmgm">BetMGM</option>
+      <option value="caesars">Caesars</option>
+      <option value="fanatics">Fanatics</option>
+      <option value="espnbet">ESPN Bet</option>
+      <option value="bet365">Bet365</option>
+      <option value="hardrockbet">Hard Rock</option>
+      <option value="ballybet">Bally Bet</option>
+      <option value="other">Other</option>
+    </select>
+  </div>
+  <div class="row2">
+    <input id="btmStake" type="number" placeholder="Stake $" step="5" />
+    <input id="btmOdds" type="number" placeholder="Odds — e.g. -110" step="5" />
+  </div>
+  <button class="addbtn" onclick="btAddManual()">＋ Add bet</button>
+  <div style="font-size:10px;color:#666;margin-top:6px">Manually-added bets settle with one tap (Won/Lost/Push) — auto-settle only works for bets logged from a +EV card.</div>
+</div>
 <div id="btOpen"></div>
 <div id="btHistory"></div>
 
@@ -3215,6 +3246,23 @@ function toggleAuto(){
     btSave(bets);
     var b=document.getElementById('evlog'+idx);
     if(b){b.textContent='✓ Logged $'+p.stake;b.style.opacity='.7';b.disabled=true;}
+  };
+
+  window.btToggleAdd=function(){var f=document.getElementById('btAddForm');f.style.display=(f.style.display==='none'||!f.style.display)?'block':'none';};
+  window.btAddManual=function(){
+    function v(id){return (document.getElementById(id).value||'').trim();}
+    var pick=v('btmPick'), stake=parseFloat(v('btmStake')), odds=parseFloat(v('btmOdds'));
+    if(!pick){alert('Enter the pick (e.g. SF Giants ML).');return;}
+    if(!(stake>0)){alert('Enter a stake greater than 0.');return;}
+    if(isNaN(odds)||odds===0){alert('Enter the odds (American, e.g. -110 or 150).');return;}
+    var bets=btLoad();
+    bets.push({id:'b'+Date.now()+Math.floor(Math.random()*9999),ts:Date.now(),
+      eventID:'',oddID:'',oppID:'',league:'',game:v('btmGame'),book:document.getElementById('btmBook').value,
+      side:'',pick:pick,betType:'',line:null,odds:odds,stake:stake,status:'open',settledTs:null,finalNote:'manual'});
+    btSave(bets);
+    ['btmPick','btmGame','btmStake','btmOdds'].forEach(function(id){document.getElementById(id).value='';});
+    document.getElementById('btAddForm').style.display='none';
+    btRender();
   };
 
   window.btInit=function(){
