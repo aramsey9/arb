@@ -632,8 +632,21 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
 <div class="bt-form" id="btAddForm" style="display:none">
   <input id="btmPick" placeholder="Pick — e.g. SF Giants ML" />
   <div class="row2">
-    <input id="btmGame" placeholder="Game — e.g. MLB TOR@SF" />
-    <select id="btmBook">
+    <input id="btmGame" placeholder="Game — e.g. TOR @ SF" />
+    <select id="btmLeague">
+      <option value="">Sport…</option>
+      <option value="MLB">⚾ MLB</option>
+      <option value="WNBA">🏀 WNBA</option>
+      <option value="NBA">🏀 NBA</option>
+      <option value="NFL">🏈 NFL</option>
+      <option value="NCAAF">🏈 NCAAF</option>
+      <option value="NHL">🏒 NHL</option>
+      <option value="NCAAB">🏀 NCAAB</option>
+      <option value="SOCCER">⚽ Soccer</option>
+      <option value="Other">Other</option>
+    </select>
+  </div>
+  <select id="btmBook">
       <option value="bookmakereu">BookMaker</option>
       <option value="draftkings">DraftKings</option>
       <option value="fanduel">FanDuel</option>
@@ -644,8 +657,7 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
       <option value="hardrockbet">Hard Rock</option>
       <option value="ballybet">Bally Bet</option>
       <option value="other">Other</option>
-    </select>
-  </div>
+  </select>
   <div class="row2">
     <input id="btmStake" type="number" placeholder="Stake $" step="5" />
     <input id="btmOdds" type="number" placeholder="Odds — e.g. -110" step="5" />
@@ -3287,10 +3299,11 @@ function toggleAuto(){
     if(isNaN(odds)||odds===0){alert('Enter the odds (American, e.g. -110 or 150).');return;}
     var bets=btLoad();
     bets.push({id:'b'+Date.now()+Math.floor(Math.random()*9999),ts:Date.now(),
-      eventID:'',oddID:'',oppID:'',league:'',game:v('btmGame'),book:document.getElementById('btmBook').value,
+      eventID:'',oddID:'',oppID:'',league:(document.getElementById('btmLeague').value||''),game:v('btmGame'),book:document.getElementById('btmBook').value,
       side:'',pick:pick,betType:'',line:null,odds:odds,stake:stake,status:'open',settledTs:null,finalNote:'manual'});
     btSave(bets);
     ['btmPick','btmGame','btmStake','btmOdds'].forEach(function(id){document.getElementById(id).value='';});
+    document.getElementById('btmLeague').value='';
     document.getElementById('btAddForm').style.display='none';
     btRender();
   };
@@ -3310,6 +3323,13 @@ function toggleAuto(){
     btSave(bets);btRender();
   };
   window.btDelete=function(id){ if(!confirm('Delete this bet?'))return; btSave(btLoad().filter(function(b){return b.id!==id;}));btRender(); };
+  window.btSetLeague=function(id,val){var a=btLoad();for(var i=0;i<a.length;i++){if(a[i].id===id){a[i].league=val;break;}}btSave(a);btRender();};
+  var BT_LEAGUES=[['','Sport…'],['MLB','⚾ MLB'],['WNBA','🏀 WNBA'],['NBA','🏀 NBA'],['NFL','🏈 NFL'],['NCAAF','🏈 NCAAF'],['NHL','🏒 NHL'],['NCAAB','🏀 NCAAB'],['SOCCER','⚽ Soccer'],['Other','Other']];
+  function btLeagueSel(b){
+    var cur=b.league||'';
+    var o=BT_LEAGUES.map(function(x){return '<option value="'+x[0]+'"'+(x[0]===cur?' selected':'')+'>'+x[1]+'</option>';}).join('');
+    return '<select onchange="btSetLeague(\''+b.id+'\',this.value)" onclick="event.stopPropagation()" style="background:#1a1a26;border:1px solid '+(cur?'#2a2a3d':'#f59e0b')+';color:'+(cur?'#a8b3c4':'#f59e0b')+';border-radius:6px;padding:3px 6px;font-size:10px;font-family:inherit;margin-top:5px">'+o+'</select>';
+  }
 
   function btRender(){
     var bets=btLoad();
@@ -3343,7 +3363,7 @@ function toggleAuto(){
         var ex=e&&e.n>1?'<div class="expo">⚠ '+btMoney(e.amt)+' on this pick across '+e.n+' books — treat as ONE position (keep total near your Kelly size).</div>':'';
         h+='<div class="bt-bet">'+
           '<div class="top"><div><div class="pk">'+btEsc(b.pick)+'</div>'+
-          '<div class="mt">'+btEsc(BN[b.book]||b.book)+' · '+btMoney(b.stake)+' @ '+(b.odds>0?'+':'')+b.odds+' · '+btEsc(b.game)+' · '+btEsc(b.league)+'</div>'+ex+'</div>'+
+          '<div class="mt">'+btEsc(BN[b.book]||b.book)+' · '+btMoney(b.stake)+' @ '+(b.odds>0?'+':'')+b.odds+(b.game?' · '+btEsc(b.game):'')+'</div>'+btLeagueSel(b)+ex+'</div>'+
           '<div class="pf neu">'+btMoney(b.stake*(btDec(b.odds)-1))+'<div style="font-size:9px;color:#666;text-align:right">to win</div></div></div>'+
           '<div class="bt-btns"><button class="g-win" onclick="btSettle(\''+b.id+'\',\'win\')">Won</button>'+
           '<button class="g-loss" onclick="btSettle(\''+b.id+'\',\'loss\')">Lost</button>'+
@@ -3360,7 +3380,7 @@ function toggleAuto(){
         var pf=btProfit(b);
         h2+='<div class="bt-bet '+b.status+'">'+
           '<div class="top"><div><div class="pk">'+btEsc(b.pick)+' <span style="font-size:10px;color:#7c8698">'+b.status.toUpperCase()+'</span></div>'+
-          '<div class="mt">'+btEsc(BN[b.book]||b.book)+' · '+btMoney(b.stake)+' @ '+(b.odds>0?'+':'')+b.odds+' · '+btEsc(b.game)+(b.finalNote?' · '+btEsc(b.finalNote):'')+'</div></div>'+
+          '<div class="mt">'+btEsc(BN[b.book]||b.book)+' · '+btMoney(b.stake)+' @ '+(b.odds>0?'+':'')+b.odds+(b.game?' · '+btEsc(b.game):'')+(b.finalNote?' · '+btEsc(b.finalNote):'')+'</div>'+btLeagueSel(b)+'</div>'+
           '<div class="pf '+btCls(pf)+'">'+(pf>0?'+':'')+btMoney(pf)+'</div></div>'+
           '<div class="bt-btns"><button class="g-push" onclick="btSettle(\''+b.id+'\',\'open\')">Undo</button>'+
           '<button class="g-del" onclick="btDelete(\''+b.id+'\')">🗑</button></div></div>';
