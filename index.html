@@ -132,7 +132,6 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
 
 <div class="tab-bar">
   <button class="tab-btn active" id="tab-scanner" onclick="switchTab('scanner')">🔍 Scanner</button>
-  <button class="tab-btn" id="tab-lookup" onclick="switchTab('lookup')">📋 Line Lookup</button>
   <button class="tab-btn" id="tab-offshore" onclick="switchTab('offshore')">🌊 Offshore</button>
   <button class="tab-btn" id="tab-notify" onclick="switchTab('notify')">🔔 Notify</button>
   <button class="tab-btn" id="tab-trueline" onclick="switchTab('trueline')">🎯 TrueLine</button>
@@ -212,39 +211,6 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
   <div class="prog-bar"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
 </div>
 <div id="out"></div>
-</div>
-
-<div id="view-lookup" class="view">
-  <div class="slabel">Sport</div>
-  <select id="lsport" style="margin-bottom:10px">
-    <option value="baseball_mlb">⚾ MLB</option>
-    <option value="basketball_nba">🏀 NBA</option>
-    <option value="americanfootball_nfl">🏈 NFL</option>
-    <option value="americanfootball_ncaaf">🏈 NCAAF</option>
-    <option value="icehockey_nhl">🏒 NHL</option>
-    <option value="soccer_usa_mls">⚽ MLS</option>
-    <option value="soccer_fifa_world_cup">🌍 World Cup</option>
-    <option value="mma_mixed_martial_arts">🥊 MMA</option>
-    <option value="basketball_wnba">🏀 WNBA</option>
-    <option value="basketball_ncaab">🏀 NCAAB</option>
-    <option value="soccer_epl">⚽ EPL</option>
-    <option value="soccer_uefa_champs_league">⚽ Champions League</option>
-    <option value="soccer_spain_la_liga">⚽ La Liga</option>
-    <option value="soccer_germany_bundesliga">⚽ Bundesliga</option>
-    <option value="soccer_italy_serie_a">⚽ Serie A</option>
-    <option value="soccer_france_ligue_1">⚽ Ligue 1</option>
-    <option value="soccer_mexico_ligamx">⚽ Liga MX</option>
-    <option value="soccer_uefa_europa_league">⚽ Europa League</option>
-    <option value="boxing_boxing">🥊 Boxing</option>
-    <option value="lacrosse_pll">🥍 PLL</option>
-    <option value="lacrosse_ncaa">🥍 NCAA Lacrosse</option>
-  </select>
-  <div class="slabel">Team or player name</div>
-  <div class="row" style="margin-bottom:14px">
-    <input type="text" id="lquery" placeholder="e.g. Yankees, Massey, KC Royals..." style="margin-bottom:0" />
-    <button class="lookup-go" onclick="runLookup()">Go</button>
-  </div>
-  <div id="lout"></div>
 </div>
 
 <div id="view-offshore" class="view">
@@ -604,6 +570,7 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
 #view-bets .g-loss{background:rgba(255,107,107,.16);color:#ff6b6b}
 #view-bets .g-push{background:rgba(124,134,152,.16);color:#a8b3c4}
 #view-bets .g-del{background:rgba(124,134,152,.1);color:#7c8698;flex:0 0 40px}
+#view-bets .g-edit{background:rgba(167,139,250,.14);color:#a78bfa;flex:0 0 44px}
 #view-bets .bt-io{display:flex;gap:8px;margin:12px 0}
 #view-bets .bt-form{background:#12121a;border:1px solid #2a2a3d;border-radius:12px;padding:12px;margin-bottom:10px}
 #view-bets .bt-form input,#view-bets .bt-form select{background:#1a1a26;border:1px solid #2a2a3d;color:#e8e8f0;border-radius:8px;padding:11px;font-size:14px;width:100%;margin-bottom:8px;font-family:inherit}
@@ -698,7 +665,7 @@ var OARB_CACHE=[]; var OEVENTS_CACHE={};
 
 // ── Tab switching ──────────────────────────────────────────
 function switchTab(tab){
-  ['scanner','lookup','offshore','notify','trueline','ev','bets'].forEach(function(t){
+  ['scanner','offshore','notify','trueline','ev','bets'].forEach(function(t){
     document.getElementById('tab-'+t).classList.remove('active');
     document.getElementById('view-'+t).classList.remove('active');
   });
@@ -1314,7 +1281,6 @@ async function scanAll(){
     c+='</div>';
     c+=placeFirstNote(x.side1.book,x.side2.book);
     if(x.middleNote)c+='<div class="middle-note">'+x.middleNote+'</div>';
-    c+='<div style="padding:8px 12px;border-top:1px solid #2a2a3d"><button class="lookup-btn" onclick="lookupFromArb('+idx+')">🔍 Find Alternative Lines</button></div>';
     c+='</div>';
     return c;
   }
@@ -3324,6 +3290,14 @@ function toggleAuto(){
   };
   window.btDelete=function(id){ if(!confirm('Delete this bet?'))return; btSave(btLoad().filter(function(b){return b.id!==id;}));btRender(); };
   window.btSetLeague=function(id,val){var a=btLoad();for(var i=0;i<a.length;i++){if(a[i].id===id){a[i].league=val;break;}}btSave(a);btRender();};
+  window.btEdit=function(id){
+    var a=btLoad(), b=null; for(var i=0;i<a.length;i++){if(a[i].id===id){b=a[i];break;}}
+    if(!b)return;
+    var pick=prompt('Pick:', b.pick); if(pick===null)return; if(pick.trim())b.pick=pick.trim();
+    var st=prompt('Stake $ (you bet):', b.stake); if(st===null)return; var sv=parseFloat(st); if(sv>0)b.stake=sv;
+    var od=prompt('Odds (American, e.g. -110 or +150):', b.odds); if(od===null)return; var ov=parseFloat(od); if(!isNaN(ov)&&ov!==0)b.odds=ov;
+    btSave(a); btRender();
+  };
   var BT_LEAGUES=[['','Sport…'],['MLB','⚾ MLB'],['WNBA','🏀 WNBA'],['NBA','🏀 NBA'],['NFL','🏈 NFL'],['NCAAF','🏈 NCAAF'],['NHL','🏒 NHL'],['NCAAB','🏀 NCAAB'],['SOCCER','⚽ Soccer'],['Other','Other']];
   function btLeagueSel(b){
     var cur=b.league||'';
@@ -3368,6 +3342,7 @@ function toggleAuto(){
           '<div class="bt-btns"><button class="g-win" onclick="btSettle(\''+b.id+'\',\'win\')">Won</button>'+
           '<button class="g-loss" onclick="btSettle(\''+b.id+'\',\'loss\')">Lost</button>'+
           '<button class="g-push" onclick="btSettle(\''+b.id+'\',\'push\')">Push</button>'+
+          '<button class="g-edit" onclick="btEdit(\''+b.id+'\')">✏️</button>'+
           '<button class="g-del" onclick="btDelete(\''+b.id+'\')">🗑</button></div></div>';
       });
       oh.innerHTML=h;
@@ -3383,6 +3358,7 @@ function toggleAuto(){
           '<div class="mt">'+btEsc(BN[b.book]||b.book)+' · '+btMoney(b.stake)+' @ '+(b.odds>0?'+':'')+b.odds+(b.game?' · '+btEsc(b.game):'')+(b.finalNote?' · '+btEsc(b.finalNote):'')+'</div>'+btLeagueSel(b)+'</div>'+
           '<div class="pf '+btCls(pf)+'">'+(pf>0?'+':'')+btMoney(pf)+'</div></div>'+
           '<div class="bt-btns"><button class="g-push" onclick="btSettle(\''+b.id+'\',\'open\')">Undo</button>'+
+          '<button class="g-edit" onclick="btEdit(\''+b.id+'\')">✏️</button>'+
           '<button class="g-del" onclick="btDelete(\''+b.id+'\')">🗑</button></div></div>';
       });
       hh.innerHTML=h2;
