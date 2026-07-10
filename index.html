@@ -3229,9 +3229,17 @@ function toggleAuto(){
     var cloudBets=Array.isArray(cloud.bets)?cloud.bets:[], local=btLoad();
     if(cloudBets.length===0 && local.length>0){ await btCloudPut(); btRender(); }   // first time: push local up
     else {
-      try{ localStorage.setItem('arb_bets',JSON.stringify(cloudBets)); if(cloud.startBank)localStorage.setItem('arb_startbank',cloud.startBank); }catch(e){}
+      // MERGE by id — cloud wins for shared bets (Worker CLV etc.), but keep any
+      // local-only bets (e.g. one you just logged that hasn't pushed yet) and sync them up.
+      var byId={}; cloudBets.forEach(function(b){if(b&&b.id)byId[b.id]=b;});
+      var addedLocal=0;
+      local.forEach(function(b){ if(b&&b.id&&!byId[b.id]){byId[b.id]=b;addedLocal++;} });
+      var merged=Object.keys(byId).map(function(k){return byId[k];});
+      try{ localStorage.setItem('arb_bets',JSON.stringify(merged)); if(cloud.startBank)localStorage.setItem('arb_startbank',cloud.startBank); }catch(e){}
       var si=document.getElementById('btStart'); if(si&&cloud.startBank)si.value=cloud.startBank;
-      btRender(); btSyncStatus('synced ✓ · '+cloudBets.length+' bets in cloud','#3DDC97');
+      btRender();
+      if(addedLocal>0){ await btCloudPut(); btSyncStatus('synced ✓ · added '+addedLocal+' new','#3DDC97'); }
+      else btSyncStatus('synced ✓ · '+merged.length+' bets in cloud','#3DDC97');
     }
   }
   function btStart(){try{return parseFloat(localStorage.getItem('arb_startbank'))||13000;}catch(e){return 13000;}}
