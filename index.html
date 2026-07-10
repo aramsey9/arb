@@ -3301,6 +3301,13 @@ function toggleAuto(){
   };
   window.btDelete=function(id){ if(!confirm('Delete this bet?'))return; btSave(btLoad().filter(function(b){return b.id!==id;}));btRender(); };
   window.btSetLeague=function(id,val){var a=btLoad();for(var i=0;i<a.length;i++){if(a[i].id===id){a[i].league=val;break;}}btSave(a);btRender();};
+  var BT_BOOKS=[['bookmakereu','BookMaker'],['draftkings','DraftKings'],['fanduel','FanDuel'],['betmgm','BetMGM'],['caesars','Caesars'],['fanatics','Fanatics'],['bet365','Bet365'],['hardrockbet','Hard Rock'],['ballybet','Bally Bet'],['other','Other']];
+  function btBookSel(b){
+    var cur=b.book||'';
+    var o=BT_BOOKS.map(function(x){return '<option value="'+x[0]+'"'+(x[0]===cur?' selected':'')+'>'+x[1]+'</option>';}).join('');
+    return '<select onchange="btSetBook(\''+b.id+'\',this.value)" onclick="event.stopPropagation()" style="background:#1a1a26;border:1px solid #2a2a3d;color:#a78bfa;border-radius:6px;padding:3px 6px;font-size:10px;font-family:inherit;margin-top:5px;margin-right:6px">'+o+'</select>';
+  }
+  window.btSetBook=function(id,val){var a=btLoad();for(var i=0;i<a.length;i++){if(a[i].id===id){a[i].book=val;break;}}btSave(a);btRender();};
   window.btEdit=function(id){
     var a=btLoad(), b=null; for(var i=0;i<a.length;i++){if(a[i].id===id){b=a[i];break;}}
     if(!b)return;
@@ -3366,10 +3373,12 @@ function toggleAuto(){
         var e=expo[b.game+'|'+b.pick];
         var ex=e&&e.n>1?'<div class="expo">⚠ '+btMoney(e.amt)+' on this pick across '+e.n+' books — treat as ONE position (keep total near your Kelly size).</div>':'';
         var lv=b.eventID&&BT_LIVE[b.eventID];
-        var sb=lv?'<div class="bt-live">🔴 '+btEsc(lv.text)+(lv.period?' · '+btEsc(String(lv.period).toUpperCase()):'')+(lv.score?' · <b>'+btEsc(lv.score)+'</b>':'')+'</div>':'';
+        var sbScore=(lv&&lv.as!=null&&lv.hs!=null)?(btEsc(lv.away||'Away')+' <b>'+lv.as+'</b> – <b>'+lv.hs+'</b> '+btEsc(lv.home||'Home')):'';
+        var sbPer=lv?String(lv.period||lv.text||'').toUpperCase():'';
+        var sb=lv?'<div class="bt-live">🔴 '+(sbScore?sbScore+(sbPer?' · ':''):'')+btEsc(sbPer)+'</div>':'';
         h+='<div class="bt-bet">'+
           '<div class="top"><div><div class="pk">'+btEsc(b.pick)+'</div>'+
-          '<div class="mt">'+btEsc(BN[b.book]||b.book)+' · '+btMoney(b.stake)+' @ '+(b.odds>0?'+':'')+b.odds+(b.game?' · '+btEsc(b.game):'')+btClvSpan(b)+'</div>'+sb+btLeagueSel(b)+ex+'</div>'+
+          '<div class="mt">'+btEsc(BN[b.book]||b.book)+' · '+btMoney(b.stake)+' @ '+(b.odds>0?'+':'')+b.odds+(b.game?' · '+btEsc(b.game):'')+btClvSpan(b)+'</div>'+sb+btBookSel(b)+btLeagueSel(b)+ex+'</div>'+
           '<div class="pf neu">'+btMoney(b.stake*(btDec(b.odds)-1))+'<div style="font-size:9px;color:#666;text-align:right">to win</div></div></div>'+
           '<div class="bt-btns"><button class="g-win" onclick="btSettle(\''+b.id+'\',\'win\')">Won</button>'+
           '<button class="g-loss" onclick="btSettle(\''+b.id+'\',\'loss\')">Lost</button>'+
@@ -3389,7 +3398,7 @@ function toggleAuto(){
         var pf=btProfit(b);
         items+='<div class="bt-bet '+b.status+'">'+
           '<div class="top"><div><div class="pk">'+btEsc(b.pick)+' <span style="font-size:10px;color:#7c8698">'+b.status.toUpperCase()+'</span></div>'+
-          '<div class="mt">'+btEsc(BN[b.book]||b.book)+' · '+btMoney(b.stake)+' @ '+(b.odds>0?'+':'')+b.odds+(b.game?' · '+btEsc(b.game):'')+(b.finalNote?' · '+btEsc(b.finalNote):'')+btClvSpan(b)+'</div>'+btLeagueSel(b)+'</div>'+
+          '<div class="mt">'+btEsc(BN[b.book]||b.book)+' · '+btMoney(b.stake)+' @ '+(b.odds>0?'+':'')+b.odds+(b.game?' · '+btEsc(b.game):'')+(b.finalNote?' · '+btEsc(b.finalNote):'')+btClvSpan(b)+'</div>'+btBookSel(b)+btLeagueSel(b)+'</div>'+
           '<div class="pf '+btCls(pf)+'">'+(pf>0?'+':'')+btMoney(pf)+'</div></div>'+
           '<div class="bt-btns"><button class="g-push" onclick="btSettle(\''+b.id+'\',\'open\')">Undo</button>'+
           '<button class="g-edit" onclick="btEdit(\''+b.id+'\')">✏️</button>'+
@@ -3457,13 +3466,27 @@ function toggleAuto(){
   // ---- auto-grade via SGO node.score ----
   // ---- live scoreboard for open bets (status + period now; score fills in once confirmed) ----
   var BT_LIVE={};
+  function btTeamName(t){if(!t)return '';if(typeof t==='string')return t;return (t.names&&(t.names.short||t.names.abbreviation||t.names.long))||t.abbreviation||t.name||'';}
   function btExtractScore(ev){
+    // Try several sources so we show a score regardless of SGO's exact live shape.
     try{
+      var odds=ev.odds||{}, hs=null, as=null;
+      Object.keys(odds).forEach(function(k){
+        var od=odds[k]; if(!od||od.score==null)return;
+        if(od.betTypeID!=='ml'||od.playerID)return;
+        if(od.periodID&&od.periodID!=='game')return;
+        if(od.sideID==='home'&&hs==null)hs=parseFloat(od.score);
+        else if(od.sideID==='away'&&as==null)as=parseFloat(od.score);
+      });
+      if(hs!=null&&!isNaN(hs)&&as!=null&&!isNaN(as))return {away:as,home:hs};
       var r=ev.results||ev.scores||null;
-      if(r&&typeof r==='object'&&r.home&&r.away&&(r.home.total!=null||r.away.total!=null))
-        return (r.away.total!=null?r.away.total:'?')+'\u2013'+(r.home.total!=null?r.home.total:'?');
+      if(r&&typeof r==='object'){
+        var g=r.game||r.reg||r;
+        var rh=g.home&&(g.home.total!=null?g.home.total:g.home.points), ra=g.away&&(g.away.total!=null?g.away.total:g.away.points);
+        if(rh!=null&&ra!=null)return {away:ra,home:rh};
+      }
     }catch(e){}
-    return '';
+    return null;
   }
   window.btLiveScores=async function(){
     var key=btKey(); if(!key)return;
@@ -3472,12 +3495,16 @@ function toggleAuto(){
     var evIds=Object.keys(ids); if(!evIds.length)return;
     for(var i=0;i<evIds.length;i++){
       try{
-        var url='https://api.sportsgameodds.com/v2/events?apiKey='+encodeURIComponent(key)+'&eventID='+encodeURIComponent(evIds[i]);
+        var url='https://api.sportsgameodds.com/v2/events?apiKey='+encodeURIComponent(key)+'&eventID='+encodeURIComponent(evIds[i])+'&expandResults=true';
         var resp=await sgoFetch(url,key);
         var ev=resp&&Array.isArray(resp.data)?resp.data[0]:null; if(!ev){continue;}
         var st=ev.status||{};
         var live=(st.live===true)||(st.started===true&&!(st.ended===true||st.completed===true));
-        BT_LIVE[evIds[i]]= live ? {text:(st.displayLong||st.displayShort||'Live'),period:(st.currentPeriodID||''),score:btExtractScore(ev)} : null;
+        if(!live){ BT_LIVE[evIds[i]]=null; continue; }
+        var sc=btExtractScore(ev);
+        BT_LIVE[evIds[i]]={text:(st.displayLong||st.displayShort||'Live'),period:(st.currentPeriodID||''),
+          away:btTeamName(ev.teams&&ev.teams.away),home:btTeamName(ev.teams&&ev.teams.home),
+          as:(sc?sc.away:null),hs:(sc?sc.home:null)};
       }catch(e){}
     }
     btRender();
