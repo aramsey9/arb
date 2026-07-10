@@ -3555,8 +3555,8 @@ function toggleAuto(){
         var ev=resp&&Array.isArray(resp.data)?resp.data[0]:null; if(ev)cache['id:'+eids[i]]=ev;
       }catch(e){}
     }
-    // fetch league windows for bets without a game ID (match by teams)
-    var leagues={}; open.forEach(function(b){if(!b.eventID&&b.league&&b.game)leagues[b.league]=1;});
+    // fetch league windows so any bet can match by teams (covers empty/stale game IDs)
+    var leagues={}; open.forEach(function(b){if(b.league)leagues[b.league]=1;});
     var lgs=Object.keys(leagues);
     var aft=new Date(Date.now()-8*3600*1000).toISOString(), bef=new Date(Date.now()+40*3600*1000).toISOString();
     for(var j=0;j<lgs.length;j++){
@@ -3568,7 +3568,7 @@ function toggleAuto(){
     }
     // process each open bet: grade if final, else live score + current-line value
     open.forEach(function(b){
-      var ev=b.eventID?cache['id:'+b.eventID]:cache['m:'+btNormMatch(b.game)];
+      var ev=(b.eventID&&cache['id:'+b.eventID])||cache['m:'+btNormMatch(b.game)];
       if(!ev)return;
       var st=ev.status||{};
       var done=(st.finalized===true)||(st.ended===true)||(st.completed===true);
