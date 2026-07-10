@@ -3337,8 +3337,8 @@ function toggleAuto(){
     delete BT_LINK[betId]; btSave(a); btRender();
     if(window.btLiveScores) btLiveScores();
   };
+  var BT_CUR={}, BT_RESOLVED={};
   function btLinkControl(b){
-    if(b.eventID) return '';
     if(BT_LINK[b.id]){
       var opts=['<option value="">Pick this game…</option>'].concat(BT_LINK[b.id].map(function(g,i){
         var when=g.t?(' · '+new Date(g.t).toLocaleString([],{month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'})):'';
@@ -3346,7 +3346,10 @@ function toggleAuto(){
       }));
       return '<select onchange="btApplyLink(\''+b.id+'\',this.value)" style="margin-top:6px;background:#1a1a26;border:1px solid #3DDC97;color:#e8e8f0;border-radius:6px;padding:5px 7px;font-size:11px;font-family:inherit;max-width:100%">'+opts.join('')+'</select>';
     }
-    return '<button id="btlink'+b.id+'" onclick="btLinkGame(\''+b.id+'\')" style="margin-top:6px;background:rgba(61,220,151,.1);border:1px dashed #3DDC97;color:#3DDC97;border-radius:6px;padding:5px 9px;font-size:10px;font-weight:700;cursor:pointer">🔗 Link game (for CLV + auto-grade)</button>';
+    if(b.clvPct!=null || BT_CUR[b.id]!=null) return '';   // has a value → resolved
+    if(!window.__BT_SCORED) return '';                    // haven't checked yet — don't flash
+    if(BT_RESOLVED[b.id]) return '';                      // matched a game (live/graded) even w/o value
+    return '<button id="btlink'+b.id+'" onclick="btLinkGame(\''+b.id+'\')" style="margin-top:6px;background:rgba(61,220,151,.1);border:1px dashed #3DDC97;color:#3DDC97;border-radius:6px;padding:5px 9px;font-size:10px;font-weight:700;cursor:pointer">🔗 Link game (not matching — tap to fix)</button>';
   }
   window.btEdit=function(id){
     var a=btLoad(), b=null; for(var i=0;i<a.length;i++){if(a[i].id===id){b=a[i];break;}}
@@ -3540,12 +3543,11 @@ function toggleAuto(){
       away:btTeamName(ev.teams&&ev.teams.away),home:btTeamName(ev.teams&&ev.teams.home),
       as:(sc?sc.away:null),hs:(sc?sc.home:null)};
   }
-  var BT_CUR={};
   window.btLiveScores=async function(){
     var key=btKey(); if(!key)return;
     var all=btLoad();
     var open=all.filter(function(b){return b.status==='open';}); if(!open.length)return;
-    var live={}, cur={}, graded=false, cache={};
+    var live={}, cur={}, resolved={}, graded=false, cache={};
     // fetch events referenced by game ID
     var evIds={}; open.forEach(function(b){if(b.eventID)evIds[b.eventID]=1;});
     var eids=Object.keys(evIds);
@@ -3570,6 +3572,7 @@ function toggleAuto(){
     open.forEach(function(b){
       var ev=(b.eventID&&cache['id:'+b.eventID])||cache['m:'+btNormMatch(b.game)];
       if(!ev)return;
+      resolved[b.id]=true;
       var st=ev.status||{};
       var done=(st.finalized===true)||(st.ended===true)||(st.completed===true);
       if(done){
@@ -3585,7 +3588,7 @@ function toggleAuto(){
         cur[b.id]=Math.round((fp*(decGot-1)-(1-fp))*1000)/10;
       }
     });
-    BT_LIVE=live; BT_CUR=cur;
+    BT_LIVE=live; BT_CUR=cur; BT_RESOLVED=resolved; window.__BT_SCORED=true;
     if(graded){ btSave(all); }
     btRender();
   };
