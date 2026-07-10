@@ -3310,6 +3310,41 @@ function toggleAuto(){
     return '<select onchange="btSetBook(\''+b.id+'\',this.value)" onclick="event.stopPropagation()" style="background:#1a1a26;border:1px solid #2a2a3d;color:#a78bfa;border-radius:6px;padding:3px 6px;font-size:10px;font-family:inherit;margin-top:5px;margin-right:6px">'+o+'</select>';
   }
   window.btSetBook=function(id,val){var a=btLoad();for(var i=0;i<a.length;i++){if(a[i].id===id){a[i].book=val;break;}}btSave(a);btRender();};
+
+  // ---- link any bet to its SGO game (unlocks CLV + auto-grade + live score) ----
+  var BT_LINK={};
+  window.btLinkGame=async function(betId){
+    var key=btKey(); if(!key){alert('Open the Offshore tab once so your SGO key loads, then retry.');return;}
+    var b=btLoad().find(function(x){return x.id===betId;}); if(!b)return;
+    if(!b.league){alert('Pick the sport on this bet first (the sport dropdown), then tap Link game.');return;}
+    var btnEl=document.getElementById('btlink'+betId); if(btnEl){btnEl.textContent='Loading games…';}
+    try{
+      var aft=new Date(Date.now()-8*3600*1000).toISOString(), bef=new Date(Date.now()+40*3600*1000).toISOString();
+      var r=await sgoFetch('https://api.sportsgameodds.com/v2/events?apiKey='+encodeURIComponent(key)+'&leagueID='+encodeURIComponent(b.league)+'&startsAfter='+encodeURIComponent(aft)+'&startsBefore='+encodeURIComponent(bef)+'&limit=100',key);
+      var evs=r&&Array.isArray(r.data)?r.data:[];
+      if(!evs.length){alert('No '+b.league+' games found near now. If the game is far off or long finished, it may not be listed.');btRender();return;}
+      BT_LINK[betId]=evs.map(function(e){return {id:(e.eventID||e.id||''),away:btTeamName(e.teams&&e.teams.away)||'Away',home:btTeamName(e.teams&&e.teams.home)||'Home',t:(e.status&&e.status.startsAt)||''};}).filter(function(g){return g.id;});
+      btRender();
+    }catch(e){alert('Couldn\u2019t load games — try again.');btRender();}
+  };
+  window.btApplyLink=function(betId,idx){
+    var list=BT_LINK[betId]; if(!list)return; var g=list[parseInt(idx)]; if(!g)return;
+    var a=btLoad(); var b=a.find(function(x){return x.id===betId;});
+    if(b){ b.eventID=g.id; b.game=g.away+' @ '+g.home; b.closeDone=false; }
+    delete BT_LINK[betId]; btSave(a); btRender();
+    if(window.btLiveScores) btLiveScores();
+  };
+  function btLinkControl(b){
+    if(b.eventID) return '';
+    if(BT_LINK[b.id]){
+      var opts=['<option value="">Pick this game…</option>'].concat(BT_LINK[b.id].map(function(g,i){
+        var when=g.t?(' · '+new Date(g.t).toLocaleString([],{month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'})):'';
+        return '<option value="'+i+'">'+btEsc(g.away+' @ '+g.home+when)+'</option>';
+      }));
+      return '<select onchange="btApplyLink(\''+b.id+'\',this.value)" style="margin-top:6px;background:#1a1a26;border:1px solid #3DDC97;color:#e8e8f0;border-radius:6px;padding:5px 7px;font-size:11px;font-family:inherit;max-width:100%">'+opts.join('')+'</select>';
+    }
+    return '<button id="btlink'+b.id+'" onclick="btLinkGame(\''+b.id+'\')" style="margin-top:6px;background:rgba(61,220,151,.1);border:1px dashed #3DDC97;color:#3DDC97;border-radius:6px;padding:5px 9px;font-size:10px;font-weight:700;cursor:pointer">🔗 Link game (for CLV + auto-grade)</button>';
+  }
   window.btEdit=function(id){
     var a=btLoad(), b=null; for(var i=0;i<a.length;i++){if(a[i].id===id){b=a[i];break;}}
     if(!b)return;
@@ -3380,7 +3415,7 @@ function toggleAuto(){
         var sb=lv?'<div class="bt-live">🔴 '+(sbScore?sbScore+(sbPer?' · ':''):'')+btEsc(sbPer)+'</div>':'';
         h+='<div class="bt-bet">'+
           '<div class="top"><div><div class="pk">'+btEsc(b.pick)+'</div>'+
-          '<div class="mt">'+btEsc(BN[b.book]||b.book)+' · '+btMoney(b.stake)+' @ '+(b.odds>0?'+':'')+b.odds+(b.game?' · '+btEsc(b.game):'')+btClvSpan(b)+'</div>'+sb+btBookSel(b)+btLeagueSel(b)+ex+'</div>'+
+          '<div class="mt">'+btEsc(BN[b.book]||b.book)+' · '+btMoney(b.stake)+' @ '+(b.odds>0?'+':'')+b.odds+(b.game?' · '+btEsc(b.game):'')+btClvSpan(b)+'</div>'+sb+btBookSel(b)+btLeagueSel(b)+btLinkControl(b)+ex+'</div>'+
           '<div class="pf neu">'+btMoney(b.stake*(btDec(b.odds)-1))+'<div style="font-size:9px;color:#666;text-align:right">to win</div></div></div>'+
           '<div class="bt-btns"><button class="g-win" onclick="btSettle(\''+b.id+'\',\'win\')">Won</button>'+
           '<button class="g-loss" onclick="btSettle(\''+b.id+'\',\'loss\')">Lost</button>'+
@@ -3400,7 +3435,7 @@ function toggleAuto(){
         var pf=btProfit(b);
         items+='<div class="bt-bet '+b.status+'">'+
           '<div class="top"><div><div class="pk">'+btEsc(b.pick)+' <span style="font-size:10px;color:#7c8698">'+b.status.toUpperCase()+'</span></div>'+
-          '<div class="mt">'+btEsc(BN[b.book]||b.book)+' · '+btMoney(b.stake)+' @ '+(b.odds>0?'+':'')+b.odds+(b.game?' · '+btEsc(b.game):'')+(b.finalNote?' · '+btEsc(b.finalNote):'')+btClvSpan(b)+'</div>'+btBookSel(b)+btLeagueSel(b)+'</div>'+
+          '<div class="mt">'+btEsc(BN[b.book]||b.book)+' · '+btMoney(b.stake)+' @ '+(b.odds>0?'+':'')+b.odds+(b.game?' · '+btEsc(b.game):'')+(b.finalNote?' · '+btEsc(b.finalNote):'')+btClvSpan(b)+'</div>'+btBookSel(b)+btLeagueSel(b)+btLinkControl(b)+'</div>'+
           '<div class="pf '+btCls(pf)+'">'+(pf>0?'+':'')+btMoney(pf)+'</div></div>'+
           '<div class="bt-btns"><button class="g-push" onclick="btSettle(\''+b.id+'\',\'open\')">Undo</button>'+
           '<button class="g-edit" onclick="btEdit(\''+b.id+'\')">✏️</button>'+
