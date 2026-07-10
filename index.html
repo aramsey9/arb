@@ -3096,6 +3096,7 @@ function toggleAuto(){
         if(!S.node.byBookmaker)return;
         books.forEach(function(bk){
           var bb=S.node.byBookmaker[bk]; if(!bb||bb.available===false||bb.odds==null)return;
+          if(parseFloat(bb.odds)>=300)return; // skip longshots (+300 or longer) — too high to flag
           var dec=evAmDec(bb.odds); if(!dec||dec<=1)return;
           var bl=evLine(bb);
           if(bt!=='ml' && S.fline!=null && bl!=null && Math.abs(parseFloat(bl)-parseFloat(S.fline))>0.001)return; // line must match fair line
@@ -3528,7 +3529,8 @@ function toggleAuto(){
     var lgs=Object.keys(leagues);
     for(var j=0;j<lgs.length;j++){
       try{
-        var r2=await sgoFetch('https://api.sportsgameodds.com/v2/events?apiKey='+encodeURIComponent(key)+'&leagueID='+encodeURIComponent(lgs[j])+'&oddsAvailable=true&expandResults=true&limit=40',key);
+        var _aft=new Date(Date.now()-20*3600*1000).toISOString(), _bef=new Date(Date.now()+4*3600*1000).toISOString();
+        var r2=await sgoFetch('https://api.sportsgameodds.com/v2/events?apiKey='+encodeURIComponent(key)+'&leagueID='+encodeURIComponent(lgs[j])+'&startsAfter='+encodeURIComponent(_aft)+'&startsBefore='+encodeURIComponent(_bef)+'&expandResults=true&limit=60',key);
         var evs=r2&&Array.isArray(r2.data)?r2.data:[];
         evs.forEach(function(ev){
           var stx=ev.status||{}, mk=btNormMatch(btTeamName(ev.teams&&ev.teams.away)+' @ '+btTeamName(ev.teams&&ev.teams.home));
