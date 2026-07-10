@@ -606,6 +606,7 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
 
 <div class="bt-chart"><div class="ct">Profit trend</div><div id="btChart"></div></div>
 <div id="btClv" style="display:none;background:#12121a;border:1px solid #2a2a3d;border-radius:11px;padding:11px 13px;margin-bottom:12px;font-size:12.5px;color:#cbd5e1"></div>
+<button id="btBackfillBtn" onclick="btBackfillCLV()" style="width:100%;background:#1a1a26;border:1px solid #3DDC97;color:#3DDC97;border-radius:9px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:12px">↻ Get CLV on past games</button>
 
 <div class="bt-break">
   <div class="bt-tbl"><div class="h">By book</div><div id="btByBook"><div class="r" style="color:#666">—</div></div></div>
@@ -3553,6 +3554,77 @@ function toggleAuto(){
     if(graded){ btSave(all); }
     btRender();
   };
+
+  function btPinnClose(node){var p=node&&node.byBookmaker&&node.byBookmaker.pinnacle; if(!p)return null; return p.closeOdds!=null?p.closeOdds:(p.odds!=null?p.odds:null);}
+  function btFindPinnFair(ev,b){
+    var odds=ev.odds||{}, node=null, opp=null;
+    if(b.oddID && odds[b.oddID]){ node=odds[b.oddID]; opp=b.oppID&&odds[b.oppID]; }
+    else {
+      var pl=(b.pick||'').toLowerCase();
+      var home=(btTeamName(ev.teams&&ev.teams.home)||'').toLowerCase(), away=(btTeamName(ev.teams&&ev.teams.away)||'').toLowerCase();
+      var wantBt,wantSide,wantLine=null;
+      var mOU=pl.match(/(over|under)\s*([\d.]+)/);
+      if(mOU){ wantBt='ou'; wantSide=mOU[1]; wantLine=parseFloat(mOU[2]); }
+      else {
+        var teamSide = (home&&pl.indexOf(home)>=0)?'home':((away&&pl.indexOf(away)>=0)?'away':null);
+        if(!teamSide){
+          var toks=pl.split(/[^a-z0-9]+/).filter(function(w){return w.length>=2;});
+          toks.forEach(function(t){ if(!teamSide){ if(home&&home.indexOf(t)>=0)teamSide='home'; else if(away&&away.indexOf(t)>=0)teamSide='away'; } });
+        }
+        if(!teamSide)return null;
+        var mSp=pl.match(/([+-]\d+\.?\d*)/);
+        if(mSp){ wantBt='sp'; wantSide=teamSide; wantLine=parseFloat(mSp[1]); }
+        else { wantBt='ml'; wantSide=teamSide; }
+      }
+      Object.keys(odds).forEach(function(k){
+        if(node)return; var od=odds[k]; if(!od||od.betTypeID!==wantBt)return;
+        if(od.playerID||(od.periodID&&od.periodID!=='game'))return;
+        var seg=k.split('-'), ent=od.statEntityID||(seg.length>=5?seg[1]:'');
+        if(wantBt==='ou'){ if(ent==='home'||ent==='away')return; if(od.sideID!==wantSide)return;
+          var pin=od.byBookmaker&&od.byBookmaker.pinnacle; if(pin&&wantLine!=null&&pin.overUnder!=null&&Math.abs(parseFloat(pin.overUnder)-wantLine)>0.001)return;
+        } else { if(od.sideID!==wantSide)return;
+          if(wantBt==='sp'){ var pin2=od.byBookmaker&&od.byBookmaker.pinnacle; if(pin2&&wantLine!=null&&pin2.spread!=null&&Math.abs(parseFloat(pin2.spread)-wantLine)>0.001)return; }
+        }
+        node=od; opp=od.opposingOddID?odds[od.opposingOddID]:null;
+      });
+    }
+    if(!node||!opp)return null;
+    var a=btPinnClose(node), bb=btPinnClose(opp); if(a==null||bb==null)return null;
+    var dpa=btDec(a),dpb=btDec(bb); if(!dpa||!dpb||dpa<=1||dpb<=1)return null;
+    var tt=1/dpa+1/dpb; return (1/dpa)/tt;
+  }
+  window.btBackfillCLV=async function(){
+    var key=btKey(); if(!key){alert('Open the Offshore tab once so your SGO key loads, then retry.');return;}
+    var all=btLoad(), settled=all.filter(function(b){return b.status!=='open';});
+    if(!settled.length){alert('No settled bets to check yet.');return;}
+    var btn=document.getElementById('btBackfillBtn'); if(btn){btn.textContent='Checking closing lines…';btn.disabled=true;}
+    var done=0, missed=0;
+    var aft=new Date(Date.now()-72*3600*1000).toISOString(), bef=new Date(Date.now()+4*3600*1000).toISOString();
+    var lgCache={};
+    for(var i=0;i<settled.length;i++){
+      var b=settled[i];
+      try{
+        var ev=null;
+        if(b.eventID){ var r=await sgoFetch('https://api.sportsgameodds.com/v2/events?apiKey='+encodeURIComponent(key)+'&eventID='+encodeURIComponent(b.eventID)+'&expandResults=true',key); ev=r&&Array.isArray(r.data)?r.data[0]:null; }
+        if(!ev && b.league && b.game){
+          if(!lgCache[b.league]){ var r2=await sgoFetch('https://api.sportsgameodds.com/v2/events?apiKey='+encodeURIComponent(key)+'&leagueID='+encodeURIComponent(b.league)+'&startsAfter='+encodeURIComponent(aft)+'&startsBefore='+encodeURIComponent(bef)+'&expandResults=true&limit=100',key); lgCache[b.league]=(r2&&Array.isArray(r2.data))?r2.data:[]; }
+          var mk=btNormMatch(b.game);
+          ev=lgCache[b.league].find(function(e){return btNormMatch(btTeamName(e.teams&&e.teams.away)+' @ '+btTeamName(e.teams&&e.teams.home))===mk;});
+        }
+        if(!ev){missed++;continue;}
+        var fp=btFindPinnFair(ev,b);
+        if(fp==null){missed++;continue;}
+        var decGot=btDec(b.odds); if(!decGot){missed++;continue;}
+        var clv=(fp*(decGot-1)-(1-fp))*100, d=1/fp;
+        b.closeFairAm=(d>=2?'+'+Math.round((d-1)*100):''+Math.round(-100/(d-1)));
+        b.clvPct=Math.round(clv*10)/10; b.closeDone=true; done++;
+      }catch(e){missed++;}
+    }
+    btSave(all); btRender();
+    if(btn){btn.textContent='\u21bb Get CLV on past games';btn.disabled=false;}
+    alert('CLV computed for '+done+' of '+settled.length+' settled bets.'+(missed?'\n\n'+missed+' could not be matched \u2014 SGO no longer has that game\u2019s closing line, or the pick text didn\u2019t match. Card-logged bets capture it reliably going forward.':''));
+  };
+
 
   window.btAutoSettle=async function(){
     var key=btKey();
