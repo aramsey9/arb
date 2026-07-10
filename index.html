@@ -3339,7 +3339,6 @@ function toggleAuto(){
   };
   function btLinkControl(b){
     if(b.eventID) return '';
-    if(b.league && b.game) return ''; // matchup (league + teams) already covers CLV/grade/score
     if(BT_LINK[b.id]){
       var opts=['<option value="">Pick this game…</option>'].concat(BT_LINK[b.id].map(function(g,i){
         var when=g.t?(' · '+new Date(g.t).toLocaleString([],{month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'})):'';
