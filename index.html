@@ -3500,19 +3500,30 @@ function toggleAuto(){
   }
   window.btLiveScores=async function(){
     var key=btKey(); if(!key)return;
-    var open=btLoad().filter(function(b){return b.status==='open';}); if(!open.length)return;
-    var live={};
-    // A) bets that carry an SGO game ID → look up directly
+    var all=btLoad();
+    var open=all.filter(function(b){return b.status==='open';}); if(!open.length)return;
+    var live={}, graded=false;
+    // A) bets that carry an SGO game ID → look up directly (live score OR auto-grade if final)
     var evIds={}; open.forEach(function(b){if(b.eventID)evIds[b.eventID]=1;});
     var eids=Object.keys(evIds);
     for(var i=0;i<eids.length;i++){
       try{
         var resp=await sgoFetch('https://api.sportsgameodds.com/v2/events?apiKey='+encodeURIComponent(key)+'&eventID='+encodeURIComponent(eids[i])+'&expandResults=true',key);
         var ev=resp&&Array.isArray(resp.data)?resp.data[0]:null; if(!ev)continue;
-        var info=btLiveInfo(ev); if(info)live[eids[i]]=info;
+        var st=ev.status||{}, odds=ev.odds||{};
+        var done=(st.finalized===true)||(st.ended===true)||(st.completed===true);
+        if(done){
+          all.forEach(function(b){
+            if(b.status!=='open'||b.eventID!==eids[i])return;
+            var res=btGrade(b,odds);
+            if(res){b.status=res.status;b.settledTs=Date.now();b.finalNote=res.note||'';graded=true;}
+          });
+        } else {
+          var info=btLiveInfo(ev); if(info)live[eids[i]]=info;
+        }
       }catch(e){}
     }
-    // B) manual bets (no game ID) → fetch their league and match by team matchup
+    // B) manual bets (no game ID) → fetch their league and match by team matchup (live score only)
     var leagues={}; open.forEach(function(b){if(!b.eventID&&b.league&&b.game)leagues[b.league]=1;});
     var lgs=Object.keys(leagues);
     for(var j=0;j<lgs.length;j++){
@@ -3520,13 +3531,24 @@ function toggleAuto(){
         var r2=await sgoFetch('https://api.sportsgameodds.com/v2/events?apiKey='+encodeURIComponent(key)+'&leagueID='+encodeURIComponent(lgs[j])+'&oddsAvailable=true&expandResults=true&limit=40',key);
         var evs=r2&&Array.isArray(r2.data)?r2.data:[];
         evs.forEach(function(ev){
-          var info=btLiveInfo(ev); if(!info)return;
-          var mk='m:'+btNormMatch(btTeamName(ev.teams&&ev.teams.away)+' @ '+btTeamName(ev.teams&&ev.teams.home));
-          live[mk]=info;
+          var stx=ev.status||{}, mk=btNormMatch(btTeamName(ev.teams&&ev.teams.away)+' @ '+btTeamName(ev.teams&&ev.teams.home));
+          var evdone=(stx.finalized===true)||(stx.ended===true)||(stx.completed===true);
+          if(evdone){
+            var sc=btExtractScore(ev); if(!sc)return;
+            all.forEach(function(b){
+              if(b.status!=='open'||b.eventID||!b.game)return;
+              if(btNormMatch(b.game)!==mk)return;
+              var res=btGradeByScore(b,sc.away,sc.home);
+              if(res){b.status=res.status;b.settledTs=Date.now();b.finalNote=res.note||'';graded=true;}
+            });
+          } else {
+            var info=btLiveInfo(ev); if(info)live['m:'+mk]=info;
+          }
         });
       }catch(e){}
     }
     BT_LIVE=live;
+    if(graded){ btSave(all); }
     btRender();
   };
 
@@ -3562,6 +3584,30 @@ function toggleAuto(){
   };
 
   function btNum(x){var n=parseFloat(x);return isNaN(n)?null:n;}
+  function btGradeByScore(b,away,home){
+    if(away==null||home==null)return null;
+    var bt=b.betType, side=b.side, line=btNum(b.line), pick=(b.pick||'').toLowerCase();
+    var isOver=side==='Over'||/over/.test(pick), isUnder=side==='Under'||/under/.test(pick);
+    if(bt==='ou'||isOver||isUnder){
+      if(line==null){var m=pick.match(/(\d+(\.\d+)?)/);if(m)line=parseFloat(m[1]);}
+      if(line==null)return null;
+      var tot=away+home;
+      if(Math.abs(tot-line)<1e-9)return{status:'push',note:'total '+tot};
+      var over=tot>line;
+      return {status:((isOver||side==='Over')?over:!over)?'win':'loss',note:'total '+tot};
+    }
+    if(bt==='ml'&&(side==='home'||side==='away')){
+      if(home===away)return{status:'push',note:away+'-'+home};
+      var win=side==='home'?home>away:away>home;
+      return {status:win?'win':'loss',note:away+'-'+home};
+    }
+    if(bt==='sp'&&(side==='home'||side==='away')&&line!=null){
+      var adj=side==='home'?home+line:away+line, opp=side==='home'?away:home;
+      if(Math.abs(adj-opp)<1e-9)return{status:'push',note:away+'-'+home+' ('+(line>0?'+':'')+line+')'};
+      return {status:adj>opp?'win':'loss',note:away+'-'+home+' ('+(line>0?'+':'')+line+')'};
+    }
+    return null;
+  }
   function btGrade(b,odds){
     var node=odds[b.oddID]; if(!node)return null;
     if(node.cancelled===true)return {status:'void',note:'cancelled'};
