@@ -3613,11 +3613,15 @@ function toggleAuto(){
         }
         if(!ev){missed++;continue;}
         var fp=btFindPinnFair(ev,b);
-        if(fp==null){missed++;continue;}
-        var decGot=btDec(b.odds); if(!decGot){missed++;continue;}
-        var clv=(fp*(decGot-1)-(1-fp))*100, d=1/fp;
-        b.closeFairAm=(d>=2?'+'+Math.round((d-1)*100):''+Math.round(-100/(d-1)));
-        b.clvPct=Math.round(clv*10)/10; b.closeDone=true; done++;
+        var decGot=btDec(b.odds);
+        if(fp!=null && decGot && Math.abs(fp-(1/decGot))<=0.22){
+          var clv=(fp*(decGot-1)-(1-fp))*100, d=1/fp;
+          b.closeFairAm=(d>=2?'+'+Math.round((d-1)*100):''+Math.round(-100/(d-1)));
+          b.clvPct=Math.round(clv*10)/10; b.closeDone=true; done++;
+        } else if(fp!=null && decGot){
+          // matched but the "close" is implausibly far from the price taken → bad match, clear it
+          b.clvPct=null; b.closeFairAm=null; b.closeDone=false; missed++;
+        } else { missed++; }
       }catch(e){missed++;}
     }
     btSave(all); btRender();
