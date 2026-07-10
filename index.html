@@ -580,6 +580,9 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
 #view-bets .bt-bet .expo{font-size:11px;color:#f59e0b;margin-top:4px}
 #view-bets .bt-live{display:inline-block;margin-top:6px;font-size:11px;font-weight:700;color:#ff6b6b;background:rgba(255,71,87,.12);border-radius:6px;padding:4px 9px}
 #view-bets .bt-live b{color:#fff;font-family:'JetBrains Mono',monospace}
+#view-bets .bt-cur{font-size:11px;color:#a8b3c4;margin-top:5px}
+#view-bets .bt-cur b{font-family:'JetBrains Mono',monospace;color:#7cc4ff}
+#view-bets .bt-cur span{color:#666;font-size:10px}
 #view-bets .bt-bet .pf{font-size:16px;font-weight:800;font-family:'JetBrains Mono',monospace;white-space:nowrap}
 #view-bets .bt-btns{display:flex;gap:6px;margin-top:9px}
 #view-bets .bt-btns button{flex:1;border:0;border-radius:7px;padding:9px;font-size:12px;font-weight:700;cursor:pointer}
@@ -3414,9 +3417,11 @@ function toggleAuto(){
         var sbScore=(lv&&lv.as!=null&&lv.hs!=null)?(btEsc(lv.away||'Away')+' <b>'+lv.as+'</b> – <b>'+lv.hs+'</b> '+btEsc(lv.home||'Home')):'';
         var sbPer=lv?String(lv.period||lv.text||'').toUpperCase():'';
         var sb=lv?'<div class="bt-live">🔴 '+(sbScore?sbScore+(sbPer?' · ':''):'')+btEsc(sbPer)+'</div>':'';
+        var cv=BT_CUR[b.id];
+        var curLine=(cv!=null && b.clvPct==null)?'<div class="bt-cur">vs current line: <b>'+(cv>=0?'+':'')+cv+'%</b> <span>live · locks at game start</span></div>':'';
         h+='<div class="bt-bet">'+
           '<div class="top"><div><div class="pk">'+btEsc(b.pick)+'</div>'+
-          '<div class="mt">'+btEsc(BN[b.book]||b.book)+' · '+btMoney(b.stake)+' @ '+(b.odds>0?'+':'')+b.odds+(b.game?' · '+btEsc(b.game):'')+btClvSpan(b)+'</div>'+sb+btBookSel(b)+btLeagueSel(b)+btLinkControl(b)+ex+'</div>'+
+          '<div class="mt">'+btEsc(BN[b.book]||b.book)+' · '+btMoney(b.stake)+' @ '+(b.odds>0?'+':'')+b.odds+(b.game?' · '+btEsc(b.game):'')+btClvSpan(b)+'</div>'+sb+curLine+btBookSel(b)+btLeagueSel(b)+btLinkControl(b)+ex+'</div>'+
           '<div class="pf neu">'+btMoney(b.stake*(btDec(b.odds)-1))+'<div style="font-size:9px;color:#666;text-align:right">to win</div></div></div>'+
           '<div class="bt-btns"><button class="g-win" onclick="btSettle(\''+b.id+'\',\'win\')">Won</button>'+
           '<button class="g-loss" onclick="btSettle(\''+b.id+'\',\'loss\')">Lost</button>'+
@@ -3536,57 +3541,52 @@ function toggleAuto(){
       away:btTeamName(ev.teams&&ev.teams.away),home:btTeamName(ev.teams&&ev.teams.home),
       as:(sc?sc.away:null),hs:(sc?sc.home:null)};
   }
+  var BT_CUR={};
   window.btLiveScores=async function(){
     var key=btKey(); if(!key)return;
     var all=btLoad();
     var open=all.filter(function(b){return b.status==='open';}); if(!open.length)return;
-    var live={}, graded=false;
-    // A) bets that carry an SGO game ID → look up directly (live score OR auto-grade if final)
+    var live={}, cur={}, graded=false, cache={};
+    // fetch events referenced by game ID
     var evIds={}; open.forEach(function(b){if(b.eventID)evIds[b.eventID]=1;});
     var eids=Object.keys(evIds);
     for(var i=0;i<eids.length;i++){
       try{
         var resp=await sgoFetch('https://api.sportsgameodds.com/v2/events?apiKey='+encodeURIComponent(key)+'&eventID='+encodeURIComponent(eids[i])+'&expandResults=true',key);
-        var ev=resp&&Array.isArray(resp.data)?resp.data[0]:null; if(!ev)continue;
-        var st=ev.status||{}, odds=ev.odds||{};
-        var done=(st.finalized===true)||(st.ended===true)||(st.completed===true);
-        if(done){
-          all.forEach(function(b){
-            if(b.status!=='open'||b.eventID!==eids[i])return;
-            var res=btGrade(b,odds);
-            if(res){b.status=res.status;b.settledTs=Date.now();b.finalNote=res.note||'';graded=true;}
-          });
-        } else {
-          var info=btLiveInfo(ev); if(info)live[eids[i]]=info;
-        }
+        var ev=resp&&Array.isArray(resp.data)?resp.data[0]:null; if(ev)cache['id:'+eids[i]]=ev;
       }catch(e){}
     }
-    // B) manual bets (no game ID) → fetch their league and match by team matchup (live score only)
+    // fetch league windows for bets without a game ID (match by teams)
     var leagues={}; open.forEach(function(b){if(!b.eventID&&b.league&&b.game)leagues[b.league]=1;});
     var lgs=Object.keys(leagues);
+    var aft=new Date(Date.now()-8*3600*1000).toISOString(), bef=new Date(Date.now()+40*3600*1000).toISOString();
     for(var j=0;j<lgs.length;j++){
       try{
-        var _aft=new Date(Date.now()-20*3600*1000).toISOString(), _bef=new Date(Date.now()+4*3600*1000).toISOString();
-        var r2=await sgoFetch('https://api.sportsgameodds.com/v2/events?apiKey='+encodeURIComponent(key)+'&leagueID='+encodeURIComponent(lgs[j])+'&startsAfter='+encodeURIComponent(_aft)+'&startsBefore='+encodeURIComponent(_bef)+'&expandResults=true&limit=60',key);
+        var r2=await sgoFetch('https://api.sportsgameodds.com/v2/events?apiKey='+encodeURIComponent(key)+'&leagueID='+encodeURIComponent(lgs[j])+'&startsAfter='+encodeURIComponent(aft)+'&startsBefore='+encodeURIComponent(bef)+'&expandResults=true&limit=80',key);
         var evs=r2&&Array.isArray(r2.data)?r2.data:[];
-        evs.forEach(function(ev){
-          var stx=ev.status||{}, mk=btNormMatch(btTeamName(ev.teams&&ev.teams.away)+' @ '+btTeamName(ev.teams&&ev.teams.home));
-          var evdone=(stx.finalized===true)||(stx.ended===true)||(stx.completed===true);
-          if(evdone){
-            var sc=btExtractScore(ev); if(!sc)return;
-            all.forEach(function(b){
-              if(b.status!=='open'||b.eventID||!b.game)return;
-              if(btNormMatch(b.game)!==mk)return;
-              var res=btGradeByScore(b,sc.away,sc.home);
-              if(res){b.status=res.status;b.settledTs=Date.now();b.finalNote=res.note||'';graded=true;}
-            });
-          } else {
-            var info=btLiveInfo(ev); if(info)live['m:'+mk]=info;
-          }
-        });
+        evs.forEach(function(e){ cache['m:'+btNormMatch(btTeamName(e.teams&&e.teams.away)+' @ '+btTeamName(e.teams&&e.teams.home))]=e; });
       }catch(e){}
     }
-    BT_LIVE=live;
+    // process each open bet: grade if final, else live score + current-line value
+    open.forEach(function(b){
+      var ev=b.eventID?cache['id:'+b.eventID]:cache['m:'+btNormMatch(b.game)];
+      if(!ev)return;
+      var st=ev.status||{};
+      var done=(st.finalized===true)||(st.ended===true)||(st.completed===true);
+      if(done){
+        var res=btGrade(b,ev.odds||{});
+        if(!res){ var sc=btExtractScore(ev); if(sc)res=btGradeByScore(b,sc.away,sc.home); }
+        if(res){ var bb=all.find(function(x){return x.id===b.id;}); if(bb){bb.status=res.status;bb.settledTs=Date.now();bb.finalNote=res.note||'';graded=true;} }
+        return;
+      }
+      var info=btLiveInfo(ev); if(info) live[b.eventID||('m:'+btNormMatch(b.game))]=info;
+      // current de-vigged Pinnacle value (live, not final) — same math as CLV vs the current line
+      var fp=btFindPinnFair(ev,b), decGot=btDec(b.odds);
+      if(fp!=null && decGot && decGot>1 && Math.abs(fp-(1/decGot))<=0.22){
+        cur[b.id]=Math.round((fp*(decGot-1)-(1-fp))*1000)/10;
+      }
+    });
+    BT_LIVE=live; BT_CUR=cur;
     if(graded){ btSave(all); }
     btRender();
   };
