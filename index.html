@@ -3291,7 +3291,7 @@ function toggleAuto(){
     if(s && !s._wired){s._wired=true;s.value=btStart();s.addEventListener('change',function(){try{localStorage.setItem('arb_startbank',parseFloat(this.value)||13000);}catch(e){}btRender();btCloudPut();});}
     btRender();
     if(btWorker()) btCloudSync();
-    if(btLoad().some(function(b){return b.status==='open'&&b.eventID;})) btLiveScores();
+    if(btLoad().some(function(b){return b.status==='open';})) btLiveScores();
   };
 
   window.btSettle=function(id,status){
@@ -3372,7 +3372,7 @@ function toggleAuto(){
       open.slice().reverse().forEach(function(b){
         var e=expo[b.game+'|'+b.pick];
         var ex=e&&e.n>1?'<div class="expo">⚠ '+btMoney(e.amt)+' on this pick across '+e.n+' books — treat as ONE position (keep total near your Kelly size).</div>':'';
-        var lv=b.eventID&&BT_LIVE[b.eventID];
+        var lv=BT_LIVE[b.eventID]||BT_LIVE['m:'+btNormMatch(b.game)];
         var sbScore=(lv&&lv.as!=null&&lv.hs!=null)?(btEsc(lv.away||'Away')+' <b>'+lv.as+'</b> – <b>'+lv.hs+'</b> '+btEsc(lv.home||'Home')):'';
         var sbPer=lv?String(lv.period||lv.text||'').toUpperCase():'';
         var sb=lv?'<div class="bt-live">🔴 '+(sbScore?sbScore+(sbPer?' · ':''):'')+btEsc(sbPer)+'</div>':'';
@@ -3488,25 +3488,45 @@ function toggleAuto(){
     }catch(e){}
     return null;
   }
+  function btNormMatch(s){if(!s)return'';var t=String(s).toLowerCase().split(/[^a-z0-9]+/).filter(function(w){return w.length>=2;});if(!t.length)return'';t.sort();return t.join('|');}
+  function btLiveInfo(ev){
+    var st=ev.status||{};
+    var live=(st.live===true)||(st.started===true&&!(st.ended===true||st.completed===true));
+    if(!live)return null;
+    var sc=btExtractScore(ev);
+    return {text:(st.displayLong||st.displayShort||'Live'),period:(st.currentPeriodID||''),
+      away:btTeamName(ev.teams&&ev.teams.away),home:btTeamName(ev.teams&&ev.teams.home),
+      as:(sc?sc.away:null),hs:(sc?sc.home:null)};
+  }
   window.btLiveScores=async function(){
     var key=btKey(); if(!key)return;
-    var open=btLoad().filter(function(b){return b.status==='open'&&b.eventID;});
-    var ids={}; open.forEach(function(b){ids[b.eventID]=1;});
-    var evIds=Object.keys(ids); if(!evIds.length)return;
-    for(var i=0;i<evIds.length;i++){
+    var open=btLoad().filter(function(b){return b.status==='open';}); if(!open.length)return;
+    var live={};
+    // A) bets that carry an SGO game ID → look up directly
+    var evIds={}; open.forEach(function(b){if(b.eventID)evIds[b.eventID]=1;});
+    var eids=Object.keys(evIds);
+    for(var i=0;i<eids.length;i++){
       try{
-        var url='https://api.sportsgameodds.com/v2/events?apiKey='+encodeURIComponent(key)+'&eventID='+encodeURIComponent(evIds[i])+'&expandResults=true';
-        var resp=await sgoFetch(url,key);
-        var ev=resp&&Array.isArray(resp.data)?resp.data[0]:null; if(!ev){continue;}
-        var st=ev.status||{};
-        var live=(st.live===true)||(st.started===true&&!(st.ended===true||st.completed===true));
-        if(!live){ BT_LIVE[evIds[i]]=null; continue; }
-        var sc=btExtractScore(ev);
-        BT_LIVE[evIds[i]]={text:(st.displayLong||st.displayShort||'Live'),period:(st.currentPeriodID||''),
-          away:btTeamName(ev.teams&&ev.teams.away),home:btTeamName(ev.teams&&ev.teams.home),
-          as:(sc?sc.away:null),hs:(sc?sc.home:null)};
+        var resp=await sgoFetch('https://api.sportsgameodds.com/v2/events?apiKey='+encodeURIComponent(key)+'&eventID='+encodeURIComponent(eids[i])+'&expandResults=true',key);
+        var ev=resp&&Array.isArray(resp.data)?resp.data[0]:null; if(!ev)continue;
+        var info=btLiveInfo(ev); if(info)live[eids[i]]=info;
       }catch(e){}
     }
+    // B) manual bets (no game ID) → fetch their league and match by team matchup
+    var leagues={}; open.forEach(function(b){if(!b.eventID&&b.league&&b.game)leagues[b.league]=1;});
+    var lgs=Object.keys(leagues);
+    for(var j=0;j<lgs.length;j++){
+      try{
+        var r2=await sgoFetch('https://api.sportsgameodds.com/v2/events?apiKey='+encodeURIComponent(key)+'&leagueID='+encodeURIComponent(lgs[j])+'&oddsAvailable=true&expandResults=true&limit=40',key);
+        var evs=r2&&Array.isArray(r2.data)?r2.data:[];
+        evs.forEach(function(ev){
+          var info=btLiveInfo(ev); if(!info)return;
+          var mk='m:'+btNormMatch(btTeamName(ev.teams&&ev.teams.away)+' @ '+btTeamName(ev.teams&&ev.teams.home));
+          live[mk]=info;
+        });
+      }catch(e){}
+    }
+    BT_LIVE=live;
     btRender();
   };
 
