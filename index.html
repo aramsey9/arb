@@ -3322,8 +3322,8 @@ function toggleAuto(){
     if(!b.league){alert('Pick the sport on this bet first (the sport dropdown), then tap Link game.');return;}
     var btnEl=document.getElementById('btlink'+betId); if(btnEl){btnEl.textContent='Loading games…';}
     try{
-      var aft=new Date(Date.now()-8*3600*1000).toISOString(), bef=new Date(Date.now()+40*3600*1000).toISOString();
-      var r=await sgoFetch('https://api.sportsgameodds.com/v2/events?apiKey='+encodeURIComponent(key)+'&leagueID='+encodeURIComponent(b.league)+'&startsAfter='+encodeURIComponent(aft)+'&startsBefore='+encodeURIComponent(bef)+'&limit=100',key);
+      var aft=new Date(Date.now()-96*3600*1000).toISOString(), bef=new Date(Date.now()+48*3600*1000).toISOString();
+      var r=await sgoFetch('https://api.sportsgameodds.com/v2/events?apiKey='+encodeURIComponent(key)+'&leagueID='+encodeURIComponent(b.league)+'&startsAfter='+encodeURIComponent(aft)+'&startsBefore='+encodeURIComponent(bef)+'&limit=200',key);
       var evs=r&&Array.isArray(r.data)?r.data:[];
       if(!evs.length){alert('No '+b.league+' games found near now. If the game is far off or long finished, it may not be listed.');btRender();return;}
       BT_LINK[betId]=evs.map(function(e){return {id:(e.eventID||e.id||''),away:btTeamName(e.teams&&e.teams.away)||'Away',home:btTeamName(e.teams&&e.teams.home)||'Home',t:(e.status&&e.status.startsAt)||''};}).filter(function(g){return g.id;});
@@ -3559,7 +3559,7 @@ function toggleAuto(){
     // fetch league windows so any bet can match by teams (covers empty/stale game IDs)
     var leagues={}; open.forEach(function(b){if(b.league)leagues[b.league]=1;});
     var lgs=Object.keys(leagues);
-    var aft=new Date(Date.now()-8*3600*1000).toISOString(), bef=new Date(Date.now()+40*3600*1000).toISOString();
+    var aft=new Date(Date.now()-48*3600*1000).toISOString(), bef=new Date(Date.now()+40*3600*1000).toISOString();
     for(var j=0;j<lgs.length;j++){
       try{
         var r2=await sgoFetch('https://api.sportsgameodds.com/v2/events?apiKey='+encodeURIComponent(key)+'&leagueID='+encodeURIComponent(lgs[j])+'&startsAfter='+encodeURIComponent(aft)+'&startsBefore='+encodeURIComponent(bef)+'&expandResults=true&limit=80',key);
