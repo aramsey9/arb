@@ -3253,7 +3253,7 @@ function toggleAuto(){
   function btProfit(b){if(b.status==='win')return b.stake*(btDec(b.odds)-1);if(b.status==='loss')return -b.stake;return 0;}
   function btEsc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
   function btCls(n){return n>0?'pos':n<0?'neg':'neu';}
-  function btClvSpan(b){ if(b.clvPct==null)return ''; var c=b.clvPct>=0?'#3DDC97':'#ff6b6b'; return ' · <span style="color:'+c+';font-weight:700">CLV '+(b.clvPct>=0?'+':'')+b.clvPct+'%</span>'; }
+  function btClvSpan(b){ if(b.clvPct==null)return ''; var c=b.clvPct>=0?'#3DDC97':'#ff6b6b'; return ' · <span style="color:'+c+';font-weight:700">CLV '+(b.clvPct>=0?'+':'')+b.clvPct+'%'+(b.clvManual?' ✎':'')+'</span>'; }
   function btKey(){return (document.getElementById('opkey')&&document.getElementById('opkey').value||'').trim();}
 
   // ---- 1-tap logging from +EV cards ----
@@ -3337,6 +3337,27 @@ function toggleAuto(){
     delete BT_LINK[betId]; btSave(a); btRender();
     if(window.btLiveScores) btLiveScores();
   };
+  // ---- manual CLV entry (guaranteed fallback when auto can't find the close) ----
+  window.btManualCLV=function(id){
+    var a=btLoad(); var b=a.find(function(x){return x.id===id;}); if(!b)return;
+    var decGot=btDec(b.odds); if(!decGot){alert('This bet has no odds set — add odds first (✏️).');return;}
+    var s1=prompt('CLOSING line for YOUR pick ('+b.pick+')\nAmerican odds, e.g. -110 or +120:', b.closeFairAm||'');
+    if(s1===null)return; s1=(''+s1).trim(); if(!s1)return;
+    var mine=parseFloat(s1); if(isNaN(mine)||mine===0){alert('Enter valid American odds like -110 or +120.');return;}
+    var s2=prompt('CLOSING line for the OTHER side\nAmerican odds (e.g. +100). Leave blank if you only have your side:','');
+    if(s2===null)return; s2=(''+s2).trim();
+    var fp, dm=btDec(mine);
+    if(s2){ var other=parseFloat(s2); if(isNaN(other)||other===0){alert('Invalid other-side odds.');return;} var dou=btDec(other); if(!dou){alert('Invalid.');return;} var tt=1/dm+1/dou; fp=(1/dm)/tt; }
+    else { fp=1/dm; } // no de-vig available — uses the raw closing price (slightly conservative)
+    var clv=(fp*(decGot-1)-(1-fp))*100, d=1/fp;
+    b.closeFairAm=(d>=2?'+'+Math.round((d-1)*100):''+Math.round(-100/(d-1)));
+    b.clvPct=Math.round(clv*10)/10; b.closeDone=true; b.clvManual=true;
+    btSave(a); btRender();
+  };
+  function btCloseControl(b){
+    if(b.clvPct!=null) return '';
+    return '<button onclick="btManualCLV(\''+b.id+'\')" style="margin-top:6px;margin-left:6px;background:rgba(124,196,255,.1);border:1px dashed #7cc4ff;color:#7cc4ff;border-radius:6px;padding:5px 9px;font-size:10px;font-weight:700;cursor:pointer">✎ Enter closing line</button>';
+  }
   var BT_CUR={}, BT_RESOLVED={};
   function btLinkControl(b){
     if(BT_LINK[b.id]){
@@ -3422,7 +3443,7 @@ function toggleAuto(){
         var curLine=(cv!=null && b.clvPct==null)?'<div class="bt-cur">vs current line: <b>'+(cv>=0?'+':'')+cv+'%</b> <span>live · locks at game start</span></div>':'';
         h+='<div class="bt-bet">'+
           '<div class="top"><div><div class="pk">'+btEsc(b.pick)+'</div>'+
-          '<div class="mt">'+btEsc(BN[b.book]||b.book)+' · '+btMoney(b.stake)+' @ '+(b.odds>0?'+':'')+b.odds+(b.game?' · '+btEsc(b.game):'')+btClvSpan(b)+'</div>'+sb+curLine+btBookSel(b)+btLeagueSel(b)+btLinkControl(b)+ex+'</div>'+
+          '<div class="mt">'+btEsc(BN[b.book]||b.book)+' · '+btMoney(b.stake)+' @ '+(b.odds>0?'+':'')+b.odds+(b.game?' · '+btEsc(b.game):'')+btClvSpan(b)+'</div>'+sb+curLine+btBookSel(b)+btLeagueSel(b)+btLinkControl(b)+btCloseControl(b)+ex+'</div>'+
           '<div class="pf neu">'+btMoney(b.stake*(btDec(b.odds)-1))+'<div style="font-size:9px;color:#666;text-align:right">to win</div></div></div>'+
           '<div class="bt-btns"><button class="g-win" onclick="btSettle(\''+b.id+'\',\'win\')">Won</button>'+
           '<button class="g-loss" onclick="btSettle(\''+b.id+'\',\'loss\')">Lost</button>'+
@@ -3442,7 +3463,7 @@ function toggleAuto(){
         var pf=btProfit(b);
         items+='<div class="bt-bet '+b.status+'">'+
           '<div class="top"><div><div class="pk">'+btEsc(b.pick)+' <span style="font-size:10px;color:#7c8698">'+b.status.toUpperCase()+'</span></div>'+
-          '<div class="mt">'+btEsc(BN[b.book]||b.book)+' · '+btMoney(b.stake)+' @ '+(b.odds>0?'+':'')+b.odds+(b.game?' · '+btEsc(b.game):'')+(b.finalNote?' · '+btEsc(b.finalNote):'')+btClvSpan(b)+'</div>'+btBookSel(b)+btLeagueSel(b)+btLinkControl(b)+'</div>'+
+          '<div class="mt">'+btEsc(BN[b.book]||b.book)+' · '+btMoney(b.stake)+' @ '+(b.odds>0?'+':'')+b.odds+(b.game?' · '+btEsc(b.game):'')+(b.finalNote?' · '+btEsc(b.finalNote):'')+btClvSpan(b)+'</div>'+btBookSel(b)+btLeagueSel(b)+btLinkControl(b)+btCloseControl(b)+'</div>'+
           '<div class="pf '+btCls(pf)+'">'+(pf>0?'+':'')+btMoney(pf)+'</div></div>'+
           '<div class="bt-btns"><button class="g-push" onclick="btSettle(\''+b.id+'\',\'open\')">Undo</button>'+
           '<button class="g-edit" onclick="btEdit(\''+b.id+'\')">✏️</button>'+
