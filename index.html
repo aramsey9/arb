@@ -3210,7 +3210,13 @@ function toggleAuto(){
 // ══════════════════════════════════════════════════════════
 (function(){
   var BN={bookmakereu:'BookMaker',draftkings:'DraftKings',fanduel:'FanDuel',betmgm:'BetMGM',caesars:'Caesars',fanatics:'Fanatics',bet365:'Bet365',hardrockbet:'Hard Rock',ballybet:'Bally Bet',other:'Other'};
-  function btLoad(){try{return JSON.parse(localStorage.getItem('arb_bets')||'[]');}catch(e){return [];}}
+  // ── Permanent manual closing-line store (separate from the bet log; never overwritten) ──
+  function clvStore(){try{return JSON.parse(localStorage.getItem('arb_clv_manual')||'{}')||{};}catch(e){return {};}}
+  function clvStoreSave(m){try{localStorage.setItem('arb_clv_manual',JSON.stringify(m));}catch(e){}}
+  function clvApply(a){var m=clvStore();(a||[]).forEach(function(b){if(b&&b.id&&m[b.id]){b.clvPct=m[b.id].clvPct;b.closeFairAm=m[b.id].closeFairAm;b.clvManual=true;b.closeDone=true;}});return a;}
+  async function clvStorePush(){var w=btWorker();if(!w)return;try{await fetch(w+'/clvstore',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(clvStore())});}catch(e){}}
+  async function clvStorePull(){var w=btWorker();if(!w)return;try{var r=await fetch(w+'/clvstore',{cache:'no-store'});if(!r.ok)return;var cloud=await r.json();if(cloud&&typeof cloud==='object'){var merged=Object.assign({},cloud,clvStore());clvStoreSave(merged);await clvStorePush();}}catch(e){}}
+  function btLoad(){var a;try{a=JSON.parse(localStorage.getItem('arb_bets')||'[]');}catch(e){a=[];}return clvApply(a);}
   var btPutTimer=null;
   function btSave(a){try{localStorage.setItem('arb_bets',JSON.stringify(a));}catch(e){} if(btPutTimer)clearTimeout(btPutTimer); btPutTimer=setTimeout(btCloudPut,700);}
 
@@ -3296,7 +3302,7 @@ function toggleAuto(){
     var s=document.getElementById('btStart');
     if(s && !s._wired){s._wired=true;s.value=btStart();s.addEventListener('change',function(){try{localStorage.setItem('arb_startbank',parseFloat(this.value)||13000);}catch(e){}btRender();btCloudPut();});}
     btRender();
-    if(btWorker()) btCloudSync();
+    if(btWorker()){ btCloudSync(); clvStorePull().then(function(){btRender();}); }
     if(btLoad().some(function(b){return b.status==='open';})) btLiveScores();
   };
 
@@ -3351,8 +3357,11 @@ function toggleAuto(){
     if(s2){ var other=parseFloat(s2); if(isNaN(other)||other===0){alert('Invalid other-side odds.');return;} var dou=btDec(other); if(!dou){alert('Invalid.');return;} var tt=1/dm+1/dou; fp=(1/dm)/tt; }
     else { fp=1/dm; } // no de-vig available — uses the raw closing price (slightly conservative)
     var clv=(fp*(decGot-1)-(1-fp))*100, d=1/fp;
-    b.closeFairAm=(d>=2?'+'+Math.round((d-1)*100):''+Math.round(-100/(d-1)));
-    b.clvPct=Math.round(clv*10)/10; b.closeDone=true; b.clvManual=true;
+    var closeFairAm=(d>=2?'+'+Math.round((d-1)*100):''+Math.round(-100/(d-1)));
+    var clvPct=Math.round(clv*10)/10;
+    // write to the PERMANENT store first (this is the durable source of truth)
+    var m=clvStore(); m[id]={clvPct:clvPct,closeFairAm:closeFairAm}; clvStoreSave(m); clvStorePush();
+    b.closeFairAm=closeFairAm; b.clvPct=clvPct; b.closeDone=true; b.clvManual=true;
     btSave(a); btRender();
   };
   function btCloseControl(b){
