@@ -610,6 +610,7 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
 <div class="bt-chart"><div class="ct">Profit trend</div><div id="btChart"></div></div>
 <div id="btClv" style="display:none;background:#12121a;border:1px solid #2a2a3d;border-radius:11px;padding:11px 13px;margin-bottom:12px;font-size:12.5px;color:#cbd5e1"></div>
 <button id="btBackfillBtn" onclick="btBackfillCLV()" style="width:100%;background:#1a1a26;border:1px solid #3DDC97;color:#3DDC97;border-radius:9px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:12px">↻ Get CLV on past games</button>
+<div class="bt-chart" id="btClvChartWrap" style="display:none"><div class="ct">CLV by day (avg %)</div><div id="btClvChart"></div></div>
 
 <div class="bt-break">
   <div class="bt-tbl"><div class="h">By book</div><div id="btByBook"><div class="r" style="color:#666">—</div></div></div>
@@ -3424,6 +3425,7 @@ function toggleAuto(){
         clvEl.style.display='block';
       } else clvEl.style.display='none';
     }
+    btClvChart(bets);
 
     // exposure map over OPEN bets (same game + same pick)
     var expo={};
@@ -3482,6 +3484,42 @@ function toggleAuto(){
     if(!keys.length){box.innerHTML='<div class="r" style="color:#666">—</div>';return;}
     box.innerHTML=keys.map(function(k){var v=m[k];return '<div class="r"><span>'+btEsc(k)+' <span style="color:#666">('+v.n+')</span></span><b class="neu">'+btMoney(v.amt)+'</b></div>';}).join('');
   }
+  function btClvChart(bets){
+    var wrap=document.getElementById('btClvChartWrap'), box=document.getElementById('btClvChart');
+    if(!wrap||!box)return;
+    var cb=bets.filter(function(b){return b.clvPct!=null;});
+    if(!cb.length){ wrap.style.display='none'; return; }
+    var byDay={};
+    cb.forEach(function(b){
+      var t=b.settledTs||b.ts||Date.now(), d=new Date(t);
+      var key=d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
+      if(!byDay[key])byDay[key]={sum:0,n:0,ts:t};
+      byDay[key].sum+=b.clvPct; byDay[key].n++; if(t<byDay[key].ts)byDay[key].ts=t;
+    });
+    var days=Object.keys(byDay).map(function(k){return {avg:byDay[k].sum/byDay[k].n,n:byDay[k].n,ts:byDay[k].ts};});
+    days.sort(function(a,b){return a.ts-b.ts;});
+    wrap.style.display='block';
+    var W=320,H=170,pad=14, n=days.length;
+    var absmax=1; days.forEach(function(d){absmax=Math.max(absmax,Math.abs(d.avg));});
+    absmax=Math.ceil(absmax/5)*5; var mx=absmax, mn=-absmax, rng=mx-mn;
+    var zeroY=pad+(1-(0-mn)/rng)*(H-2*pad);
+    var gap=W/n, bw=Math.min(gap*0.6,46);
+    var bars='';
+    days.forEach(function(d,i){
+      var x=i*gap+(gap-bw)/2;
+      var y=pad+(1-(d.avg-mn)/rng)*(H-2*pad);
+      var top=Math.min(y,zeroY), h=Math.max(Math.abs(y-zeroY),2);
+      var col=d.avg>=0?'#3DDC97':'#ff6b6b';
+      bars+='<rect x="'+x.toFixed(1)+'" y="'+top.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+h.toFixed(1)+'" fill="'+col+'" rx="2"/>';
+      var ly=d.avg>=0?(top-4):(top+h+11);
+      bars+='<text x="'+(x+bw/2).toFixed(1)+'" y="'+ly.toFixed(1)+'" fill="'+col+'" font-size="10" font-weight="700" text-anchor="middle">'+(d.avg>=0?'+':'')+d.avg.toFixed(0)+'%</text>';
+    });
+    var labels=days.map(function(d){var dt=new Date(d.ts);return '<span style="flex:1;text-align:center">'+(dt.getMonth()+1)+'/'+dt.getDate()+'<br><span style="color:#555">'+d.n+'</span></span>';}).join('');
+    box.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" style="width:100%;height:auto">'+
+      '<line x1="0" y1="'+zeroY.toFixed(1)+'" x2="'+W+'" y2="'+zeroY.toFixed(1)+'" stroke="#3a3a4d" stroke-width="1"/>'+bars+'</svg>'+
+      '<div style="display:flex;font-size:10px;color:#7c8698;margin-top:2px">'+labels+'</div>';
+  }
+
   function btRiskChart(bets){
     var box=document.getElementById('btRiskChart'); if(!box)return;
     var ord=bets.slice().filter(function(b){return b.stake>0;}).sort(function(a,b){return (a.ts||0)-(b.ts||0);});
