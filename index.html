@@ -135,6 +135,8 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
   <button class="tab-btn" id="tab-offshore" onclick="switchTab('offshore')">🌊 Offshore</button>
   <button class="tab-btn" id="tab-notify" onclick="switchTab('notify')">🔔 Notify</button>
   <button class="tab-btn" id="tab-trueline" onclick="switchTab('trueline')">🎯 TrueLine</button>
+  <button class="tab-btn" id="tab-ev" onclick="switchTab('ev')">💎 +EV</button>
+  <button class="tab-btn" id="tab-bets" onclick="switchTab('bets')">📊 Bets</button>
 </div>
 
 <div id="view-scanner" class="view active">
@@ -214,7 +216,7 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
 <div id="view-offshore" class="view">
   <div class="slabel">SportsGameOdds API Key</div>
   <input type="password" id="opkey" placeholder="Paste SportsGameOdds API key (sportsgameodds.com)" style="font-size:12px" />
-  <div class="slabel" style="margin-top:-4px;color:#38bdf8">Every enabled book compared against every other — best price on each side, any pairing. Main lines only. Paid tier = real-time.</div>
+  <div class="slabel" style="margin-top:-4px;color:#38bdf8">🔒 BookMaker.eu is locked as one leg of every arb — hedged against your domestic books. Paid tier = real-time.</div>
   <div class="row">
     <input type="number" id="obank" value="300" placeholder="US stake $" />
     <input type="number" id="omine" value="0.5" placeholder="Min %" step="0.1" />
@@ -230,6 +232,7 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
   <div class="row" style="gap:6px">
     <div style="flex:1"><div style="font-size:10px;color:#666;margin-bottom:2px">ML / Spreads</div><input type="number" id="omaxML" value="1000" placeholder="ML max" style="margin-bottom:0"/></div>
     <div style="flex:1"><div style="font-size:10px;color:#666;margin-bottom:2px">Totals</div><input type="number" id="omaxTot" value="1000" placeholder="Totals max" style="margin-bottom:0"/></div>
+    <div style="flex:1"><div style="font-size:10px;color:#666;margin-bottom:2px">Props</div><input type="number" id="omaxProp" value="655" placeholder="Props max" style="margin-bottom:0"/></div>
   </div>
   <div class="slabel">Leagues (one call covers all selected)</div>
   <div class="sports" id="oleagues">
@@ -261,6 +264,8 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
     <div class="mb on" data-om="ml">💰 Moneyline</div>
     <div class="mb on" data-om="sp">📊 Spreads</div>
     <div class="mb on" data-om="ou">🔢 Totals</div>
+    <div class="mb on" data-om="props">🎯 Player Props</div>
+    <div class="mb on" data-om="gameprops">🏟️ Game Props</div>
     <div class="mb on" data-om="alt">📈 Alt Lines</div>
   </div>
   <div class="slabel">Game Status</div>
@@ -272,7 +277,7 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
   <div class="slabel">Max games to scan</div>
   <input type="number" id="omax" value="50" min="1" max="150" style="width:100px;margin-bottom:4px" />
   <div class="slabel" style="color:#555;margin-top:0">Higher = more coverage but more objects used. Keep low (15-25) if running Auto, since Auto re-scans every 60s and multiplies the cost.</div>
-  <div class="slabel" style="color:#555;margin-top:-4px">BookMaker.eu · FanDuel · DraftKings · BetMGM · Caesars · Fanatics · Bet365 · theScore · Hard Rock · Bally — all vs all. Live bet-slip links included.</div>
+  <div class="slabel" style="color:#555;margin-top:-4px">🌊 BookMaker.eu vs FanDuel · DraftKings · BetMGM · Caesars · Fanatics · Bet365 · theScore · 📈 Kalshi · Polymarket. Live bet-slip links included.</div>
   <button class="scan" onclick="scanOffshore()" style="background:#38bdf8">🔒 Scan BookMaker Arbs</button>
   <button onclick="checkSgoUsage()" style="background:#1a1a26;color:#38bdf8;border:1px solid #38bdf8;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;width:100%;margin-bottom:8px">📊 Check API Usage</button>
   <button onclick="checkSgoBooks()" style="background:#1a1a26;color:#a78bfa;border:1px solid #a78bfa;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;width:100%;margin-bottom:12px">📋 Check my books (which slugs my key can access)</button>
@@ -411,40 +416,238 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
 @media (prefers-reduced-motion:reduce){#view-trueline *{animation:none!important;transition:none!important}}
 </style>
 
-  <style>
-  #view-trueline .tl-mkt{background:#12121a;border:1px solid #2a2a3d;border-radius:11px;padding:12px;margin-bottom:10px}
-  #view-trueline .tl-mkthead{font-size:11px;color:#7c8698;text-transform:uppercase;letter-spacing:.6px;margin-bottom:9px}
-  #view-trueline .tl-head{font-size:16px;font-weight:700;color:#e8e8f0;margin:4px 0 12px}
-  #view-trueline .tl-side{margin-bottom:8px}
-  #view-trueline .tl-sidehead{font-size:13px;font-weight:700;color:#e8e8f0;margin-bottom:4px}
-  #view-trueline .tl-fair{font-size:11px;color:#7c8698;font-weight:400;font-family:monospace}
-  #view-trueline .tl-bookrow{display:grid;grid-template-columns:1fr auto auto;gap:10px;font-size:12.5px;color:#cbd5e1;padding:3px 0}
-  #view-trueline .tl-bookrow span:nth-child(2){font-family:monospace;color:#e8e8f0}
-  #view-trueline .tl-ev{font-family:monospace;text-align:right;min-width:52px}
-  #view-trueline .tl-ev.pos{color:#3DDC97}#view-trueline .tl-ev.neg{color:#ff6b6b}
-  #view-trueline .tl-empty{color:#7c8698;font-size:13px;text-align:center;padding:26px 12px;line-height:1.6}
-  #view-trueline .tl-big{font-size:15px;color:#e8e8f0;font-weight:700;margin-bottom:4px}
-  </style>
   <div class="tl-setup">
-    <div style="color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Leagues</div>
-    <div class="sports" id="tlSports" style="margin-bottom:10px">
-      <div class="sb on" data-tls="MLB">⚾ MLB</div>
-      <div class="sb on" data-tls="WNBA">🏀 WNBA</div>
-      <div class="sb" data-tls="NBA">🏀 NBA</div>
-      <div class="sb" data-tls="NFL">🏈 NFL</div>
-      <div class="sb" data-tls="NCAAF">🏈 NCAAF</div>
-      <div class="sb" data-tls="NHL">🏒 NHL</div>
-      <div class="sb" data-tls="NCAAB">🏀 NCAAB</div>
+    <div class="tl-row">
+      <select id="tlSport" class="tl-sel"><option value="">Loading sports…</option></select>
+      <button class="tl-btn" onclick="tlLoadGames()">Load games</button>
     </div>
-    <button class="scan" onclick="tlScan()" style="background:#3DDC97">🎯 Load games</button>
-    <div class="tl-row" style="margin-top:10px">
-      <select id="tlGame" class="tl-sel"><option value="">Tap Load games…</option></select>
-    </div>
-    <div class="tl-hint">Pulls Pinnacle + your books straight from SGO. Pinnacle de-vigged = the fair line; every book is priced against it. Main lines only. <span id="tlCredits"></span></div>
-    <div style="font-size:11px;color:#666;margin-top:6px">Max games per league <input type="number" id="tlMaxGames" value="30" style="width:64px;display:inline-block;margin:0 0 0 6px;padding:6px;font-size:12px"></div>
+    <div class="tl-hint">Uses the Odds API key up top. Moneyline, vig removed, every US book. ~2 credits per load. <span id="tlCredits"></span></div>
   </div>
   <div id="tlErr"></div>
+  <div class="tl-games" id="tlGames"><div class="tl-empty"><div class="tl-big">Pick a sport, then Load games</div>Tap any game to see its true no-vig price.</div></div>
   <div id="tlAnalysis"></div>
+</div>
+
+<div id="view-ev" class="view">
+<style>
+#view-ev .ev-note{background:rgba(61,220,151,.07);border:1px solid rgba(61,220,151,.25);border-radius:10px;padding:11px 13px;font-size:11.5px;color:#9fe7c4;line-height:1.55;margin-bottom:12px}
+#view-ev .ev-note b{color:#3DDC97}
+#view-ev .ev-lbl{color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.8px;margin:12px 0 6px}
+#view-ev .ev-anchor{display:flex;align-items:center;justify-content:space-between;background:#12121a;border:1px solid #2a2a3d;border-radius:10px;padding:12px 14px;margin-bottom:10px}
+#view-ev .ev-anchor .l{font-size:12px;color:#cbd5e1}
+#view-ev .ev-anchor .s{font-size:10px;color:#666;margin-top:2px}
+#view-ev .ev-card{background:#12121a;border:1px solid #2a2a3d;border-radius:12px;margin-bottom:12px;overflow:hidden}
+#view-ev .ev-card.pos{border-color:#3DDC97;box-shadow:0 0 16px rgba(61,220,151,.09)}
+#view-ev .ev-card.arb{border-color:#00ff88;box-shadow:0 0 16px rgba(0,255,136,.15)}
+#view-ev .ev-card.warn{border-color:#f59e0b}
+#view-ev .ev-top{padding:12px 14px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+#view-ev .ev-meta{color:#7c8698;font-size:10px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+#view-ev .ev-game{font-size:14px;font-weight:600;line-height:1.3;color:#e8e8f0}
+#view-ev .ev-when{color:#666;font-size:10px;font-family:monospace;margin-top:3px}
+#view-ev .ev-pct{color:#3DDC97;font-size:22px;font-weight:bold;font-family:'JetBrains Mono',monospace;white-space:nowrap;text-align:right}
+#view-ev .ev-pct.arb{color:#00ff88}
+#view-ev .ev-pct.warn{color:#f59e0b}
+#view-ev .ev-pctsub{color:#666;font-size:10px;text-align:right;text-transform:uppercase}
+#view-ev .ev-body{background:#1a1a26;border-top:1px solid #2a2a3d;padding:12px 14px}
+#view-ev .ev-pick{font-size:15px;font-weight:700;color:#e8e8f0;margin-bottom:2px}
+#view-ev .ev-book{color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase}
+#view-ev .ev-line{display:flex;justify-content:space-between;align-items:baseline;margin-top:8px;gap:10px}
+#view-ev .ev-odds{font-size:20px;font-weight:bold;font-family:'JetBrains Mono',monospace;color:#3DDC97}
+#view-ev .ev-fair{font-size:11px;color:#7c8698;font-family:monospace}
+#view-ev .ev-stake{margin-top:10px;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.25);border-radius:8px;padding:9px 11px;font-size:13px;color:#00ff88;font-weight:700}
+#view-ev .ev-stake span{color:#7c8698;font-weight:400;font-size:11px}
+#view-ev .ev-arbleg{border-top:1px solid #2a2a3d;padding:10px 14px;font-size:12px;color:#cbd5e1}
+#view-ev .ev-arbleg b{color:#00ff88}
+#view-ev .ev-flag{margin-top:9px;font-size:11px;color:#f59e0b;background:rgba(245,158,11,.08);border-radius:7px;padding:7px 9px;line-height:1.4}
+#view-ev .ev-open{display:block;margin-top:9px;color:#a78bfa;font-size:11px;font-weight:700;text-decoration:none}
+#view-ev .ev-livepill{display:inline-block;background:rgba(255,71,87,.18);color:#ff6b6b;font-size:9px;font-weight:800;letter-spacing:.5px;padding:2px 6px;border-radius:5px;margin-left:7px;vertical-align:middle;animation:pulse 2s infinite}
+#view-ev .ev-select{background:#1a1a26;border:1px solid #2a2a3d;color:#e8e8f0;border-radius:8px;padding:12px;font-size:14px;width:100%;margin-bottom:10px;font-family:monospace}
+</style>
+
+<div class="ev-note">
+<b>+EV mode.</b> De-vigs <b>Pinnacle</b> to get the true odds, then flags every <b>TN book</b> paying more than that fair price. Pinnacle is used for the math only — you never bet it; you only place on your TN books. Main markets only (moneyline, spreads, totals) to stay off the books' radar. Sizes each bet for you. Uses your <b>SportsGameOdds key</b> (same one as the Offshore tab). Read the <b>EV for Dummies</b> guide once first.
+</div>
+
+<div class="row">
+  <input type="number" id="evBank" value="13000" placeholder="Bankroll $" />
+  <select id="evKelly" class="ev-select" style="margin-bottom:0">
+    <option value="0.125">Stake: 1/8 Kelly (safest)</option>
+    <option value="0.25" selected>Stake: 1/4 Kelly (recommended)</option>
+    <option value="0.5">Stake: 1/2 Kelly (aggressive)</option>
+    <option value="flat">Stake: Flat $ (simplest)</option>
+  </select>
+</div>
+<div class="row">
+  <input type="number" id="evMin" value="2" placeholder="Min EV %" step="0.5" />
+  <input type="number" id="evMax" value="325" placeholder="Max bet $" step="25" />
+</div>
+<div class="row" id="evFlatWrap" style="display:none">
+  <input type="number" id="evFlat" value="50" placeholder="Flat stake $ per bet" />
+</div>
+
+<div class="ev-lbl">Leagues (turn off what's out of season)</div>
+<div class="sports" id="evSports">
+  <div class="sb on" data-es="MLB">⚾ MLB</div>
+  <div class="sb on" data-es="WNBA">🏀 WNBA</div>
+  <div class="sb" data-es="NBA">🏀 NBA</div>
+  <div class="sb" data-es="NFL">🏈 NFL</div>
+  <div class="sb" data-es="NCAAF">🏈 NCAAF</div>
+  <div class="sb" data-es="NHL">🏒 NHL</div>
+  <div class="sb" data-es="NCAAB">🏀 NCAAB</div>
+</div>
+
+<div class="ev-lbl">Your books (bet targets)</div>
+<div class="sports" id="evBooks">
+  <div class="sb on" data-eb="bookmakereu">🔒 BookMaker</div>
+  <div class="sb on" data-eb="draftkings">DraftKings</div>
+  <div class="sb on" data-eb="fanduel">FanDuel</div>
+  <div class="sb on" data-eb="betmgm">BetMGM</div>
+  <div class="sb on" data-eb="caesars">Caesars</div>
+  <div class="sb on" data-eb="fanatics">Fanatics</div>
+  <div class="sb on" data-eb="bet365">Bet365</div>
+  <div class="sb on" data-eb="hardrockbet">Hard Rock</div>
+  <div class="sb on" data-eb="ballybet">Bally Bet</div>
+</div>
+
+<div class="ev-lbl">Markets (main only — props stay off by design)</div>
+<div class="markets" id="evMarkets">
+  <div class="mb on" data-em="ml">💰 Moneyline</div>
+  <div class="mb on" data-em="sp">📊 Spreads</div>
+  <div class="mb on" data-em="ou">🔢 Totals</div>
+</div>
+
+<div class="ev-anchor" id="evAnchorBox">
+  <div>
+    <div class="l">Fair-line anchor: <b id="evAnchorMode" style="color:#3DDC97">Pinnacle → consensus</b></div>
+    <div class="s">De-vigged Pinnacle is the truth source. If a game has no Pinnacle price, falls back to a no-vig consensus of your books (higher edge required).</div>
+  </div>
+  <label class="switch"><input type="checkbox" id="evUsePinn" checked><span class="slider"></span></label>
+</div>
+<div style="font-size:11px;color:#666;margin:-2px 0 12px">Max games per league <input type="number" id="evMaxGames" value="30" style="width:64px;display:inline-block;margin:0 0 0 6px;padding:6px;font-size:12px"> · lower this to save SGO objects</div>
+
+<div class="ev-lbl">Show</div>
+<div class="filters" id="evFilter">
+  <div class="fb" data-ef="all">🌐 All</div>
+  <div class="fb on" data-ef="pre">📅 Pre-game</div>
+  <div class="fb" data-ef="live">🔴 Live</div>
+</div>
+
+<button class="scan" onclick="evScan()" style="background:#3DDC97">💎 Find +EV Bets</button>
+<div id="evProg" style="display:none" class="prog">
+  <span id="evProgText">Initializing…</span>
+  <div class="prog-bar"><div class="prog-fill" id="evProgFill" style="width:0%;background:#3DDC97"></div></div>
+</div>
+<div id="evOut"></div>
+</div>
+
+<div id="view-bets" class="view">
+<style>
+#view-bets .bt-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+#view-bets .bt-stat{background:#12121a;border:1px solid #2a2a3d;border-radius:11px;padding:12px 13px}
+#view-bets .bt-stat .v{font-size:21px;font-weight:800;font-family:'JetBrains Mono',monospace;line-height:1.1}
+#view-bets .bt-stat .k{font-size:10px;color:#7c8698;text-transform:uppercase;letter-spacing:.6px;margin-top:3px}
+#view-bets .pos{color:#3DDC97}#view-bets .neg{color:#ff6b6b}#view-bets .neu{color:#e8e8f0}
+#view-bets .bt-chart{background:#12121a;border:1px solid #2a2a3d;border-radius:12px;padding:12px;margin-bottom:12px}
+#view-bets .bt-chart .ct{font-size:11px;color:#7c8698;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
+#view-bets svg{width:100%;height:auto;display:block}
+#view-bets .bt-break{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+#view-bets .bt-tbl{background:#12121a;border:1px solid #2a2a3d;border-radius:11px;padding:11px 12px}
+#view-bets .bt-tbl .h{font-size:10px;color:#7c8698;text-transform:uppercase;letter-spacing:.6px;margin-bottom:7px}
+#view-bets .bt-tbl .r{display:flex;justify-content:space-between;font-size:12px;padding:3px 0;color:#cbd5e1}
+#view-bets .bt-tbl .r b{font-family:'JetBrains Mono',monospace}
+#view-bets .bt-lbl{color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.8px;margin:14px 0 7px;display:flex;justify-content:space-between;align-items:center}
+#view-bets .bt-settle{background:#3DDC97;color:#04120b;border:0;border-radius:8px;padding:8px 12px;font-size:11px;font-weight:800;cursor:pointer}
+#view-bets .bt-bet{background:#12121a;border:1px solid #2a2a3d;border-radius:11px;padding:11px 12px;margin-bottom:8px}
+#view-bets .bt-bet.win{border-left:3px solid #3DDC97}#view-bets .bt-bet.loss{border-left:3px solid #ff6b6b}#view-bets .bt-bet.push,#view-bets .bt-bet.void{border-left:3px solid #7c8698}
+#view-bets .bt-bet .top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+#view-bets .bt-bet .pk{font-size:14px;font-weight:700;color:#e8e8f0}
+#view-bets .bt-bet .mt{font-size:11px;color:#7c8698;margin-top:2px}
+#view-bets .bt-bet .expo{font-size:11px;color:#f59e0b;margin-top:4px}
+#view-bets .bt-bet .pf{font-size:16px;font-weight:800;font-family:'JetBrains Mono',monospace;white-space:nowrap}
+#view-bets .bt-btns{display:flex;gap:6px;margin-top:9px}
+#view-bets .bt-btns button{flex:1;border:0;border-radius:7px;padding:9px;font-size:12px;font-weight:700;cursor:pointer}
+#view-bets .g-win{background:rgba(61,220,151,.16);color:#3DDC97}
+#view-bets .g-loss{background:rgba(255,107,107,.16);color:#ff6b6b}
+#view-bets .g-push{background:rgba(124,134,152,.16);color:#a8b3c4}
+#view-bets .g-del{background:rgba(124,134,152,.1);color:#7c8698;flex:0 0 40px}
+#view-bets .g-edit{background:rgba(167,139,250,.14);color:#a78bfa;flex:0 0 44px}
+#view-bets .bt-io{display:flex;gap:8px;margin:12px 0}
+#view-bets .bt-form{background:#12121a;border:1px solid #2a2a3d;border-radius:12px;padding:12px;margin-bottom:10px}
+#view-bets .bt-form input,#view-bets .bt-form select{background:#1a1a26;border:1px solid #2a2a3d;color:#e8e8f0;border-radius:8px;padding:11px;font-size:14px;width:100%;margin-bottom:8px;font-family:inherit}
+#view-bets .bt-form .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#view-bets .bt-form .addbtn{background:#3DDC97;color:#04120b;border:0;border-radius:9px;padding:12px;font-size:14px;font-weight:800;width:100%;cursor:pointer}
+#view-bets .bt-addtoggle{background:#1a1a26;border:1px dashed #3a3a4d;color:#a8b3c4;border-radius:9px;padding:11px;font-size:12px;font-weight:700;width:100%;cursor:pointer;margin:6px 0 10px}
+#view-bets .bt-io button{flex:1;background:#1a1a26;border:1px solid #2a2a3d;color:#a78bfa;border-radius:8px;padding:11px;font-size:12px;font-weight:700;cursor:pointer}
+</style>
+
+<div class="bt-stats">
+  <div class="bt-stat"><div class="v neu" id="btBank">$13,000</div><div class="k">Bankroll</div></div>
+  <div class="bt-stat"><div class="v neu" id="btNet">$0</div><div class="k">Net P/L</div></div>
+  <div class="bt-stat"><div class="v neu" id="btRoi">—</div><div class="k">ROI</div></div>
+  <div class="bt-stat"><div class="v neu" id="btRec">0-0-0</div><div class="k">Record (W-L-P)</div></div>
+</div>
+
+<div class="bt-chart"><div class="ct">Profit trend</div><div id="btChart"></div></div>
+
+<div class="bt-break">
+  <div class="bt-tbl"><div class="h">By book</div><div id="btByBook"><div class="r" style="color:#666">—</div></div></div>
+  <div class="bt-tbl"><div class="h">By sport</div><div id="btBySport"><div class="r" style="color:#666">—</div></div></div>
+</div>
+
+<div class="bt-lbl"><span>Open bets</span><button class="bt-settle" onclick="btAutoSettle()">⏱ Auto-settle finished</button></div>
+<button class="bt-addtoggle" onclick="btToggleAdd()">＋ Add a bet manually (for ones not on the board)</button>
+<div class="bt-form" id="btAddForm" style="display:none">
+  <input id="btmPick" placeholder="Pick — e.g. SF Giants ML" />
+  <div class="row2">
+    <input id="btmGame" placeholder="Game — e.g. TOR @ SF" />
+    <select id="btmLeague">
+      <option value="">Sport…</option>
+      <option value="MLB">⚾ MLB</option>
+      <option value="WNBA">🏀 WNBA</option>
+      <option value="NBA">🏀 NBA</option>
+      <option value="NFL">🏈 NFL</option>
+      <option value="NCAAF">🏈 NCAAF</option>
+      <option value="NHL">🏒 NHL</option>
+      <option value="NCAAB">🏀 NCAAB</option>
+      <option value="SOCCER">⚽ Soccer</option>
+      <option value="Other">Other</option>
+    </select>
+  </div>
+  <select id="btmBook">
+      <option value="bookmakereu">BookMaker</option>
+      <option value="draftkings">DraftKings</option>
+      <option value="fanduel">FanDuel</option>
+      <option value="betmgm">BetMGM</option>
+      <option value="caesars">Caesars</option>
+      <option value="fanatics">Fanatics</option>
+      <option value="bet365">Bet365</option>
+      <option value="hardrockbet">Hard Rock</option>
+      <option value="ballybet">Bally Bet</option>
+      <option value="other">Other</option>
+  </select>
+  <div class="row2">
+    <input id="btmStake" type="number" placeholder="Stake $" step="5" />
+    <input id="btmOdds" type="number" placeholder="Odds — e.g. -110" step="5" />
+  </div>
+  <button class="addbtn" onclick="btAddManual()">＋ Add bet</button>
+  <div style="font-size:10px;color:#666;margin-top:6px">Manually-added bets settle with one tap (Won/Lost/Push) — auto-settle only works for bets logged from a +EV card.</div>
+</div>
+<div id="btOpen"></div>
+<div id="btHistory"></div>
+
+<div class="bt-io">
+  <button onclick="btExportCsv()">⬇ Export CSV</button>
+  <button onclick="btExportJson()">⬇ Backup</button>
+  <button onclick="document.getElementById('btImport').click()">⬆ Restore</button>
+  <input type="file" id="btImport" accept=".json" style="display:none" onchange="btImport(event)" />
+</div>
+<div style="background:#12121a;border:1px solid #2a2a3d;border-radius:11px;padding:11px 12px;margin-bottom:8px">
+  <div style="font-size:12px;color:#cbd5e1;margin-bottom:7px">☁️ Cloud backup — <span id="btSync" style="color:#666">checking…</span></div>
+  <input type="text" id="btWorker" placeholder="Your Worker URL (…workers.dev)" style="background:#1a1a26;border:1px solid #2a2a3d;color:#e8e8f0;border-radius:8px;padding:10px;font-size:12px;width:100%;margin-bottom:8px;font-family:monospace" />
+  <button onclick="btCloudSaveUrl()" style="background:#3DDC97;color:#04120b;border:0;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:800;cursor:pointer;width:100%">Connect / sync now</button>
+  <div style="font-size:11px;color:#666;margin-top:8px">Once connected, every bet saves to your Cloudflare KV automatically — survives clearing your browser and syncs across devices. Starting bankroll <input type="number" id="btStart" value="13000" style="width:78px;display:inline-block;margin-left:4px;padding:6px;font-size:12px"></div>
+</div>
+<div style="font-size:11px;color:#7c8698;line-height:1.5;background:#12121a;border:1px solid #2a2a3d;border-radius:10px;padding:11px 12px">Log bets with the <b style="color:#3DDC97">＋ Log</b> button on any +EV card — no typing. Tap <b>Auto-settle</b> after games finish and it grades wins/losses from the SGO results feed. Anything it can't grade yet gets a one-tap Won/Lost/Push.</div>
 </div>
 
 <div class="ticker">
@@ -462,13 +665,15 @@ var OARB_CACHE=[]; var OEVENTS_CACHE={};
 
 // ── Tab switching ──────────────────────────────────────────
 function switchTab(tab){
-  ['scanner','offshore','notify','trueline'].forEach(function(t){
+  ['scanner','offshore','notify','trueline','ev','bets'].forEach(function(t){
     document.getElementById('tab-'+t).classList.remove('active');
     document.getElementById('view-'+t).classList.remove('active');
   });
   document.getElementById('tab-'+tab).classList.add('active');
   document.getElementById('view-'+tab).classList.add('active');
   if(tab==='trueline' && window.tlInit) tlInit();
+  if(tab==='ev' && window.evInit) evInit();
+  if(tab==='bets' && window.btInit) btInit();
 }
 
 // ── Filter toggle listeners ────────────────────────────────
@@ -800,7 +1005,7 @@ function processH2H(oc,gl,sp2,bank,min,allArbs,label,tag,liveFlag){
   label=label||'Moneyline';tag=tag||'h2h';
   var bt={};
   oc.forEach(function(o){if(!bt[o.name])bt[o.name]=[];bt[o.name].push({book:o.book,odds:o.price,link:o.link,limit:o.limit})});
-  var tn=Object.keys(bt);if(tn.length<2)return;
+  var tn=Object.keys(bt);if(tn.length!==2)return;   // 3-way markets (tie possible) are NOT a clean 2-leg arb — reject
   var b1=bt[tn[0]].reduce(function(a,b){return a.odds>b.odds?a:b}),b2=bt[tn[1]].reduce(function(a,b){return a.odds>b.odds?a:b});
   if(b1.book===b2.book||!isTrueArb(b1.odds,b2.odds,min))return;
   var p1=oP(b1.odds),p2=oP(b2.odds),tot=p1+p2,s1=bank*(p1/tot),s2=bank*(p2/tot),pr=Math.min(s1*oD(b1.odds),s2*oD(b2.odds))-(s1+s2);
@@ -898,7 +1103,7 @@ function processGameProps(bookmakers,gl,sp2,bank,min,allArbs,gpKeys,liveFlag,sp)
   gpKeys.forEach(function(mkt){
     var oc=md[mkt];if(!oc||oc.length<2)return;
     var lbl=GP_LABEL[mkt]||mkt;
-    if(mkt.indexOf('h2h')===0){if(isSoccer)process3Way(oc,gl,sp2,bank,min,allArbs,lbl,'gameprops',liveFlag);else processH2H(oc,gl,sp2,bank,min,allArbs,lbl,'gameprops',liveFlag);}
+    if(mkt.indexOf('h2h')===0){if(isSoccer)process3Way(oc,gl,sp2,bank,min,allArbs,lbl,'gameprops',liveFlag);/* non-soccer period/quarter/half moneylines are 3-way (can end tied) — not a clean 2-leg hedge, skip */}
     else if(mkt.indexOf('spreads')===0)processSpreads(oc,gl,sp2,bank,min,allArbs,lbl,'gameprops',liveFlag);
     else if(mkt.indexOf('totals')===0||mkt==='team_totals')processTotals(oc,gl,sp2,bank,min,allArbs,lbl,'gameprops',liveFlag);
   });
@@ -1094,6 +1299,50 @@ async function scanAll(){
   setStatus(autoOn,'#'+scanCount+' at '+now+(autoOn?' — next in 60s':''));
 }
 
+// ── Line Lookup ────────────────────────────────────────────
+function lookupFromArb(idx){
+  var x=ARB_CACHE[idx];
+  if(!x||!x.gameId||!x.sportKey){document.getElementById('lout').innerHTML='<div class="err">Run a fresh scan first, then tap this button.</div>';switchTab('lookup');return}
+  switchTab('lookup');
+  document.getElementById('lout').innerHTML='<div class="msg">Loading lines...</div>';
+  var sp=x.sportKey;
+
+  // Figure out which specific markets to fetch and what to filter by
+  var targetMkts=[];
+  var playerFilter=null;
+
+  if(x.market==='props'){
+    // Extract player name from game string e.g. "KC @ TB — Michael Massey"
+    var parts=x.game.split(' — ');
+    playerFilter=parts.length>1?parts[parts.length-1].toLowerCase():null;
+    // Use the exact market key stored on the arb — also include its _alternate variant
+    if(x.propMarketKey){
+      targetMkts=[x.propMarketKey];
+      var altKey=x.propMarketKey.replace(/_alternate$/,'')+'_alternate';
+      if(altKey!==x.propMarketKey)targetMkts.push(altKey);
+    } else {
+      var allPropKeys=PROP_MARKETS[sp]||[];
+      targetMkts=allPropKeys.length?allPropKeys:['batter_hits','player_points'];
+    }
+  } else if(x.market==='gameprops'){
+    // Game prop (half/quarter/period) — fetch all game prop markets
+    targetMkts=GAME_PROP_MARKETS[sp]||[];
+    if(!targetMkts.length)targetMkts=['h2h_h1','totals_h1'];
+  } else if(x.market==='alt'){
+    targetMkts=['alternate_spreads','alternate_totals'];
+  } else if(x.market==='spreads'){
+    targetMkts=['spreads'];
+  } else if(x.market==='totals'){
+    targetMkts=['totals'];
+  } else {
+    // h2h moneyline or golf
+    targetMkts=['h2h'];
+  }
+
+  var gameLabel=x.game.split(' — ')[0];
+  var arbLabel=x.label;
+  fetchEventOdds(x.gameId,sp,targetMkts.filter(function(v,i,a){return a.indexOf(v)===i&&v}).join(','),gameLabel,playerFilter,arbLabel,x.propPoint);
+}
 
 async function runLookup(){
   var key=document.getElementById('key').value.trim();
@@ -2013,10 +2262,8 @@ function startScan(){scanAll()}
 
 var SGO_BOOKMAKER = 'bookmakereu';
 var SGO_DOMESTIC = ['draftkings','fanduel','betmgm','caesars','fanatics','bet365','thescorebet','kalshi','polymarket'];
-var SGO_NAMES = {bookmakereu:'BookMaker.eu',draftkings:'DraftKings',fanduel:'FanDuel',betmgm:'BetMGM',caesars:'Caesars',fanatics:'Fanatics',bet365:'Bet365',thescorebet:'theScore',kalshi:'Kalshi',polymarket:'Polymarket',hardrockbet:'Hard Rock',ballybet:'Bally Bet'};
-// ARBS: every enabled book vs every other enabled book (no locked leg).
-var SGO_ARB_BOOKS = ['bookmakereu','draftkings','fanduel','betmgm','caesars','fanatics','bet365','thescorebet','hardrockbet','ballybet'];
-var SGO_HOME = {hardrockbet:'https://app.hardrock.bet',ballybet:'https://play.ballybet.com',bookmakereu:'https://www.bookmaker.eu',draftkings:'https://sportsbook.draftkings.com',fanduel:'https://sportsbook.fanduel.com',betmgm:'https://sports.betmgm.com',caesars:'https://sportsbook.caesars.com',fanatics:'https://sportsbook.fanatics.com',bet365:'https://www.bet365.com',thescorebet:'https://www.thescore.bet',kalshi:'https://kalshi.com',polymarket:'https://polymarket.com'};
+var SGO_NAMES = {bookmakereu:'BookMaker.eu',draftkings:'DraftKings',fanduel:'FanDuel',betmgm:'BetMGM',caesars:'Caesars',fanatics:'Fanatics',bet365:'Bet365',thescorebet:'theScore',kalshi:'Kalshi',polymarket:'Polymarket'};
+var SGO_HOME = {bookmakereu:'https://www.bookmaker.eu',draftkings:'https://sportsbook.draftkings.com',fanduel:'https://sportsbook.fanduel.com',betmgm:'https://sports.betmgm.com',caesars:'https://sportsbook.caesars.com',fanatics:'https://sportsbook.fanatics.com',bet365:'https://www.bet365.com',thescorebet:'https://www.thescore.bet',kalshi:'https://kalshi.com',polymarket:'https://polymarket.com'};
 function sgoHome(b){ return SGO_HOME[b]||null; }
 function sgoName(b){ return SGO_NAMES[b]||b; }
 
@@ -2259,6 +2506,7 @@ async function scanOffshore(){
   var min = parseFloat(document.getElementById('omine').value)||0.5;
   var maxML = parseFloat(document.getElementById('omaxML').value)||0;
   var maxTot = parseFloat(document.getElementById('omaxTot').value)||0;
+  var maxProp = parseFloat(document.getElementById('omaxProp').value)||0;
   var leagues = oGetLeagues();
   var wantM = oGetMarkets();
   var filt = oGetFilter();
@@ -2270,7 +2518,7 @@ async function scanOffshore(){
 
   out.innerHTML=''; oSetProg('Fetching events from SportsGameOdds...');
 
-  var books = SGO_ARB_BOOKS.slice();
+  var books = [SGO_BOOKMAKER].concat(SGO_DOMESTIC);
   var wantAlt = wantM.indexOf('alt')>-1;
   var base = 'https://api.sportsgameodds.com/v2/events';
   var collected=[], cursor=null, pages=0, droppedBooks=[];
@@ -2329,26 +2577,24 @@ async function scanOffshore(){
   // Build a clean, search-ready bet string for the Copy-bet button.
   function obBetStr(x, which){
     var leg = which==='bm' ? x.bmLeg : x.domLeg;
-    var bookNm = sgoName(leg.book);
+    var bookNm = which==='bm' ? 'BookMaker.eu' : sgoName(x.domLeg.book);
     return x.game + ' — ' + x.label + ' — ' + leg.name + ' (' + amFmt(leg.am) + ') @ ' + bookNm;
   }
   function obEsc(s){ return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-  function bestAny(node, skip){
-    // Best available price on this outcome across ALL enabled books (no locked leg).
-    // `skip` excludes a book (used when the same book tops both sides).
+  function bestDomestic(node){
     if(!node || !node.byBookmaker) return null;
     var best=null, decs=[];
-    SGO_ARB_BOOKS.forEach(function(bk){
-      if(skip && bk===skip) return;
+    SGO_DOMESTIC.forEach(function(bk){
       var bb=node.byBookmaker[bk]; if(!bb||bb.available===false||bb.odds==null) return;
       var d=amDec(bb.odds); if(!d||d<=1) return;
       decs.push(d);
       if(!best||d>best.dec) best={book:bk,am:bb.odds,dec:d,line:(bb.overUnder!=null?bb.overUnder:bb.spread),link:bb.deeplink||bb.deepLink||bb.link||null};
     });
     if(best){
-      // Stale-line detector: how far the winning price sits above the next book on
-      // the SAME outcome. 5%+ longer than peers is usually a stale/error quote.
+      // Stale-line detector: how far the winning price sits above the next
+      // domestic book on the SAME outcome. A book that's 5%+ longer than its
+      // peers is usually a stale/error quote, not a real edge.
       decs.sort(function(a,b){return b-a;});
       best.nBooks=decs.length;
       best.second=decs.length>1?decs[1]:null;
@@ -2356,6 +2602,12 @@ async function scanOffshore(){
       best.outlierPct=best.second?((best.dec/best.second-1)*100):0;
     }
     return best;
+  }
+  function bookmakerSide(node){
+    if(!node||!node.byBookmaker) return null;
+    var bb=node.byBookmaker[SGO_BOOKMAKER]; if(!bb||bb.available===false||bb.odds==null) return null;
+    var d=amDec(bb.odds); if(!d||d<=1) return null;
+    return {book:SGO_BOOKMAKER,am:bb.odds,dec:d,line:(bb.overUnder!=null?bb.overUnder:bb.spread),link:bb.deeplink||bb.deepLink||bb.link||null};
   }
 
   events.forEach(function(ev){
@@ -2380,84 +2632,84 @@ async function scanOffshore(){
       var primarySides={ml:'home',sp:'home',ou:'over',yn:'yes'};
       var isProp = !!od.playerID;
       var isGameProp = !isProp && od.periodID && od.periodID!=='game'; // halves/quarters/periods
-      var _seg = String(oddID).split('-');
-      var _ent = od.statEntityID||(_seg.length>=5?_seg[1]:'');
-      var isTeamTotal = (bt==='ou') && (_ent==='home'||_ent==='away');
-      var isYesNo = (bt==='yn');
-      // MAIN LINES ONLY — no player props, no halves/periods, no team totals, no yes/no.
-      if(isProp||isGameProp||isTeamTotal||isYesNo) return;
-      if(bt==='ml'&&wantM.indexOf('ml')<0) return;
-      if(bt==='sp'&&wantM.indexOf('sp')<0) return;
-      if(bt==='ou'&&wantM.indexOf('ou')<0) return;
-      if(['ml','sp','ou'].indexOf(bt)<0) return;
+      // market gating
+      if(isProp){ if(wantM.indexOf('props')<0) return; }
+      else if(isGameProp){ if(wantM.indexOf('gameprops')<0) return; }
+      else {
+        if(bt==='ml'&&wantM.indexOf('ml')<0) return;
+        if(bt==='sp'&&wantM.indexOf('sp')<0) return;
+        if(bt==='ou'&&wantM.indexOf('ou')<0) return;
+      }
+      if(['ml','sp','ou','yn'].indexOf(bt)<0) return;
       if(oIsSoccer&&(bt==='ml'||bt==='yn')) return; // soccer ML is 3-way (draw) — not a clean 2-leg hedge
       if(side!==primarySides[bt]) return;
 
       var oppID = od.opposingOddID; if(!oppID) return;
       var opp = odds[oppID]; if(!opp) return;
 
-      function sideName(which){
-        if(bt==='ml'||bt==='sp') return which==='primary'?homeName:awayName;
-        if(bt==='ou') return which==='primary'?'Over':'Under';
-        return which;
-      }
-      function withLine(nm, leg){ if(leg&&leg.line!=null&&(bt==='ou'||bt==='sp')) return nm+' '+(parseFloat(leg.line)>0&&bt==='sp'?'+':'')+leg.line; return nm; }
+      var bmHere=bookmakerSide(od), domOpp=bestDomestic(opp);
+      var domHere=bestDomestic(od), bmOpp=bookmakerSide(opp);
+      if(bmHere||bmOpp) sawBookmaker=true;
 
-      // ALL-BOOKS ARB: best price on each side across every enabled book, any pairing.
-      function consider(legP, legO){
-        if(!legP||!legO) return;
-        if(legP.book===legO.book) return;              // must be two different books
-        var inv=(1/legP.dec)+(1/legO.dec);
+      function consider(legBM, legDOM, bmIsSideA, nameA, nameB){
+        if(!legBM||!legDOM) return;
+        var inv=(1/legBM.dec)+(1/legDOM.dec);
         var edge=(1-inv)*100;
         if(inv>=1||edge<min) return;
-        // Line-mismatch guard: legP is the primary side (Over / home).
-        if(bt==='ou'&&legP.line!=null&&legO.line!=null){ if(parseFloat(legO.line)<parseFloat(legP.line)) return; }
-        if(bt==='sp'&&legP.line!=null&&legO.line!=null){ if((parseFloat(legP.line)+parseFloat(legO.line))<0) return; }
-        var nameP=withLine(sideName('primary'),legP), nameO=withLine(sideName('opp'),legO);
-        // Display order: if BookMaker is a leg it goes first (sharp side — place it first).
-        var legA=legP, legB=legO, nameA=nameP, nameB=nameO;
-        if(legO.book===SGO_BOOKMAKER && legP.book!==SGO_BOOKMAKER){ legA=legO; legB=legP; nameA=nameO; nameB=nameP; }
-        if(legA.book===SGO_BOOKMAKER||legB.book===SGO_BOOKMAKER) sawBookmaker=true;
-        // Fix leg B at a round stake; size leg A to balance for an equal payout.
-        var sB = usStake;
-        if(roundTo>0) sB = Math.round(usStake/roundTo)*roundTo;
-        if(sB<=0) sB = roundTo>0?roundTo:usStake;
-        var sA = sB*legB.dec/legA.dec;
-        var payout = sB*legB.dec;          // == sA*legA.dec
-        var totalStaked = sA + sB;
+        if((bt==='ou')&&legBM.line!=null&&legDOM.line!=null){
+          var overLine = bmIsSideA?legBM.line:legDOM.line;
+          var underLine= bmIsSideA?legDOM.line:legBM.line;
+          if(parseFloat(underLine)<parseFloat(overLine)) return;
+        }
+        if(bt==='sp'&&legBM.line!=null&&legDOM.line!=null){
+          if((parseFloat(legBM.line)+parseFloat(legDOM.line))<0) return;
+        }
+        // Fix the DOMESTIC stake at a round number; size BookMaker to balance.
+        var sDOM = usStake;
+        if(roundTo>0) sDOM = Math.round(usStake/roundTo)*roundTo;
+        if(sDOM<=0) sDOM = roundTo>0?roundTo:usStake;
+        // Equal-payout hedge: sBM * decBM = sDOM * decDOM
+        var sBM = sDOM*legDOM.dec/legBM.dec;
+        var payout = sDOM*legDOM.dec; // == sBM*legBM.dec
+        var totalStaked = sDOM + sBM;
         var profit = payout - totalStaked;
         var roi = (profit/totalStaked)*100;
-        // Your BookMaker max only applies when BookMaker is actually one of the legs.
-        var cap = (legA.book===SGO_BOOKMAKER) ? (bt==='ou'?maxTot:maxML) : 0;
-        var overMax = (cap>0 && sA>cap);
+        // Which BookMaker max applies to this market?
+        var cap = isProp ? maxProp : (bt==='ou' ? maxTot : maxML);
+        var overMax = (cap>0 && sBM>cap);
+        // If over the cap, compute the largest arb that FITS: cap BookMaker, shrink domestic.
         var fit=null;
         if(overMax){
-          var fitA=cap, fitB=fitA*legA.dec/legB.dec, fitPayout=fitA*legA.dec, fitTotal=fitA+fitB;
-          fit={ bm:fitA, dom:fitB, profit:fitPayout-fitTotal, total:fitTotal };
+          var fitBM = cap;
+          var fitDOM = fitBM*legBM.dec/legDOM.dec; // balance back to domestic
+          var fitPayout = fitBM*legBM.dec;
+          var fitTotal = fitDOM+fitBM;
+          fit={ bm:fitBM, dom:fitDOM, profit:fitPayout-fitTotal, total:fitTotal };
         }
-        // Stale-outlier is a WARNING only (a sharp book is *meant* to be the outlier).
-        var oA=legA.outlier?(legA.outlierPct||0):0, oB=legB.outlier?(legB.outlierPct||0):0;
-        var outBook = (oA>=oB) ? (oA>0?legA.book:null) : legB.book;
         var mLabel = od.marketName || (od.statID? (od.statID.replace(/_/g,' ')) : bt.toUpperCase());
         if(oIsSoccer){ mLabel += oSoccerScope(od.periodID); }
+        else if(isGameProp && od.periodID){ mLabel = (od.periodID).toUpperCase()+' '+mLabel; }
         arbs.push({
-          game:gl, league:leagueName, eventID:ev.eventID||ev.id, oddID:oddID, isProp:false, isGameProp:false, live:!!live, start:start, edge:edge, profit:profit, roi:roi, totalStaked:totalStaked,
+          game:gl, league:leagueName, eventID:ev.eventID||ev.id, oddID:oddID, isProp:isProp, isGameProp:isGameProp, live:!!live, start:start, edge:edge, profit:profit, roi:roi, totalStaked:totalStaked,
           cap:cap, overMax:overMax, fit:fit, label:mLabel,
-          domOutlier:!!outBook, domOutlierPct:Math.max(oA,oB), outBook:outBook, domNBooks:legB.nBooks||1,
-          bmLeg:{book:legA.book,am:legA.am,stake:sA,line:legA.line,link:legA.link,name:nameA},
-          domLeg:{book:legB.book,am:legB.am,stake:sB,line:legB.line,link:legB.link,name:nameB}
+          domOutlier:!!legDOM.outlier, domOutlierPct:legDOM.outlierPct||0, domNBooks:legDOM.nBooks||1,
+          bmLeg:{book:legBM.book,am:legBM.am,stake:sBM,line:legBM.line,link:legBM.link,name:nameA},
+          domLeg:{book:legDOM.book,am:legDOM.am,stake:sDOM,line:legDOM.line,link:legDOM.link,name:nameB}
         });
       }
 
-      var bestP=bestAny(od), bestO=bestAny(opp);
-      if(bestP&&bestO&&bestP.book===bestO.book){
-        // same book tops both sides (not a real arb) — drop to the next best on
-        // whichever side costs the least edge.
-        var altO=bestAny(opp,bestO.book), altP=bestAny(od,bestP.book);
-        var c1=altO?(1/bestP.dec+1/altO.dec):9, c2=altP?(1/altP.dec+1/bestO.dec):9;
-        if(c1<=c2){ bestO=altO; } else { bestP=altP; }
+      function sideName(which){
+        if(bt==='ml') return which==='primary'?homeName:awayName;
+        if(bt==='sp') return which==='primary'?homeName:awayName;
+        if(bt==='ou') return which==='primary'?'Over':'Under';
+        if(bt==='yn') return which==='primary'?'Yes':'No';
+        return which;
       }
-      consider(bestP,bestO);
+      var nmPrimary=sideName('primary'), nmOpp=sideName('opp');
+      function withLine(nm, leg){ if(leg&&leg.line!=null&&(bt==='ou'||bt==='sp')) return nm+' '+(parseFloat(leg.line)>0&&bt==='sp'?'+':'')+leg.line; return nm; }
+
+      consider(bmHere, domOpp, true, withLine(nmPrimary,bmHere), withLine(nmOpp,domOpp));
+      consider(bmOpp, domHere, false, withLine(nmOpp,bmOpp), withLine(nmPrimary,domHere));
     });
   });
 
@@ -2467,10 +2719,10 @@ async function scanOffshore(){
   OARB_CACHE=arbs;
 
   var now2=new Date().toLocaleTimeString();
-  var h='<div class="stats">Scanned '+events.length+' events · '+arbs.length+' arbs (all books) · '+now2+'</div>';
+  var h='<div class="stats">Scanned '+events.length+' events · '+arbs.length+' BookMaker arbs · '+now2+'</div>';
 
   // Coverage strip: green = book returned prices, red = requested but 0.
-  var reqBooks=SGO_ARB_BOOKS.slice();
+  var reqBooks=[SGO_BOOKMAKER].concat(SGO_DOMESTIC);
   var covParts=reqBooks.map(function(b){
     if(droppedBooks.indexOf(b)>-1) return '<span style="color:#f59e0b">'+sgoName(b)+' dropped</span>';
     var n=bookCoverage[b]||0;
@@ -2482,22 +2734,22 @@ async function scanOffshore(){
     +'<br><span style="color:#666">Red = 0 prices returned. If Kalshi/Polymarket show 0 with no amber "dropped" tag, SGO has no overlapping markets in these leagues right now (or the slug differs — check "Other slugs" above).</span></div>';
 
   if(droppedBooks.length) h+='<div class="alert-bar" style="background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.3);color:#f59e0b">⚠️ Skipped (not in your tier): '+droppedBooks.join(', ')+'</div>';
-  h+='<div class="alert-bar" style="background:rgba(56,189,248,.1);border-color:rgba(56,189,248,.3);color:#38bdf8">🔍 All books vs all books · main lines only'+(sawBookmaker?' · BookMaker.eu present in feed':' · ⚠️ no BookMaker.eu odds this scan')+'</div>';
+  h+='<div class="alert-bar" style="background:rgba(56,189,248,.1);border-color:rgba(56,189,248,.3);color:#38bdf8">'+(sawBookmaker?'✓ BookMaker.eu present — locked as one leg of every arb below':'⚠️ No BookMaker.eu odds in feed (check plan/leagues)')+'</div>';
 
-  if(!arbs.length){ h+='<div class="msg">No arbs above '+min+'% right now.<br><br>Real arbs on main lines are rare and small — try lowering Min % to 0.2 or adding leagues.</div>'; }
+  if(!arbs.length){ h+='<div class="msg">No BookMaker arbs above '+min+'% right now.<br><br>BookMaker is sharp, so edges are rare and small — try lowering Min % to 0.2, enabling props, or adding leagues.</div>'; }
   else {
     arbs.forEach(function(x,idx){
-      h+='<div class="card'+(x.overMax?' live':x.edge>2?' hot':x.live?' live':'')+'"><div class="ctop"><div style="flex:1;min-width:0"><div class="gmeta">'+(x.league?x.league+' · ':'')+sgoName(x.bmLeg.book).toUpperCase()+' vs '+sgoName(x.domLeg.book).toUpperCase()+'</div><span class="mktag h2h">'+x.label+'</span>';
+      h+='<div class="card'+(x.overMax?' live':x.edge>2?' hot':x.live?' live':'')+'"><div class="ctop"><div style="flex:1;min-width:0"><div class="gmeta">🔒 '+(x.league?x.league+' · ':'')+'BOOKMAKER'+(x.isProp?' · PROP':x.isGameProp?' · GAME PROP':'')+'</div><span class="mktag '+(x.isProp?'props':x.isGameProp?'gameprops':'h2h')+'">'+x.label+'</span>';
       if(x.overMax) h+='<span class="mktag live">🚫 OVER MAX</span>';
       if(x.live) h+='<span class="mktag live">🔴 LIVE</span>';
-      if(x.domOutlier&&x.outBook) h+='<span class="mktag live">⚠️ VERIFY '+sgoName(x.outBook)+' +'+x.domOutlierPct.toFixed(0)+'% vs other books</span>';
+      if(x.domOutlier) h+='<span class="mktag live">⚠️ STALE? '+sgoName(x.domLeg.book)+' +'+x.domOutlierPct.toFixed(0)+'% vs other books</span>';
       h+='<div class="gtitle">'+x.game+'</div>';
       if(x.start) h+='<div class="gdate-tag">'+new Date(x.start).toLocaleString()+'</div>';
       h+='</div><div style="text-align:right;flex-shrink:0"><div class="roi">+'+x.edge.toFixed(2)+'%</div><div class="psub">$'+x.profit.toFixed(2)+' profit</div><div class="psub">on $'+x.totalStaked.toFixed(0)+' staked</div></div></div><div class="sides">';
       // BookMaker leg (exact hedge), then domestic leg (round stake)
-      h+='<div class="side"><div class="book" style="color:#38bdf8">'+(x.bmLeg.book==='bookmakereu'?'🌊 ':'')+sgoName(x.bmLeg.book)+'</div><div class="team">'+x.bmLeg.name+'</div><div class="odds">'+amFmt(x.bmLeg.am)+'</div><div class="stake">Bet $'+x.bmLeg.stake.toFixed(2)+'</div>';
+      h+='<div class="side"><div class="book" style="color:#38bdf8">🌊 BookMaker.eu</div><div class="team">'+x.bmLeg.name+'</div><div class="odds">'+amFmt(x.bmLeg.am)+'</div><div class="stake">Bet $'+x.bmLeg.stake.toFixed(2)+'</div>';
       if(x.bmLeg.link) h+='<a href="'+x.bmLeg.link+'" target="_blank" class="open-link">Open bet slip →</a>';
-      else if(sgoHome(x.bmLeg.book)) h+='<a href="'+sgoHome(x.bmLeg.book)+'" target="_blank" class="open-link">Open '+sgoName(x.bmLeg.book)+' →</a>';
+      else h+='<a href="'+sgoHome('bookmakereu')+'" target="_blank" class="open-link">Open BookMaker.eu →</a>';
       h+='<button class="copy-bet" data-bet="'+obEsc(obBetStr(x,'bm'))+'" onclick="obCopyBet(this)">📋 Copy bet</button>';
       h+='</div>';
       h+='<div class="side"><div class="book">'+sgoName(x.domLeg.book)+'</div><div class="team">'+x.domLeg.name+'</div><div class="odds">'+amFmt(x.domLeg.am)+'</div><div class="stake" style="color:#fbbf24;font-weight:700">Bet $'+x.domLeg.stake.toFixed(0)+'</div>';
@@ -2506,9 +2758,9 @@ async function scanOffshore(){
       h+='<button class="copy-bet" data-bet="'+obEsc(obBetStr(x,'dom'))+'" onclick="obCopyBet(this)">📋 Copy bet</button>';
       h+='</div>';
       h+='</div>';
-      h+='<div class="place-first-note">⚠️ '+sgoName(x.domLeg.book)+' is your fixed $'+x.domLeg.stake.toFixed(0)+' leg. Place <strong>'+sgoName(x.bmLeg.book)+' first</strong> ($'+x.bmLeg.stake.toFixed(2)+') — sharpest side moves fastest — then lock '+sgoName(x.domLeg.book)+'.</div>';
+      h+='<div class="place-first-note">⚠️ '+sgoName(x.domLeg.book)+' is your fixed $'+x.domLeg.stake.toFixed(0)+' leg. Place <strong>BookMaker.eu first</strong> ($'+x.bmLeg.stake.toFixed(2)+') — sharp side moves fastest — then lock '+sgoName(x.domLeg.book)+'.</div>';
       if(x.overMax){
-        h+='<div class="middle-note" style="background:rgba(255,71,87,.12);border-top:1px solid rgba(255,71,87,.4);color:#ff6b6b">🚫 '+sgoName(x.bmLeg.book)+' hedge $'+x.bmLeg.stake.toFixed(2)+' exceeds your max ($'+x.cap.toFixed(0)+').';
+        h+='<div class="middle-note" style="background:rgba(255,71,87,.12);border-top:1px solid rgba(255,71,87,.4);color:#ff6b6b">🚫 BookMaker hedge $'+x.bmLeg.stake.toFixed(2)+' exceeds your max ($'+x.cap.toFixed(0)+').';
         if(x.fit) h+=' To fit: bet <strong>$'+x.fit.bm.toFixed(2)+'</strong> on BookMaker + <strong>$'+x.fit.dom.toFixed(2)+'</strong> on '+sgoName(x.domLeg.book)+' → $'+x.fit.profit.toFixed(2)+' profit.';
         h+='</div>';
       }
@@ -2533,31 +2785,197 @@ function toggleAuto(){
 <script>
 // ── TrueLine tab (Module 1: true odds + hold/EV, on The Odds API) ──
 (function(){
-  var TL_NAME={bookmakereu:'BookMaker',draftkings:'DraftKings',fanduel:'FanDuel',betmgm:'BetMGM',caesars:'Caesars',fanatics:'Fanatics',bet365:'Bet365',thescorebet:'theScore',hardrockbet:'Hard Rock',ballybet:'Bally Bet',pinnacle:'Pinnacle'};
-  var TL_MAIN=['ml','sp','ou'];
-  var TL_RAW={ts:0,events:[],books:[]};
-  function tlAmDec(p){p=parseFloat(p);if(isNaN(p))return null;return p>0?p/100+1:100/Math.abs(p)+1;}
-  function tlDecAm(d){if(!d||d<=1)return '\u2014';return d>=2?'+'+Math.round((d-1)*100):''+Math.round(-100/(d-1));}
-  function tlAmFmt(x){x=parseFloat(x);if(isNaN(x))return '\u2014';return (x>0?'+':'')+x;}
-  function tlEsc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-  function tlTeam(t){if(!t)return '';if(typeof t==='string')return t;return (t.names&&(t.names.short||t.names.long))||t.name||t.shortName||'';}
-  function tlLine(bb){if(!bb)return null;if(bb.overUnder!=null)return parseFloat(bb.overUnder);if(bb.spread!=null)return parseFloat(bb.spread);return null;}
-  function tlKey(){return (document.getElementById('opkey')&&document.getElementById('opkey').value||'').trim();}
-  function tlLeagues(){return Array.from(document.querySelectorAll('#tlSports [data-tls].on')).map(function(x){return x.dataset.tls;});}
+  function tlKey(){ return (document.getElementById('key').value||'').trim(); }
+  function tlAmDec(p){p=parseFloat(p);if(!p)return null;return p>0?p/100+1:100/Math.abs(p)+1;}
+  function tlDecAm(d){if(!d||d<=1)return null;return d>=2?'+'+Math.round((d-1)*100):''+Math.round(-100/(d-1));}
+  function tlMedian(a){if(!a.length)return null;var s=a.slice().sort(function(x,y){return x-y;});var m=Math.floor(s.length/2);return s.length%2?s[m]:(s[m-1]+s[m])/2;}
+  function tlEsc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  function tlErr(m){document.getElementById('tlErr').innerHTML='<div class="err">'+tlEsc(m)+'</div>';}
+  function tlClrErr(){document.getElementById('tlErr').innerHTML='';}
+  function tlCredits(res){try{var r=res.headers.get('x-requests-remaining');if(r!=null)document.getElementById('tlCredits').textContent='· '+r+' credits left';}catch(e){}}
 
-  // Own SGO pull — Pinnacle (fair anchor) + every enabled book. Main lines only.
-  window.tlScan=async function(){
-    var key=tlKey(), out=document.getElementById('tlAnalysis'), errEl=document.getElementById('tlErr');
-    errEl.innerHTML='';
-    if(!key){errEl.innerHTML='<div class="err">No SportsGameOdds key found. Open the \ud83c\udf0a Offshore tab and paste your SGO key there once \u2014 it\u2019s shared with this tab.</div>';return;}
-    var leagues=tlLeagues();
-    if(!leagues.length){errEl.innerHTML='<div class="err">Turn on at least one league.</div>';return;}
-    var maxGames=parseInt(document.getElementById('tlMaxGames').value)||30;
-    var btn=document.querySelector('#view-trueline .scan'); if(btn){btn.textContent='Loading\u2026';btn.disabled=true;}
-    var all=[], errs=[], pinnMissing=false, usedBooks=[];
+  var tlSportsLoaded=false, TL=[];
+
+  window.tlInit=function(){
+    if(!tlSportsLoaded && tlKey()) tlLoadSports();
+  };
+
+  async function tlLoadSports(){
+    var key=tlKey(); if(!key){return;}
+    try{
+      var res=await fetch('https://api.the-odds-api.com/v4/sports/?apiKey='+encodeURIComponent(key));
+      tlCredits(res);
+      if(res.status===401){tlErr('Odds API key was rejected — check the key up top.');return;}
+      var data=await res.json();
+      if(!Array.isArray(data)){tlErr('Unexpected response loading sports.');return;}
+      tlClrErr(); tlSportsLoaded=true;
+      var order=['americanfootball_nfl','basketball_nba','baseball_mlb','icehockey_nhl','americanfootball_ncaaf','basketball_ncaab','basketball_wnba','mma_mixed_martial_arts','soccer_epl'];
+      data.sort(function(a,b){var ia=order.indexOf(a.key),ib=order.indexOf(b.key);return (ia<0?99:ia)-(ib<0?99:ib);});
+      var opts=data.filter(function(s){return !s.has_outrights;}).map(function(s){return '<option value="'+tlEsc(s.key)+'">'+tlEsc(s.title)+'</option>';}).join('');
+      document.getElementById('tlSport').innerHTML=opts||'<option value="">No active sports</option>';
+    }catch(e){tlErr('Network error loading sports.');}
+  }
+
+  window.tlLoadGames=async function(){
+    var key=tlKey(); if(!key){tlErr('Paste your Odds API key up top first.');return;}
+    if(!tlSportsLoaded){await tlLoadSports();}
+    var sport=document.getElementById('tlSport').value; if(!sport){return;}
+    document.getElementById('tlGames').innerHTML='<div class="tl-empty"><span class="tl-spin"></span>Loading games…</div>';
+    document.getElementById('tlAnalysis').innerHTML='';
+    try{
+      var res=await fetch('https://api.the-odds-api.com/v4/sports/'+sport+'/odds/?apiKey='+encodeURIComponent(key)+'&regions=us,us2&markets=h2h&oddsFormat=american');
+      tlCredits(res);
+      if(res.status===401){document.getElementById('tlGames').innerHTML='';tlErr('Key rejected.');return;}
+      if(res.status===422){document.getElementById('tlGames').innerHTML='';tlErr('No moneyline available for this sport right now.');return;}
+      var data=await res.json();
+      if(!Array.isArray(data)||!data.length){document.getElementById('tlGames').innerHTML='<div class="tl-empty"><div class="tl-big">No games on the board</div>Nothing upcoming here — try another sport.</div>';return;}
+      tlClrErr(); TL=data;
+      document.getElementById('tlGames').innerHTML=data.map(function(g,i){
+        var t=new Date(g.commence_time);
+        var when=t.toLocaleDateString([], {weekday:'short',month:'short',day:'numeric'})+' · '+t.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
+        var nb=(g.bookmakers||[]).length;
+        return '<div class="tl-game" id="tlg'+i+'" onclick="tlAnalyze('+i+')"><div><div class="tl-teams">'+tlEsc(g.away_team)+' <span style="color:#5C6675">@</span> '+tlEsc(g.home_team)+'</div><div class="tl-when">'+tlEsc(when)+' · '+nb+' books</div></div><div class="tl-chev">analyze →</div></div>';
+      }).join('');
+    }catch(e){document.getElementById('tlGames').innerHTML='';tlErr('Network error loading games.');}
+  };
+
+  window.tlAnalyze=function(i){
+    var g=TL[i]; if(!g)return;
+    document.querySelectorAll('#view-trueline .tl-game').forEach(function(x){x.classList.remove('sel');});
+    var gel=document.getElementById('tlg'+i); if(gel)gel.classList.add('sel');
+
+    var names=[], perBook=[];
+    (g.bookmakers||[]).forEach(function(bk){
+      var mkt=(bk.markets||[]).filter(function(m){return m.key==='h2h';})[0];
+      if(!mkt||!mkt.outcomes||mkt.outcomes.length<2)return;
+      var q={},decs={},tot=0,ok=true;
+      mkt.outcomes.forEach(function(o){var d=tlAmDec(o.price);if(!d){ok=false;return;}decs[o.name]=d;q[o.name]=1/d;tot+=1/d;if(names.indexOf(o.name)<0)names.push(o.name);});
+      if(!ok||tot<=0)return;
+      var fair={};Object.keys(q).forEach(function(n){fair[n]=q[n]/tot;});
+      perBook.push({book:bk.title,fair:fair,hold:(tot-1)*100,dec:decs});
+    });
+    if(perBook.length<1||names.length<2){document.getElementById('tlAnalysis').innerHTML='<div class="err">Not enough book data to de-vig this game yet.</div>';return;}
+
+    var cons={};names.forEach(function(n){var arr=perBook.filter(function(b){return b.fair[n]!=null;}).map(function(b){return b.fair[n];});cons[n]=tlMedian(arr)||0;});
+    var cs=0;names.forEach(function(n){cs+=cons[n];});names.forEach(function(n){cons[n]=cons[n]/cs;});
+
+    var best={};names.forEach(function(n){var bd=0,bb='';perBook.forEach(function(b){if(b.dec[n]&&b.dec[n]>bd){bd=b.dec[n];bb=b.book;}});best[n]={dec:bd,book:bb,ev:(cons[n]*(bd-1)-(1-cons[n]))*100};});
+    var holdMed=tlMedian(perBook.map(function(b){return b.hold;}));
+    var minHold=Math.min.apply(null,perBook.map(function(b){return b.hold;}));
+
+    var three=names.length>=3;
+    var t=new Date(g.commence_time);
+    var when=t.toLocaleDateString([], {weekday:'short',month:'short',day:'numeric'})+' · '+t.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
+
+    var cards=names.map(function(n){var p=cons[n],b=best[n],pos=b.ev>0.01;
+      return '<div class="tl-fo"><div class="tl-name">'+tlEsc(n)+'</div><div class="tl-prob">'+(p*100).toFixed(1)+'<span>%</span></div>'+
+        '<div class="tl-odds">fair '+tlDecAm(1/p)+'</div><div class="tl-bestp">best <b>'+tlDecAm(b.dec)+'</b> @ '+tlEsc(b.book||'—')+'</div>'+
+        '<span class="tl-ev '+(pos?'pos':'neg')+'">'+(pos?'+EV '+b.ev.toFixed(1)+'%':'no edge')+'</span></div>';
+    }).join('');
+
+    var sc=['s0','s1','s2'];
+    var segs=names.slice().sort(function(a,b){return cons[b]-cons[a];}).map(function(n,idx){var w=cons[n]*100;return '<div class="tl-seg '+sc[idx]+'" data-w="'+w+'" style="width:0%">'+(w>14?Math.round(w)+'%':'')+'</div>';}).join('');
+
+    var rows=perBook.slice().sort(function(a,b){return a.hold-b.hold;}).map(function(b){
+      var cheap=Math.abs(b.hold-minHold)<0.001;
+      var px=names.map(function(n){var isB=best[n].book===b.book&&best[n].dec===b.dec[n];return '<span class="tl-px" style="'+(isB?'color:var(--fav)':'')+'">'+tlDecAm(b.dec[n])+'</span>';});
+      var hc=b.hold>=holdMed+1?'hi':(cheap?'lo':'');
+      return '<div class="tl-brow"><div class="tl-bk">'+tlEsc(b.book)+(cheap?' <span class="tl-flag">LOW VIG</span>':'')+'</div><div style="display:flex;gap:12px;justify-content:flex-end">'+px.join('')+'</div><div class="tl-hdc '+hc+'">'+b.hold.toFixed(1)+'%</div></div>';
+    }).join('');
+
+    var bev=names.slice().sort(function(a,b){return best[b].ev-best[a].ev;})[0];
+    var take = best[bev].ev>0.01
+      ? '<b>'+tlEsc(bev)+'</b> at '+tlDecAm(best[bev].dec)+' ('+tlEsc(best[bev].book)+') beats its fair price — about <b style="color:var(--value)">+'+best[bev].ev.toFixed(1)+'%</b> per $100. Real edges are small; confirm the line is still live.'
+      : 'No book is priced above the fair line — every side is −EV once vig is counted. Cheapest vig here is <b>'+minHold.toFixed(1)+'%</b>; anything more is extra tax.';
+
+    document.getElementById('tlAnalysis').innerHTML=
+      '<div class="tl-card"><div class="tl-chead"><div class="tl-mkt">Moneyline · no-vig</div><div class="tl-match">'+tlEsc(g.away_team)+' @ '+tlEsc(g.home_team)+'</div><div class="tl-sub">'+tlEsc(when)+' · consensus of '+perBook.length+' books</div></div>'+
+      '<div class="tl-hero"><div class="tl-fg'+(three?' three':'')+'">'+cards+'</div>'+
+      '<div class="tl-splitwrap"><div class="tl-splitlbl"><span>True probability (vig removed)</span><span>100%</span></div><div class="tl-split" id="tlSplit">'+segs+'</div></div>'+
+      '<div class="tl-vig"><div class="tl-vigtop"><span class="n">'+holdMed.toFixed(1)+'%</span><span class="l">typical vig on this game — the books\u2019 built-in tax</span></div>'+
+      '<div class="tl-vigmeter"><i id="tlVig" style="width:0%"></i></div><div class="tl-vigscale"><span>0%</span><span>fair</span><span>5%</span><span>gouging</span><span>10%+</span></div>'+
+      '<div class="tl-take">'+take+'</div></div>'+
+      '<div class="tl-books"><h3>Every book — price &amp; its vig</h3>'+rows+'</div></div></div>';
+
+    requestAnimationFrame(function(){setTimeout(function(){
+      document.querySelectorAll('#tlSplit .tl-seg').forEach(function(s){s.style.width=s.getAttribute('data-w')+'%';});
+      var vf=document.getElementById('tlVig'); if(vf)vf.style.width=Math.min(holdMed/10*100,100)+'%';
+    },60);});
+  };
+})();
+
+// ══════════════════════════════════════════════════════════
+//  +EV ENGINE  — SGO feed, Pinnacle-anchored, TN books, sizing
+//  Pinnacle is used for MATH ONLY. You never bet Pinnacle.
+// ══════════════════════════════════════════════════════════
+(function(){
+  var EV_HOME={bookmakereu:'https://www.bookmaker.eu',draftkings:'https://sportsbook.draftkings.com',fanduel:'https://sportsbook.fanduel.com',betmgm:'https://sports.betmgm.com',caesars:'https://sportsbook.caesars.com',fanatics:'https://sportsbook.fanatics.com',bet365:'https://www.bet365.com',hardrockbet:'https://app.hardrock.bet',ballybet:'https://play.ballybet.com'};
+  var EV_NAME={bookmakereu:'BookMaker',draftkings:'DraftKings',fanduel:'FanDuel',betmgm:'BetMGM',caesars:'Caesars',fanatics:'Fanatics',bet365:'Bet365',hardrockbet:'Hard Rock',ballybet:'Bally Bet'};
+
+  function evKey(){return (document.getElementById('opkey')&&document.getElementById('opkey').value||'').trim();} // SGO key (shared w/ Offshore)
+  function evAmDec(p){p=parseFloat(p);if(isNaN(p))return null;if(p>0)return p/100+1;if(p<0)return 100/Math.abs(p)+1;return null;}
+  function evDecAm(d){if(!d||d<=1)return '—';return d>=2?'+'+Math.round((d-1)*100):''+Math.round(-100/(d-1));}
+  function evAmFmt(x){x=parseFloat(x);if(isNaN(x))return '—';return (x>0?'+':'')+x;}
+  function evMedian(a){if(!a.length)return null;var s=a.slice().sort(function(x,y){return x-y;});var m=Math.floor(s.length/2);return s.length%2?s[m]:(s[m-1]+s[m])/2;}
+  function evEsc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  function evDevig2(dA,dB){if(!dA||!dB||dA<=1||dB<=1)return null;var iA=1/dA,iB=1/dB,t=iA+iB;if(t<=0)return null;return {a:iA/t,b:iB/t,hold:(t-1)*100};}
+  function evSel(id,attr){return Array.from(document.querySelectorAll('#'+id+' [data-'+attr+'].on')).map(function(x){return x.dataset[attr];});}
+  function evLine(bb){ if(!bb)return null; if(bb.overUnder!=null)return parseFloat(bb.overUnder); if(bb.spread!=null)return parseFloat(bb.spread); return null; }
+  function evLink(bb,bk){ return (bb&&(bb.deeplink||bb.deepLink||bb.link))||EV_HOME[bk]||'#'; }
+
+  function evRoundStake(x,maxBet){
+    if(x<=0)return 0;
+    var r = x<40 ? Math.round(x/5)*5 : (x<100 ? Math.round(x/10)*10 : Math.round(x/25)*25);
+    if(r<10)r=10;
+    if(r>maxBet)r=Math.floor(maxBet/25)*25||maxBet;
+    return r;
+  }
+  function evStake(fairP,dec,bank,kfrac,flat,flatVal,maxBet){
+    if(flat)return Math.min(flatVal,maxBet);
+    var fFull=(fairP*dec-1)/(dec-1); if(fFull<=0)return 0;
+    return evRoundStake(Math.min(bank*kfrac*fFull,maxBet),maxBet);
+  }
+
+  window.evInit=function(){
+    var ks=document.getElementById('evKelly');
+    if(ks && !ks._wired){ks._wired=true;ks.addEventListener('change',function(){document.getElementById('evFlatWrap').style.display=this.value==='flat'?'flex':'none';});}
+    var up=document.getElementById('evUsePinn');
+    if(up && !up._wired){up._wired=true;up.addEventListener('change',function(){document.getElementById('evAnchorMode').textContent=this.checked?'Pinnacle → consensus':'Consensus only (ML)';});}
+    ['evSports','evBooks','evMarkets'].forEach(function(id){
+      var el=document.getElementById(id);
+      if(el && !el._wired){el._wired=true;el.addEventListener('click',function(e){var b=e.target.closest('[data-es],[data-eb],[data-em]');if(b)b.classList.toggle('on');});}
+    });
+    var ef=document.getElementById('evFilter');
+    if(ef && !ef._wired){ef._wired=true;ef.addEventListener('click',function(e){var b=e.target.closest('[data-ef]');if(!b)return;Array.from(ef.querySelectorAll('[data-ef]')).forEach(function(x){x.classList.remove('on');});b.classList.add('on');evRender();});}
+  };
+  function evFilterVal(){var el=document.querySelector('#evFilter [data-ef].on');return el?el.dataset.ef:'all';}
+  var EV_LAST={plays:[],arbs:[],games:0,pinnMissing:false,errs:[]};
+
+  function evProg(t,pct){document.getElementById('evProg').style.display='block';document.getElementById('evProgText').textContent=t;if(pct!=null)document.getElementById('evProgFill').style.width=pct+'%';}
+  function evHideProg(){document.getElementById('evProg').style.display='none';}
+
+  window.evScan=async function(){
+    var key=evKey(), out=document.getElementById('evOut');
+    if(!key){out.innerHTML='<div class="err">No SportsGameOdds key found. Open the 🌊 Offshore tab and paste your SGO key there once — it\u2019s shared with this tab.</div>';return;}
+    var bank=parseFloat(document.getElementById('evBank').value)||10000;
+    var kmode=document.getElementById('evKelly').value, flat=kmode==='flat', kfrac=flat?0:parseFloat(kmode);
+    var flatVal=parseFloat(document.getElementById('evFlat').value)||50;
+    var minEV=parseFloat(document.getElementById('evMin').value); if(isNaN(minEV))minEV=2;
+    var maxBet=parseFloat(document.getElementById('evMax').value)||250;
+    var usePinn=document.getElementById('evUsePinn').checked;
+    var maxGames=parseInt(document.getElementById('evMaxGames').value)||30;
+
+    var leagues=evSel('evSports','es'), books=evSel('evBooks','eb'), markets=evSel('evMarkets','em');
+    if(!leagues.length){out.innerHTML='<div class="err">Turn on at least one league.</div>';return;}
+    if(!books.length){out.innerHTML='<div class="err">Turn on at least one TN book.</div>';return;}
+    if(!markets.length){out.innerHTML='<div class="err">Turn on at least one market.</div>';return;}
+
+    out.innerHTML=''; var plays=[], arbs=[], gamesSeen=0, errs=[], pinnMissing=false;
+
     for(var li=0;li<leagues.length;li++){
       var lg=leagues[li];
-      var bks=SGO_ARB_BOOKS.concat(['pinnacle']);
+      evProg('Scanning '+lg+' … ('+(li+1)+'/'+leagues.length+')', Math.round(li/leagues.length*100));
+      var bks=books.slice(); if(usePinn)bks.push('pinnacle');
       var collected=[], cursor=null, pages=0, guard=0;
       do{
         guard++;
@@ -2575,81 +2993,497 @@ function toggleAuto(){
         collected=collected.concat(batch);
         cursor=resp.nextCursor||null; pages++;
       } while(cursor && collected.length<maxGames && pages<6 && guard<12);
-      usedBooks=bks;
-      collected.slice(0,maxGames).forEach(function(ev){ try{ev.__lg=lg;}catch(e){} all.push(ev); });
+      var events=collected.slice(0,maxGames);
+      var pinnOn = usePinn && bks.indexOf('pinnacle')>-1;
+      events.forEach(function(ev){ gamesSeen++; evEvent(ev,lg,books,markets,pinnOn,minEV,bank,kfrac,flat,flatVal,maxBet,plays,arbs); });
     }
-    if(btn){btn.textContent='\ud83c\udfaf Load games';btn.disabled=false;}
-    TL_RAW={ts:Date.now(),events:all,books:usedBooks.filter(function(b){return b!=='pinnacle';})};
-    if(errs.length)errEl.innerHTML='<div class="err">'+errs.map(tlEsc).join('<br>')+'</div>';
-    if(pinnMissing)errEl.innerHTML+='<div class="err" style="color:#f59e0b">Pinnacle wasn\u2019t returned on your SGO tier \u2014 without it there\u2019s no fair anchor here.</div>';
-    tlInit();
+
+    evHideProg();
+    plays.sort(function(a,b){return b.evpct-a.evpct;});
+    arbs.sort(function(a,b){return b.profit-a.profit;});
+    EV_LAST={plays:plays,arbs:arbs,games:gamesSeen,pinnMissing:pinnMissing,errs:errs};
+    evRender();
   };
 
-  window.tlInit=function(){
-    var sel=document.getElementById('tlGame'), out=document.getElementById('tlAnalysis');
-    if(!sel||!out)return;
-    if(!TL_RAW.events.length){
-      sel.innerHTML='<option value="">Tap Load games\u2026</option>';
-      out.innerHTML='<div class="tl-empty"><div class="tl-big">No games loaded</div>Pick your leagues and tap <b>Load games</b>. TrueLine pulls Pinnacle + your books and shows the true no-vig price for any game.</div>';
-      document.getElementById('tlCredits').textContent='';
-      return;
+  function evRender(){
+    var out=document.getElementById('evOut'); if(!out)return;
+    var f=evFilterVal();
+    var match=function(x){ return f==='all' || (f==='live'?x.live:!x.live); };
+    var plays=EV_LAST.plays.filter(match), arbs=EV_LAST.arbs.filter(match);
+    var liveN=EV_LAST.plays.filter(function(x){return x.live;}).length;
+    var preN=EV_LAST.plays.length-liveN;
+    var head='<div class="stats">Scanned <b style="color:#e8e8f0">'+EV_LAST.games+'</b> games · <b style="color:#3DDC97">'+EV_LAST.plays.length+'</b> +EV ('+preN+' pre · '+liveN+' live) · <b style="color:#00ff88">'+EV_LAST.arbs.length+'</b> arb'+(EV_LAST.arbs.length===1?'':'s')+'</div>';
+    if(EV_LAST.pinnMissing)head+='<div class="ev-flag" style="color:#f59e0b;background:rgba(245,158,11,.08);margin-bottom:12px">Pinnacle wasn\u2019t returned for some/all leagues on your SGO tier — those fell back to book consensus (moneyline only, 3%+ edge). If this persists, check your SGO plan includes Pinnacle.</div>';
+    var body='';
+    if(EV_LAST.errs.length)body+='<div class="err">'+EV_LAST.errs.map(evEsc).join('<br>')+'</div>';
+    arbs.slice(0,20).forEach(function(a){body+=evArbCard(a);});
+    if(plays.length){ var shown=plays.slice(0,80); window.__EVPLAYS=shown; shown.forEach(function(p,i){body+=evCard(p,i);}); }
+    else if(!arbs.length){
+      var why = EV_LAST.plays.length? 'No '+(f==='live'?'live':'pre-game')+' +EV bets right now — try the other filter.' : 'No +EV bets at or above your Min EV right now.<br><br>Normal — main-market edges are small and fleeting. Rescan in a bit, lower Min EV toward 1.5%, or turn on more leagues.';
+      body+='<div class="msg">'+why+'</div>';
     }
-    var opts=['<option value="">Select a game\u2026</option>'];
-    TL_RAW.events.forEach(function(ev,i){
-      var home=tlTeam(ev.teams&&ev.teams.home)||'Home', away=tlTeam(ev.teams&&ev.teams.away)||'Away';
-      opts.push('<option value="'+i+'">'+tlEsc((ev.__lg?ev.__lg+': ':'')+away+' @ '+home)+'</option>');
-    });
-    sel.innerHTML=opts.join('');
-    if(!sel._wired){sel._wired=true;sel.addEventListener('change',function(){tlShow(this.value);});}
-    var age=Math.round((Date.now()-TL_RAW.ts)/60000);
-    document.getElementById('tlCredits').textContent=TL_RAW.events.length+' games \u00b7 loaded '+(age<1?'just now':age+'m ago');
-    out.innerHTML='<div class="tl-empty"><div class="tl-big">'+TL_RAW.events.length+' games loaded</div>Pick a game above to see its true no-vig line and every book\u2019s edge.</div>';
-  };
-
-  function tlShow(idx){
-    var out=document.getElementById('tlAnalysis'); if(!out)return;
-    var ev=TL_RAW.events[parseInt(idx)]; if(!ev){out.innerHTML='';return;}
-    var home=tlTeam(ev.teams&&ev.teams.home)||'Home', away=tlTeam(ev.teams&&ev.teams.away)||'Away';
-    var odds=ev.odds||{}, books=TL_RAW.books||[], primary={ml:'home',sp:'home',ou:'over'};
-    var sections=[];
-    Object.keys(odds).forEach(function(oddID){
-      var od=odds[oddID]; if(!od)return; var bt=od.betTypeID;
-      if(TL_MAIN.indexOf(bt)<0)return;
-      if(od.playerID)return; if(od.periodID&&od.periodID!=='game')return;
-      if(od.sideID!==primary[bt])return;
-      var seg=String(oddID).split('-'), ent=od.statEntityID||(seg.length>=5?seg[1]:'');
-      if(bt==='ou'&&(ent==='home'||ent==='away'))return; // no team totals
-      var opp=od.opposingOddID?odds[od.opposingOddID]:null; if(!opp)return;
-      var pa=od.byBookmaker&&od.byBookmaker.pinnacle, pb=opp.byBookmaker&&opp.byBookmaker.pinnacle;
-      if(!(pa&&pb&&pa.odds!=null&&pb.odds!=null))return;
-      var dpa=tlAmDec(pa.odds),dpb=tlAmDec(pb.odds); if(!dpa||!dpb||dpa<=1||dpb<=1)return;
-      var tt=1/dpa+1/dpb, fairA=(1/dpa)/tt, fairB=(1/dpb)/tt, pLine=tlLine(pa);
-      var vig=(tt-1)*100;
-      var mkt=bt==='ml'?'Moneyline':bt==='sp'?('Spread '+(pLine>0?'+':'')+pLine):('Total '+pLine);
-      var nameA=bt==='ou'?'Over':home, nameB=bt==='ou'?'Under':away;
-      var rows='';
-      [{nm:nameA,fp:fairA,node:od},{nm:nameB,fp:fairB,node:opp}].forEach(function(S){
-        var bh='';
-        books.forEach(function(bk){
-          var bb=S.node.byBookmaker&&S.node.byBookmaker[bk]; if(!bb||bb.available===false||bb.odds==null)return;
-          var dec=tlAmDec(bb.odds); if(!dec||dec<=1)return;
-          var bl=tlLine(bb); if(bt!=='ml'&&pLine!=null&&bl!=null&&Math.abs(bl-pLine)>0.001)return;
-          var evp=(S.fp*(dec-1)-(1-S.fp))*100;
-          var cls=evp>=2?'tl-ev pos':(evp<=-2?'tl-ev neg':'tl-ev');
-          bh+='<div class="tl-bookrow"><span>'+tlEsc(TL_NAME[bk]||bk)+'</span><span>'+tlAmFmt(bb.odds)+'</span><span class="'+cls+'">'+(evp>=0?'+':'')+evp.toFixed(1)+'%</span></div>';
-        });
-        if(bh)rows+='<div class="tl-side"><div class="tl-sidehead">'+tlEsc(S.nm)+' <span class="tl-fair">fair '+tlDecAm(1/S.fp)+' \u00b7 '+(S.fp*100).toFixed(1)+'%</span></div>'+bh+'</div>';
-      });
-      if(rows)sections.push('<div class="tl-mkt"><div class="tl-mkthead">'+tlEsc(mkt)+' \u00b7 vs Pinnacle \u00b7 vig '+vig.toFixed(1)+'%</div>'+rows+'</div>');
-    });
-    out.innerHTML='<div class="tl-head">'+tlEsc(away+' @ '+home)+'</div>'+
-      (sections.length?sections.join(''):'<div class="tl-empty">No Pinnacle-anchored main lines for this game.</div>');
+    out.innerHTML=head+body;
   }
 
-  var tls=document.getElementById('tlSports');
-  if(tls) tls.addEventListener('click',function(e){var b=e.target.closest('[data-tls]');if(b)b.classList.toggle('on');});
+  function evTeam(t){ if(!t)return ''; if(typeof t==='string')return t; return (t.names&&(t.names.short||t.names.long))||t.name||t.shortName||''; }
+
+  function evEvent(ev,league,books,markets,usePinn,minEV,bank,kfrac,flat,flatVal,maxBet,plays,arbs){
+    if(!ev)return;
+    var st=ev.status||{};
+    if(st.ended===true||st.completed===true)return;
+    var live=(st.started===true||st.live===true)&&!(st.ended===true||st.completed===true);
+    var odds=ev.odds; if(!odds)return;
+    var home=evTeam(ev.teams&&ev.teams.home)||'Home', away=evTeam(ev.teams&&ev.teams.away)||'Away';
+    var when=st.startsAt||st.startTime||ev.scheduled||null;
+    var sportID=ev.sportID||'';
+    var isSoccer=(sportID==='SOCCER')||String(league).toUpperCase().indexOf('SOCCER')>-1;
+    var gl=away+' @ '+home;
+    var primary={ml:'home',sp:'home',ou:'over'};
+
+    Object.keys(odds).forEach(function(oddID){
+      var od=odds[oddID]; if(!od)return;
+      var bt=od.betTypeID, side=od.sideID;
+      if(['ml','sp','ou'].indexOf(bt)<0)return;
+      if(markets.indexOf(bt)<0)return;
+      if(od.playerID)return;                             // no player props
+      if(od.periodID && od.periodID!=='game')return;     // full-game main lines only
+      if(bt==='ou'){                                     // totals: keep only the COMBINED game total
+        var _seg=String(oddID).split('-');
+        var _ent=od.statEntityID||(_seg.length>=5?_seg[1]:'');
+        if(_ent==='home'||_ent==='away')return;          // drop team totals (e.g. "Over 5.5" for one side)
+      }
+      if(side!==primary[bt])return;                      // handle each pair once
+      if(isSoccer && bt==='ml')return;                   // soccer ML is 3-way
+      var oppID=od.opposingOddID; if(!oppID)return;
+      var opp=odds[oppID]; if(!opp)return;
+
+      // ---- fair line ----
+      var fairA=null,fairB=null,anchor='',anchorN=0,fLineA=null,fLineB=null;
+      if(usePinn){
+        var pa=od.byBookmaker&&od.byBookmaker.pinnacle, pb=opp.byBookmaker&&opp.byBookmaker.pinnacle;
+        if(pa&&pb&&pa.available!==false&&pb.available!==false&&pa.odds!=null&&pb.odds!=null){
+          var dv=evDevig2(evAmDec(pa.odds),evAmDec(pb.odds));
+          if(dv){fairA=dv.a;fairB=dv.b;anchor='Pinnacle';fLineA=evLine(pa);fLineB=evLine(pb);}
+        }
+      }
+      if(!fairA && bt==='ml'){ // consensus fallback: moneyline only (no line-matching risk)
+        var arrA=[],arrB=[];
+        books.forEach(function(bk){
+          var sa=od.byBookmaker&&od.byBookmaker[bk], sb=opp.byBookmaker&&opp.byBookmaker[bk];
+          if(sa&&sb&&sa.odds!=null&&sb.odds!=null&&sa.available!==false&&sb.available!==false){
+            var d=evDevig2(evAmDec(sa.odds),evAmDec(sb.odds)); if(d){arrA.push(d.a);arrB.push(d.b);}
+          }
+        });
+        if(arrA.length>=2){var mA=evMedian(arrA),mB=evMedian(arrB),t=mA+mB;fairA=mA/t;fairB=mB/t;anchor='consensus';anchorN=arrA.length;}
+      }
+      if(!fairA)return;
+      var pinnAnchored=anchor==='Pinnacle';
+      var effMin=pinnAnchored?minEV:Math.max(minEV,3);
+
+      // MAIN-LINE GUARD: for totals/spreads, the fair line must sit on the market's
+      // main line (the line most books agree on). This stops a single stale or alt
+      // book line (e.g. bet365 showing 8.5 when the live line is 9.5) from creating
+      // a phantom edge — the book, the market, and Pinnacle must all be on the same line.
+      if(bt!=='ml'){
+        var mainLine=evModalLine(od,books);
+        if(fLineA==null || mainLine==null || Math.abs(parseFloat(fLineA)-parseFloat(mainLine))>0.001)return;
+      }
+
+      var sides=[
+        {node:od, fp:fairA, fline:fLineA, name:evSideName(bt,'primary',home,away), oddID:oddID, oppID:oppID},
+        {node:opp,fp:fairB, fline:fLineB, name:evSideName(bt,'opp',home,away), oddID:oppID, oppID:oddID}
+      ];
+      sides.forEach(function(S){
+        if(!S.node.byBookmaker)return;
+        books.forEach(function(bk){
+          var bb=S.node.byBookmaker[bk]; if(!bb||bb.available===false||bb.odds==null)return;
+          var dec=evAmDec(bb.odds); if(!dec||dec<=1)return;
+          var bl=evLine(bb);
+          if(bt!=='ml' && S.fline!=null && bl!=null && Math.abs(parseFloat(bl)-parseFloat(S.fline))>0.001)return; // line must match fair line
+          var ev=S.fp*(dec-1)-(1-S.fp), evpct=ev*100;
+          if(evpct<effMin)return;
+          if(evpct>60)return;
+          var stake=evStake(S.fp,dec,bank,kfrac,flat,flatVal,maxBet); if(stake<=0)return;
+          plays.push({sport:league,game:gl,when:when,live:live,mkt:bt,label:evPickLabel(bt,S.name,bl),
+            book:bk,bookTitle:EV_NAME[bk]||bk,am:bb.odds,dec:dec,fairP:S.fp,fairAm:evDecAm(1/S.fp),
+            evpct:evpct,stake:stake,link:evLink(bb,bk),anchor:anchor,anchorN:anchorN,
+            eventID:(ev.eventID||ev.id||''),oddID:S.oddID,oppID:S.oppID,side:S.name,line:(bl==null?null:bl)});
+        });
+      });
+
+      // ---- opportunistic arb (two TN books cross on matching lines) ----
+      var bestA=evBestBook(od,books,fLineA,bt), bestB=evBestBook(opp,books,fLineB,bt);
+      if(bestA&&bestB&&bestA.book!==bestB.book){
+        var inv=1/bestA.dec+1/bestB.dec;
+        if(inv<1){
+          arbs.push({sport:league,game:gl,when:when,live:live,mkt:bt,mktLabel:evMktLabel(bt),profit:(1/inv-1)*100,
+            legA:{pick:evPickLabel(bt,evSideName(bt,'primary',home,away),bestA.line),book:EV_NAME[bestA.book]||bestA.book,am:evAmFmt(bestA.am),link:bestA.link},
+            legB:{pick:evPickLabel(bt,evSideName(bt,'opp',home,away),bestB.line),book:EV_NAME[bestB.book]||bestB.book,am:evAmFmt(bestB.am),link:bestB.link}});
+        }
+      }
+    });
+  }
+
+  function evModalLine(node,books){
+    if(!node||!node.byBookmaker)return null;
+    var counts={},best=null,bestN=0;
+    books.concat(['pinnacle']).forEach(function(bk){
+      var bb=node.byBookmaker[bk]; if(!bb||bb.available===false)return;
+      var L=evLine(bb); if(L==null)return;
+      var k=String(L); counts[k]=(counts[k]||0)+1;
+      if(counts[k]>bestN){bestN=counts[k];best=L;}
+    });
+    return best;
+  }
+  function evBestBook(node,books,fline,bt){
+    if(!node||!node.byBookmaker)return null;
+    var best=null;
+    books.forEach(function(bk){
+      var bb=node.byBookmaker[bk]; if(!bb||bb.available===false||bb.odds==null)return;
+      var dec=evAmDec(bb.odds); if(!dec||dec<=1)return;
+      var bl=evLine(bb);
+      if(bt!=='ml' && fline!=null && bl!=null && Math.abs(parseFloat(bl)-parseFloat(fline))>0.001)return;
+      if(!best||dec>best.dec)best={book:bk,dec:dec,am:bb.odds,line:bl,link:evLink(bb,bk)};
+    });
+    return best;
+  }
+  function evSideName(bt,which,home,away){
+    if(bt==='ou')return which==='primary'?'Over':'Under';
+    return which==='primary'?home:away;
+  }
+  function evPickLabel(bt,name,line){
+    if(bt==='ml')return name+' ML';
+    if(bt==='sp')return name+' '+(line>0?'+':'')+(line==null?'':line);
+    if(bt==='ou')return name+' '+(line==null?'':line);
+    return name;
+  }
+  function evMktLabel(bt){return bt==='ml'?'Moneyline':bt==='sp'?'Spread':'Total';}
+  function evWhen(iso){ try{var t=new Date(iso);return t.toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'})+' · '+t.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});}catch(e){return '';} }
+
+  function evCard(p,idx){
+    var warn=p.evpct>10, cls=warn?'ev-card warn':'ev-card pos', pcls=warn?'ev-pct warn':'ev-pct', flag='';
+    if(warn)flag='<div class="ev-flag">⚠ '+p.evpct.toFixed(1)+'% is unusually high — almost always a stale line or a rule/period difference. Open the book and confirm the exact market before betting.</div>';
+    else if(p.anchor==='consensus')flag='<div class="ev-flag" style="color:#7c8698;background:rgba(124,134,152,.08)">Fair price from a '+p.anchorN+'-book no-vig consensus (no Pinnacle on this game). A touch less precise — treat thin edges with care.</div>';
+    var kv=document.getElementById('evKelly').value;
+    var stakeLine=p.stake>0?('<div class="ev-stake">Bet ~$'+p.stake+' <span>· '+(kv==='flat'?'flat stake':'\u00bc-Kelly, rounded')+'</span></div>'):'';
+    return '<div class="'+cls+'">'+
+      '<div class="ev-top"><div>'+
+        '<div class="ev-meta">'+evEsc(p.sport)+' · '+evMktLabel(p.mkt)+(p.anchor==='Pinnacle'?' · vs Pinnacle':'')+'</div>'+
+        '<div class="ev-game">'+evEsc(p.game)+(p.live?'<span class="ev-livepill">🔴 LIVE</span>':'')+'</div>'+
+        '<div class="ev-when">'+(p.live?'<span style="color:#ff6b6b">In progress · line moving fast, confirm before betting</span>':evWhen(p.when))+'</div>'+
+      '</div><div><div class="'+pcls+'">+'+p.evpct.toFixed(1)+'%</div><div class="ev-pctsub">EV</div></div></div>'+
+      '<div class="ev-body">'+
+        '<div class="ev-book">'+evEsc(p.bookTitle)+'</div>'+
+        '<div class="ev-pick">'+evEsc(p.label)+'</div>'+
+        '<div class="ev-line"><div class="ev-odds">'+evAmFmt(p.am)+'</div><div class="ev-fair">fair '+p.fairAm+' · '+(p.fairP*100).toFixed(1)+'%</div></div>'+
+        stakeLine+flag+
+        '<div style="display:flex;gap:10px;align-items:center;margin-top:9px">'+
+          '<a class="ev-open" style="margin:0" href="'+evEsc(p.link)+'" target="_blank" rel="noopener">Open '+evEsc(p.bookTitle)+' \u2197</a>'+
+          (idx!=null?'<button id="evlog'+idx+'" onclick="plQuickLog('+idx+')" style="margin-left:auto;background:rgba(61,220,151,.14);color:#3DDC97;border:0;border-radius:7px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer">＋ Log bet</button>':'')+
+        '</div>'+
+      '</div></div>';
+  }
+
+  function evArbCard(a){
+    return '<div class="ev-card arb">'+
+      '<div class="ev-top"><div>'+
+        '<div class="ev-meta">'+evEsc(a.sport)+' · '+evEsc(a.mktLabel)+' · \uD83D\uDD12 ARB</div>'+
+        '<div class="ev-game">'+evEsc(a.game)+(a.live?'<span class="ev-livepill">🔴 LIVE</span>':'')+'</div>'+
+        '<div class="ev-when">'+(a.live?'<span style="color:#ff6b6b">In progress · confirm both lines before firing</span>':evWhen(a.when))+'</div>'+
+      '</div><div><div class="ev-pct arb">'+a.profit.toFixed(2)+'%</div><div class="ev-pctsub">locked</div></div></div>'+
+      '<div class="ev-arbleg">Leg 1 · <b>'+evEsc(a.legA.book)+'</b> — '+evEsc(a.legA.pick)+' <b>'+a.legA.am+'</b> · <a class="ev-open" style="display:inline;margin:0" href="'+evEsc(a.legA.link)+'" target="_blank" rel="noopener">open \u2197</a></div>'+
+      '<div class="ev-arbleg">Leg 2 · <b>'+evEsc(a.legB.book)+'</b> — '+evEsc(a.legB.pick)+' <b>'+a.legB.am+'</b> · <a class="ev-open" style="display:inline;margin:0" href="'+evEsc(a.legB.link)+'" target="_blank" rel="noopener">open \u2197</a></div>'+
+      '<div class="ev-flag" style="color:#00ff88;background:rgba(0,255,136,.07)">Bet BOTH sides across the two books. Confirm both lines are still live before firing the second leg.</div>'+
+      '</div>';
+  }
 })();
 
+// ══════════════════════════════════════════════════════════
+//  BETS TRACKER — 1-tap log, SGO auto-grade, by book/sport
+// ══════════════════════════════════════════════════════════
+(function(){
+  var BN={bookmakereu:'BookMaker',draftkings:'DraftKings',fanduel:'FanDuel',betmgm:'BetMGM',caesars:'Caesars',fanatics:'Fanatics',bet365:'Bet365',hardrockbet:'Hard Rock',ballybet:'Bally Bet',other:'Other'};
+  function btLoad(){try{return JSON.parse(localStorage.getItem('arb_bets')||'[]');}catch(e){return [];}}
+  var btPutTimer=null;
+  function btSave(a){try{localStorage.setItem('arb_bets',JSON.stringify(a));}catch(e){} if(btPutTimer)clearTimeout(btPutTimer); btPutTimer=setTimeout(btCloudPut,700);}
+
+  // ---- cloud sync via Cloudflare Worker + KV ----
+  var BT_DEFAULT_WORKER='https://arb-scanner.andrewramsey14.workers.dev';
+  function btWorker(){ try{ var el=document.getElementById('btWorker'); var v=((el&&el.value)||localStorage.getItem('bet_worker')||'').trim().replace(/\/+$/,''); return v; }catch(e){return '';} }
+  function btSyncStatus(t,c){ var e=document.getElementById('btSync'); if(e){e.textContent=t; e.style.color=c||'#666';} }
+  async function btCloudGet(){ var w=btWorker(); if(!w)return null; try{var r=await fetch(w+'/betlog',{cache:'no-store'}); if(!r.ok)return null; return await r.json();}catch(e){return null;} }
+  async function btCloudPut(){
+    var w=btWorker(); if(!w){btSyncStatus('not connected (saved on device)','#f59e0b');return;}
+    try{ btSyncStatus('saving…','#7c8698');
+      var r=await fetch(w+'/betlog',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({bets:btLoad(),startBank:btStart()})});
+      var j=await r.json(); btSyncStatus(j&&j.ok?'saved to cloud ✓':'save failed — still on device', j&&j.ok?'#3DDC97':'#ff6b6b');
+    }catch(e){ btSyncStatus('offline — saved on device','#f59e0b'); }
+  }
+  window.btCloudSaveUrl=function(){ var w=btWorker(); if(!w){alert('Paste your Worker URL first (…workers.dev).');return;} try{localStorage.setItem('bet_worker',w);}catch(e){} btCloudSync(); };
+  async function btCloudSync(){
+    var w=btWorker(); if(!w){btSyncStatus('not connected (saved on device)','#f59e0b');return;}
+    btSyncStatus('connecting…','#7c8698');
+    var cloud=await btCloudGet();
+    if(cloud===null){ btSyncStatus('couldn\u2019t reach Worker — check the URL','#ff6b6b'); return; }
+    var cloudBets=Array.isArray(cloud.bets)?cloud.bets:[], local=btLoad();
+    if(cloudBets.length===0 && local.length>0){ await btCloudPut(); btRender(); }   // first time: push local up
+    else {
+      try{ localStorage.setItem('arb_bets',JSON.stringify(cloudBets)); if(cloud.startBank)localStorage.setItem('arb_startbank',cloud.startBank); }catch(e){}
+      var si=document.getElementById('btStart'); if(si&&cloud.startBank)si.value=cloud.startBank;
+      btRender(); btSyncStatus('synced ✓ · '+cloudBets.length+' bets in cloud','#3DDC97');
+    }
+  }
+  function btStart(){try{return parseFloat(localStorage.getItem('arb_startbank'))||13000;}catch(e){return 13000;}}
+  function btDec(am){am=parseFloat(am);if(isNaN(am)||am===0)return null;return am>0?am/100+1:100/Math.abs(am)+1;}
+  function btMoney(n){var s=n<0?'-':'';return s+'$'+Math.abs(n).toLocaleString(undefined,{maximumFractionDigits:0});}
+  function btProfit(b){if(b.status==='win')return b.stake*(btDec(b.odds)-1);if(b.status==='loss')return -b.stake;return 0;}
+  function btEsc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+  function btCls(n){return n>0?'pos':n<0?'neg':'neu';}
+  function btKey(){return (document.getElementById('opkey')&&document.getElementById('opkey').value||'').trim();}
+
+  // ---- 1-tap logging from +EV cards ----
+  window.plQuickLog=function(idx){
+    var p=(window.__EVPLAYS||[])[idx]; if(!p)return;
+    var bets=btLoad();
+    var dupe=bets.some(function(b){return b.status==='open'&&b.eventID===p.eventID&&b.oddID===p.oddID&&b.book===p.book;});
+    if(dupe){var db=document.getElementById('evlog'+idx);if(db){db.textContent='already logged';}return;}
+    bets.push({id:'b'+Date.now()+Math.floor(Math.random()*9999),ts:Date.now(),
+      eventID:p.eventID,oddID:p.oddID,oppID:p.oppID,league:p.sport,game:p.game,book:p.book,
+      side:p.side,pick:p.label,betType:p.mkt,line:(p.line==null?null:p.line),odds:parseFloat(p.am),
+      stake:p.stake,status:'open',settledTs:null,finalNote:''});
+    btSave(bets);
+    var b=document.getElementById('evlog'+idx);
+    if(b){b.textContent='✓ Logged $'+p.stake;b.style.opacity='.7';b.disabled=true;}
+  };
+
+  window.btToggleAdd=function(){var f=document.getElementById('btAddForm');f.style.display=(f.style.display==='none'||!f.style.display)?'block':'none';};
+  window.btAddManual=function(){
+    function v(id){return (document.getElementById(id).value||'').trim();}
+    var pick=v('btmPick'), stake=parseFloat(v('btmStake')), odds=parseFloat(v('btmOdds'));
+    if(!pick){alert('Enter the pick (e.g. SF Giants ML).');return;}
+    if(!(stake>0)){alert('Enter a stake greater than 0.');return;}
+    if(isNaN(odds)||odds===0){alert('Enter the odds (American, e.g. -110 or 150).');return;}
+    var bets=btLoad();
+    bets.push({id:'b'+Date.now()+Math.floor(Math.random()*9999),ts:Date.now(),
+      eventID:'',oddID:'',oppID:'',league:(document.getElementById('btmLeague').value||''),game:v('btmGame'),book:document.getElementById('btmBook').value,
+      side:'',pick:pick,betType:'',line:null,odds:odds,stake:stake,status:'open',settledTs:null,finalNote:'manual'});
+    btSave(bets);
+    ['btmPick','btmGame','btmStake','btmOdds'].forEach(function(id){document.getElementById(id).value='';});
+    document.getElementById('btmLeague').value='';
+    document.getElementById('btAddForm').style.display='none';
+    btRender();
+  };
+
+  window.btInit=function(){
+    var wi=document.getElementById('btWorker');
+    if(wi && !wi._wired){ wi._wired=true; wi.value=(localStorage.getItem('bet_worker')||BT_DEFAULT_WORKER); }
+    var s=document.getElementById('btStart');
+    if(s && !s._wired){s._wired=true;s.value=btStart();s.addEventListener('change',function(){try{localStorage.setItem('arb_startbank',parseFloat(this.value)||13000);}catch(e){}btRender();btCloudPut();});}
+    btRender();
+    if(btWorker()) btCloudSync();
+  };
+
+  window.btSettle=function(id,status){
+    var bets=btLoad();
+    for(var i=0;i<bets.length;i++){if(bets[i].id===id){bets[i].status=status;bets[i].settledTs=status==='open'?null:Date.now();break;}}
+    btSave(bets);btRender();
+  };
+  window.btDelete=function(id){ if(!confirm('Delete this bet?'))return; btSave(btLoad().filter(function(b){return b.id!==id;}));btRender(); };
+  window.btSetLeague=function(id,val){var a=btLoad();for(var i=0;i<a.length;i++){if(a[i].id===id){a[i].league=val;break;}}btSave(a);btRender();};
+  window.btEdit=function(id){
+    var a=btLoad(), b=null; for(var i=0;i<a.length;i++){if(a[i].id===id){b=a[i];break;}}
+    if(!b)return;
+    var pick=prompt('Pick:', b.pick); if(pick===null)return; if(pick.trim())b.pick=pick.trim();
+    var st=prompt('Stake $ (you bet):', b.stake); if(st===null)return; var sv=parseFloat(st); if(sv>0)b.stake=sv;
+    var od=prompt('Odds (American, e.g. -110 or +150):', b.odds); if(od===null)return; var ov=parseFloat(od); if(!isNaN(ov)&&ov!==0)b.odds=ov;
+    btSave(a); btRender();
+  };
+  var BT_LEAGUES=[['','Sport…'],['MLB','⚾ MLB'],['WNBA','🏀 WNBA'],['NBA','🏀 NBA'],['NFL','🏈 NFL'],['NCAAF','🏈 NCAAF'],['NHL','🏒 NHL'],['NCAAB','🏀 NCAAB'],['SOCCER','⚽ Soccer'],['Other','Other']];
+  function btLeagueSel(b){
+    var cur=b.league||'';
+    var o=BT_LEAGUES.map(function(x){return '<option value="'+x[0]+'"'+(x[0]===cur?' selected':'')+'>'+x[1]+'</option>';}).join('');
+    return '<select onchange="btSetLeague(\''+b.id+'\',this.value)" onclick="event.stopPropagation()" style="background:#1a1a26;border:1px solid '+(cur?'#2a2a3d':'#f59e0b')+';color:'+(cur?'#a8b3c4':'#f59e0b')+';border-radius:6px;padding:3px 6px;font-size:10px;font-family:inherit;margin-top:5px">'+o+'</select>';
+  }
+
+  function btRender(){
+    var bets=btLoad();
+    var settled=bets.filter(function(b){return b.status==='win'||b.status==='loss'||b.status==='push'||b.status==='void';});
+    var open=bets.filter(function(b){return b.status==='open';});
+    settled.sort(function(a,b){return (a.settledTs||0)-(b.settledTs||0);});
+
+    var net=0,turn=0,w=0,l=0,p=0;
+    settled.forEach(function(b){net+=btProfit(b);if(b.status==='win'){w++;turn+=b.stake;}else if(b.status==='loss'){l++;turn+=b.stake;}else if(b.status==='push')p++;});
+    var roi=turn>0?(net/turn*100):null, bank=btStart()+net;
+
+    var setV=function(id,txt,cls){var e=document.getElementById(id);e.textContent=txt;e.className='v '+(cls||'neu');};
+    setV('btBank',btMoney(bank),btCls(bank-btStart()));
+    setV('btNet',(net>=0?'+':'')+btMoney(net),btCls(net));
+    setV('btRoi',roi==null?'—':(roi>=0?'+':'')+roi.toFixed(1)+'%',roi==null?'neu':btCls(roi));
+    setV('btRec',w+'-'+l+'-'+p,'neu');
+
+    btChart(settled);
+    btBreak('btByBook',settled,function(b){return BN[b.book]||b.book;});
+    btBreak('btBySport',settled,function(b){return b.league||'—';});
+
+    // exposure map over OPEN bets (same game + same pick)
+    var expo={};
+    open.forEach(function(b){var k=b.game+'|'+b.pick;expo[k]=expo[k]||{n:0,amt:0};expo[k].n++;expo[k].amt+=b.stake;});
+
+    var oh=document.getElementById('btOpen');
+    if(open.length){
+      var h='';
+      open.slice().reverse().forEach(function(b){
+        var e=expo[b.game+'|'+b.pick];
+        var ex=e&&e.n>1?'<div class="expo">⚠ '+btMoney(e.amt)+' on this pick across '+e.n+' books — treat as ONE position (keep total near your Kelly size).</div>':'';
+        h+='<div class="bt-bet">'+
+          '<div class="top"><div><div class="pk">'+btEsc(b.pick)+'</div>'+
+          '<div class="mt">'+btEsc(BN[b.book]||b.book)+' · '+btMoney(b.stake)+' @ '+(b.odds>0?'+':'')+b.odds+(b.game?' · '+btEsc(b.game):'')+'</div>'+btLeagueSel(b)+ex+'</div>'+
+          '<div class="pf neu">'+btMoney(b.stake*(btDec(b.odds)-1))+'<div style="font-size:9px;color:#666;text-align:right">to win</div></div></div>'+
+          '<div class="bt-btns"><button class="g-win" onclick="btSettle(\''+b.id+'\',\'win\')">Won</button>'+
+          '<button class="g-loss" onclick="btSettle(\''+b.id+'\',\'loss\')">Lost</button>'+
+          '<button class="g-push" onclick="btSettle(\''+b.id+'\',\'push\')">Push</button>'+
+          '<button class="g-edit" onclick="btEdit(\''+b.id+'\')">✏️</button>'+
+          '<button class="g-del" onclick="btDelete(\''+b.id+'\')">🗑</button></div></div>';
+      });
+      oh.innerHTML=h;
+    } else oh.innerHTML='<div style="color:#666;font-size:12px;padding:6px 2px 14px">No open bets. Log one from a +EV card.</div>';
+
+    var hh=document.getElementById('btHistory');
+    if(settled.length){
+      var h2='<div class="bt-lbl">History ('+settled.length+')</div>';
+      settled.slice().reverse().forEach(function(b){
+        var pf=btProfit(b);
+        h2+='<div class="bt-bet '+b.status+'">'+
+          '<div class="top"><div><div class="pk">'+btEsc(b.pick)+' <span style="font-size:10px;color:#7c8698">'+b.status.toUpperCase()+'</span></div>'+
+          '<div class="mt">'+btEsc(BN[b.book]||b.book)+' · '+btMoney(b.stake)+' @ '+(b.odds>0?'+':'')+b.odds+(b.game?' · '+btEsc(b.game):'')+(b.finalNote?' · '+btEsc(b.finalNote):'')+'</div>'+btLeagueSel(b)+'</div>'+
+          '<div class="pf '+btCls(pf)+'">'+(pf>0?'+':'')+btMoney(pf)+'</div></div>'+
+          '<div class="bt-btns"><button class="g-push" onclick="btSettle(\''+b.id+'\',\'open\')">Undo</button>'+
+          '<button class="g-edit" onclick="btEdit(\''+b.id+'\')">✏️</button>'+
+          '<button class="g-del" onclick="btDelete(\''+b.id+'\')">🗑</button></div></div>';
+      });
+      hh.innerHTML=h2;
+    } else hh.innerHTML='';
+  }
+
+  function btBreak(id,settled,keyFn){
+    var box=document.getElementById(id);
+    var m={};
+    settled.forEach(function(b){var k=keyFn(b);if(!m[k])m[k]={net:0,n:0};m[k].net+=btProfit(b);m[k].n++;});
+    var keys=Object.keys(m).sort(function(a,b){return m[b].net-m[a].net;});
+    if(!keys.length){box.innerHTML='<div class="r" style="color:#666">—</div>';return;}
+    box.innerHTML=keys.map(function(k){var v=m[k];return '<div class="r"><span>'+btEsc(k)+' <span style="color:#666">('+v.n+')</span></span><b class="'+btCls(v.net)+'">'+(v.net>=0?'+':'')+btMoney(v.net)+'</b></div>';}).join('');
+  }
+
+  function btChart(settled){
+    var box=document.getElementById('btChart');
+    if(settled.length<1){box.innerHTML='<div style="color:#666;font-size:12px;padding:18px 4px;text-align:center">Your profit trend appears here once you settle a bet.</div>';return;}
+    var cum=0,pts=[{y:0}];
+    settled.forEach(function(b){cum+=btProfit(b);pts.push({y:cum});});
+    var W=320,H=140,pad=8;
+    var ys=pts.map(function(p){return p.y;});ys.push(0);
+    var mn=Math.min.apply(null,ys),mx=Math.max.apply(null,ys); if(mn===mx){mn-=10;mx+=10;}
+    var rng=mx-mn;
+    function px(i){return (i/(pts.length-1||1))*W;}
+    function py(v){return pad+(1-(v-mn)/rng)*(H-2*pad);}
+    var line=pts.map(function(p,i){return (i?'L':'M')+px(i).toFixed(1)+' '+py(p.y).toFixed(1);}).join(' ');
+    var last=pts[pts.length-1].y, col=last>=0?'#3DDC97':'#ff6b6b', zeroY=py(0).toFixed(1);
+    var area=line+' L'+px(pts.length-1).toFixed(1)+' '+zeroY+' L0 '+zeroY+' Z';
+    box.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none"><defs><linearGradient id="btg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="'+col+'" stop-opacity="0.28"/><stop offset="1" stop-color="'+col+'" stop-opacity="0"/></linearGradient></defs>'+
+      '<line x1="0" y1="'+zeroY+'" x2="'+W+'" y2="'+zeroY+'" stroke="#3a3a4d" stroke-width="1" stroke-dasharray="3 3"/>'+
+      '<path d="'+area+'" fill="url(#btg)"/><path d="'+line+'" fill="none" stroke="'+col+'" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>'+
+      '<circle cx="'+px(pts.length-1).toFixed(1)+'" cy="'+py(last).toFixed(1)+'" r="4" fill="'+col+'"/></svg>'+
+      '<div style="display:flex;justify-content:space-between;font-size:11px;color:#7c8698;margin-top:6px"><span>start</span><span style="color:'+col+';font-weight:700">'+(last>=0?'+':'')+btMoney(last)+' over '+settled.length+' bet'+(settled.length===1?'':'s')+'</span></div>';
+  }
+
+  // ---- auto-grade via SGO node.score ----
+  window.btAutoSettle=async function(){
+    var key=btKey();
+    if(!key){alert('No SGO key found — open the Offshore tab and paste it once.');return;}
+    var bets=btLoad(), open=bets.filter(function(b){return b.status==='open';});
+    if(!open.length){alert('No open bets to settle.');return;}
+    var ids={}; open.forEach(function(b){if(b.eventID)ids[b.eventID]=1;});
+    var evIds=Object.keys(ids); if(!evIds.length){alert('These bets have no game IDs to grade — settle them by hand.');return;}
+    var btn=document.querySelector('#view-bets .bt-settle'); if(btn){btn.textContent='Checking…';btn.disabled=true;}
+    var graded=0, pending=0;
+    for(var i=0;i<evIds.length;i++){
+      try{
+        var url='https://api.sportsgameodds.com/v2/events?apiKey='+encodeURIComponent(key)+'&eventID='+encodeURIComponent(evIds[i]);
+        var resp=await sgoFetch(url,key);
+        var ev=resp&&Array.isArray(resp.data)?resp.data[0]:null;
+        if(!ev){pending++;continue;}
+        var st=ev.status||{}, done=(st.finalized===true)||(st.ended===true||st.completed===true);
+        var odds=ev.odds||{};
+        open.forEach(function(b){
+          if(b.eventID!==evIds[i]||b.status!=='open')return;
+          if(!done){pending++;return;}
+          var res=btGrade(b,odds);
+          if(res){ b.status=res.status; b.settledTs=Date.now(); b.finalNote=res.note||''; graded++; }
+          else pending++;
+        });
+      }catch(e){pending++;}
+    }
+    btSave(bets); btRender();
+    if(btn){btn.textContent='⏱ Auto-settle finished';btn.disabled=false;}
+    alert('Graded '+graded+' bet'+(graded===1?'':'s')+'.'+(pending?' '+pending+' still pending (game not final, or couldn\u2019t grade — settle those by hand).':''));
+  };
+
+  function btNum(x){var n=parseFloat(x);return isNaN(n)?null:n;}
+  function btGrade(b,odds){
+    var node=odds[b.oddID]; if(!node)return null;
+    if(node.cancelled===true)return {status:'void',note:'cancelled'};
+    var sc=btNum(node.score); if(sc==null)return null;
+    if(b.betType==='ou'){
+      var line=btNum(b.line); if(line==null)return null;
+      if(Math.abs(sc-line)<1e-9)return {status:'push',note:'total '+sc};
+      var over=sc>line;
+      var win=(b.side==='Over')?over:!over;
+      return {status:win?'win':'loss',note:'total '+sc};
+    }
+    // ml / sp need the opposing side's score
+    var opp=b.oppID?odds[b.oppID]:null; var os=opp?btNum(opp.score):null;
+    if(os==null)return null;
+    if(b.betType==='ml'){
+      if(sc>os)return {status:'win',note:sc+'-'+os};
+      if(sc<os)return {status:'loss',note:sc+'-'+os};
+      return {status:'push',note:sc+'-'+os};
+    }
+    if(b.betType==='sp'){
+      var L=btNum(b.line)||0, adj=sc+L;
+      if(adj>os)return {status:'win',note:sc+'-'+os+' ('+(L>0?'+':'')+L+')'};
+      if(adj<os)return {status:'loss',note:sc+'-'+os+' ('+(L>0?'+':'')+L+')'};
+      return {status:'push',note:'covered exactly'};
+    }
+    return null;
+  }
+
+  // ---- export / import ----
+  window.btExportCsv=function(){
+    var bets=btLoad(); if(!bets.length){alert('No bets yet.');return;}
+    var rows=[['date','league','game','pick','book','stake','odds','line','status','profit']];
+    bets.forEach(function(b){rows.push([new Date(b.ts).toISOString().slice(0,10),b.league||'',b.game||'',b.pick||'',BN[b.book]||b.book,b.stake,b.odds,b.line==null?'':b.line,b.status,btProfit(b).toFixed(2)]);});
+    btDownload(rows.map(function(r){return r.map(function(c){var s=String(c);return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}).join(',');}).join('\n'),'arbedge_bets.csv','text/csv');
+  };
+  window.btExportJson=function(){ btDownload(JSON.stringify({startBank:btStart(),bets:btLoad()},null,2),'arbedge_backup.json','application/json'); };
+  function btDownload(text,name,type){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:type}));a.download=name;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},100);}
+  window.btImport=function(ev){
+    var f=ev.target.files&&ev.target.files[0]; if(!f)return;
+    var r=new FileReader();
+    r.onload=function(){
+      try{
+        var d=JSON.parse(r.result), inc=Array.isArray(d)?d:(d.bets||[]);
+        if(!Array.isArray(inc))throw 0;
+        if(!confirm('Import '+inc.length+' bets? Merges with what you have.'))return;
+        var cur=btLoad(),ids={};cur.forEach(function(b){ids[b.id]=1;});
+        inc.forEach(function(b){if(b&&b.id&&!ids[b.id])cur.push(b);});
+        btSave(cur);
+        if(d.startBank){try{localStorage.setItem('arb_startbank',d.startBank);document.getElementById('btStart').value=d.startBank;}catch(e){}}
+        btRender();alert('Imported.');
+      }catch(e){alert('That file didn\u2019t look like a valid backup.');}
+      ev.target.value='';
+    };
+    r.readAsText(f);
+  };
+})();
 
 </script>
 </body>
