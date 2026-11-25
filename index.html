@@ -132,7 +132,7 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
 
 <div class="tab-bar">
   <button class="tab-btn active" id="tab-scanner" onclick="switchTab('scanner')">🔍 Scanner</button>
-  <button class="tab-btn" id="tab-offshore" onclick="switchTab('offshore')">🌊 Offshore</button>
+  <button class="tab-btn" id="tab-offshore" onclick="switchTab('offshore')">🔁 Arbs</button>
   <button class="tab-btn" id="tab-notify" onclick="switchTab('notify')">🔔 Notify</button>
   <button class="tab-btn" id="tab-trueline" onclick="switchTab('trueline')">🎯 TrueLine</button>
   <button class="tab-btn" id="tab-ev" onclick="switchTab('ev')">💎 +EV</button>
@@ -216,12 +216,12 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
 <div id="view-offshore" class="view">
   <div class="slabel">SportsGameOdds API Key</div>
   <input type="password" id="opkey" placeholder="Paste SportsGameOdds API key (sportsgameodds.com)" style="font-size:12px" />
-  <div class="slabel" style="margin-top:-4px;color:#38bdf8">🔒 BookMaker.eu is locked as one leg of every arb — hedged against your domestic books. Paid tier = real-time.</div>
+  <div class="slabel" style="margin-top:-4px;color:#38bdf8">🔁 Every book vs every book — BookMaker vs domestic AND domestic vs domestic. College = no player props. BookMaker = main lines only.</div>
   <div class="row">
-    <input type="number" id="obank" value="300" placeholder="US stake $" />
+    <input type="number" id="obank" value="300" placeholder="Round-leg stake $" />
     <input type="number" id="omine" value="0.5" placeholder="Min %" step="0.1" />
   </div>
-  <div class="slabel">Round US (domestic) stake to nearest</div>
+  <div class="slabel">Round the fixed leg to nearest (shown in yellow on each card)</div>
   <div class="filters" id="oround">
     <div class="fb" data-r="50">$50</div>
     <div class="fb on" data-r="100">$100</div>
@@ -234,28 +234,12 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
     <div style="flex:1"><div style="font-size:10px;color:#666;margin-bottom:2px">Totals</div><input type="number" id="omaxTot" value="1000" placeholder="Totals max" style="margin-bottom:0"/></div>
     <div style="flex:1"><div style="font-size:10px;color:#666;margin-bottom:2px">Props</div><input type="number" id="omaxProp" value="655" placeholder="Props max" style="margin-bottom:0"/></div>
   </div>
-  <div class="slabel">Leagues (one call covers all selected)</div>
+  <div class="slabel">Leagues</div>
   <div class="sports" id="oleagues">
-    <div class="sb on" data-l="MLB">⚾ MLB</div>
-    <div class="sb on" data-l="NBA">🏀 NBA</div>
     <div class="sb on" data-l="NFL">🏈 NFL</div>
-    <div class="sb on" data-l="NHL">🏒 NHL</div>
-    <div class="sb on" data-l="WNBA">🏀 WNBA</div>
-    <div class="sb on" data-l="UFC">🥊 UFC</div>
-    <div class="sb" data-l="MLS">⚽ MLS</div>
-    <div class="sb" data-l="NCAAF">🏈 NCAAF</div>
-    <div class="sb" data-l="NCAAB">🏀 NCAAB</div>
-    <div class="sb" data-l="ATP">🎾 ATP</div>
-    <div class="sb" data-l="WTA">🎾 WTA</div>
-    <div class="sb" data-l="EPL">⚽ EPL</div>
-    <div class="sb" data-l="UEFA_CHAMPIONS_LEAGUE">⚽ UCL</div>
-    <div class="sb" data-l="UEFA_EUROPA_LEAGUE">⚽ Europa</div>
-    <div class="sb" data-l="LA_LIGA">⚽ La Liga</div>
-    <div class="sb" data-l="BUNDESLIGA">⚽ Bundesliga</div>
-    <div class="sb" data-l="IT_SERIE_A">⚽ Serie A</div>
-    <div class="sb" data-l="FR_LIGUE_1">⚽ Ligue 1</div>
-    <div class="sb" data-l="LIGA_MX">⚽ Liga MX</div>
-    <div class="sb on" data-l="INTERNATIONAL_SOCCER">🌍 Intl / World Cup</div>
+    <div class="sb on" data-l="NBA">🏀 NBA</div>
+    <div class="sb on" data-l="NCAAF">🏈 NCAAF</div>
+    <div class="sb on" data-l="NCAAB">🏀 NCAAB</div>
   </div>
   <button onclick="discoverLeagues()" style="background:#1a1a26;color:#38bdf8;border:1px solid #38bdf8;border-radius:8px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;width:100%;margin-bottom:8px">🔍 Show all leagues my key supports</button>
   <div id="oleaguesExtra"></div>
@@ -266,19 +250,21 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
     <div class="mb on" data-om="ou">🔢 Totals</div>
     <div class="mb on" data-om="props">🎯 Player Props</div>
     <div class="mb on" data-om="gameprops">🏟️ Game Props</div>
-    <div class="mb on" data-om="alt">📈 Alt Lines</div>
+    <div class="mb" data-om="alt">📈 Alt Lines</div>
   </div>
   <div class="slabel">Game Status</div>
   <div class="filters" id="ofilters">
-    <div class="fb on" data-of="all">🌐 All Games</div>
-    <div class="fb" data-of="upcoming">📅 Upcoming</div>
+    <div class="fb" data-of="all">🌐 All Games</div>
+    <div class="fb on" data-of="upcoming">📅 Upcoming</div>
     <div class="fb" data-of="live">🔴 Live</div>
   </div>
-  <div class="slabel">Max games to scan</div>
-  <input type="number" id="omax" value="50" min="1" max="150" style="width:100px;margin-bottom:4px" />
-  <div class="slabel" style="color:#555;margin-top:0">Higher = more coverage but more objects used. Keep low (15-25) if running Auto, since Auto re-scans every 60s and multiplies the cost.</div>
-  <div class="slabel" style="color:#555;margin-top:-4px">🌊 BookMaker.eu vs FanDuel · DraftKings · BetMGM · Caesars · Fanatics · Bet365 · theScore · 📈 Kalshi · Polymarket. Live bet-slip links included.</div>
-  <button class="scan" onclick="scanOffshore()" style="background:#38bdf8">🔒 Scan BookMaker Arbs</button>
+  <div class="row" style="gap:8px">
+    <div style="flex:1"><div class="slabel" style="margin-top:0">Max games per league</div><input type="number" id="omax" value="50" min="1" max="150" style="margin-bottom:4px" /></div>
+    <div style="flex:1"><div class="slabel" style="margin-top:0">Games starting within (hours)</div><input type="number" id="ohours" value="24" min="1" max="336" style="margin-bottom:4px" /></div>
+  </div>
+  <div class="slabel" style="color:#555;margin-top:0">Each game returned counts against your monthly SGO budget. Fewer hours or fewer games = cheaper scans.</div>
+  <div class="slabel" style="color:#555;margin-top:-4px">Books: BookMaker · DraftKings · FanDuel · BetMGM · Caesars · Fanatics · Bet365 · theScore. NFL/NBA player props load a few games at a time, so those scans take longer.</div>
+  <button class="scan" onclick="scanOffshore()" style="background:#38bdf8">🔁 Scan All-Book Arbs</button>
   <button onclick="checkSgoUsage()" style="background:#1a1a26;color:#38bdf8;border:1px solid #38bdf8;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;width:100%;margin-bottom:8px">📊 Check API Usage</button>
   <button onclick="checkSgoBooks()" style="background:#1a1a26;color:#a78bfa;border:1px solid #a78bfa;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;width:100%;margin-bottom:12px">📋 Check my books (which slugs my key can access)</button>
   <div id="obooks"></div>
@@ -487,13 +473,10 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
 
 <div class="ev-lbl">Leagues (turn off what's out of season)</div>
 <div class="sports" id="evSports">
-  <div class="sb on" data-es="MLB">⚾ MLB</div>
-  <div class="sb on" data-es="WNBA">🏀 WNBA</div>
-  <div class="sb" data-es="NBA">🏀 NBA</div>
-  <div class="sb" data-es="NFL">🏈 NFL</div>
-  <div class="sb" data-es="NCAAF">🏈 NCAAF</div>
-  <div class="sb" data-es="NHL">🏒 NHL</div>
-  <div class="sb" data-es="NCAAB">🏀 NCAAB</div>
+  <div class="sb on" data-es="NFL">🏈 NFL</div>
+  <div class="sb on" data-es="NBA">🏀 NBA</div>
+  <div class="sb on" data-es="NCAAF">🏈 NCAAF</div>
+  <div class="sb on" data-es="NCAAB">🏀 NCAAB</div>
 </div>
 
 <div class="ev-lbl">Your books (bet targets)</div>
@@ -505,8 +488,7 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
   <div class="sb on" data-eb="caesars">Caesars</div>
   <div class="sb on" data-eb="fanatics">Fanatics</div>
   <div class="sb on" data-eb="bet365">Bet365</div>
-  <div class="sb on" data-eb="hardrockbet">Hard Rock</div>
-  <div class="sb on" data-eb="ballybet">Bally Bet</div>
+  <div class="sb on" data-eb="thescorebet">theScore</div>
 </div>
 
 <div class="ev-lbl">Markets (main only — props stay off by design)</div>
@@ -621,6 +603,7 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
       <option value="caesars">Caesars</option>
       <option value="fanatics">Fanatics</option>
       <option value="bet365">Bet365</option>
+      <option value="thescorebet">theScore</option>
       <option value="hardrockbet">Hard Rock</option>
       <option value="ballybet">Bally Bet</option>
       <option value="other">Other</option>
@@ -785,12 +768,12 @@ async function maybePushoverNotify(arbs){
   var minEdge=_notifyMinEdge();
   // Normalize both arb shapes: domestic (side1/side2/market) and offshore (bmLeg/domLeg/label).
   var norm=arbs.map(function(x){
-    var isOff=!!x.bmLeg;
+    var isOff=!!x.legA;
     return {
       game:x.game||'',
       market:x.market||x.label||'',
-      book1:isOff?'BookMaker.eu':((x.side1&&x.side1.book)||''),
-      book2:isOff?_notifyBook(x.domLeg&&x.domLeg.book):((x.side2&&x.side2.book)||''),
+      book1:isOff?_notifyBook(x.legA.book):((x.side1&&x.side1.book)||''),
+      book2:isOff?_notifyBook(x.legB.book):((x.side2&&x.side2.book)||''),
       edge:(typeof x.edge==='number'?x.edge:0),
       roi:(typeof x.roi==='number'?x.roi:(typeof x.edge==='number'?x.edge:0)),
       profit:(typeof x.profit==='number'?x.profit:0),
@@ -2261,8 +2244,8 @@ function startScan(){scanAll()}
 })();
 
 var SGO_BOOKMAKER = 'bookmakereu';
-var SGO_DOMESTIC = ['draftkings','fanduel','betmgm','caesars','fanatics','bet365','thescorebet','kalshi','polymarket'];
-var SGO_NAMES = {bookmakereu:'BookMaker.eu',draftkings:'DraftKings',fanduel:'FanDuel',betmgm:'BetMGM',caesars:'Caesars',fanatics:'Fanatics',bet365:'Bet365',thescorebet:'theScore',kalshi:'Kalshi',polymarket:'Polymarket'};
+var SGO_DOMESTIC = ['draftkings','fanduel','betmgm','caesars','fanatics','bet365','thescorebet'];
+var SGO_NAMES = {bookmakereu:'BookMaker',draftkings:'DraftKings',fanduel:'FanDuel',betmgm:'BetMGM',caesars:'Caesars',fanatics:'Fanatics',bet365:'Bet365',thescorebet:'theScore',kalshi:'Kalshi',polymarket:'Polymarket'};
 var SGO_HOME = {bookmakereu:'https://www.bookmaker.eu',draftkings:'https://sportsbook.draftkings.com',fanduel:'https://sportsbook.fanduel.com',betmgm:'https://sports.betmgm.com',caesars:'https://sportsbook.caesars.com',fanatics:'https://sportsbook.fanatics.com',bet365:'https://www.bet365.com',thescorebet:'https://www.thescore.bet',kalshi:'https://kalshi.com',polymarket:'https://polymarket.com'};
 function sgoHome(b){ return SGO_HOME[b]||null; }
 function sgoName(b){ return SGO_NAMES[b]||b; }
@@ -2325,7 +2308,7 @@ function showOffshoreLines(idx){
   }
   function sideName(node, isOpp){
     var bt=od.betTypeID;
-    if(bt==='ml') return isOpp? (x.domLeg&&x.game.split(' @ ')[0]||'Away') : (x.game.split(' @ ')[1]||'Home');
+    if(bt==='ml') return isOpp? (x.game.split(' @ ')[0]||'Away') : (x.game.split(' @ ')[1]||'Home');
     if(bt==='ou') return isOpp?'Under':'Over';
     if(bt==='yn') return isOpp?'No':'Yes';
     return isOpp?'Side B':'Side A';
@@ -2498,274 +2481,280 @@ async function checkSgoBooks(){
   box.innerHTML=h;
 }
 
+// ── ALL-BOOK ARB ENGINE (SportsGameOdds) ─────────────────────────
+// Every book is compared against every other book: BookMaker vs domestic AND
+// domestic vs domestic. Best price on one side vs best price on the other.
+var SGO_BOOKS = [SGO_BOOKMAKER].concat(SGO_DOMESTIC);
+var O_NO_PLAYER_PROPS = {NCAAF:1, NCAAB:1};   // college: game props OK, player props never
+var O_BM_MAIN_ONLY = true;                    // BookMaker only on full-game ML / spread / total. Set false to use it on props too.
+var O_MAIN_ODD_IDS = 'points-home-game-ml-home,points-home-game-sp-home,points-all-game-ou-over';
+
+function oPriceAt(node, bk){
+  var bb = node && node.byBookmaker && node.byBookmaker[bk];
+  if(!bb || bb.available===false || bb.odds==null) return null;
+  var d = amDec(bb.odds); if(!d || d<=1) return null;
+  var line = (bb.overUnder!=null ? bb.overUnder : (bb.spread!=null ? bb.spread : null));
+  return {book:bk, am:bb.odds, dec:d, line:(line==null?null:parseFloat(line)), link:bb.deeplink||bb.deepLink||bb.link||null};
+}
+// a = primary side (home / over / yes), b = opposing side. True only when the two bets cannot BOTH lose.
+function oLinesOK(bt, a, b){
+  if(bt==='ou'){ if(a.line==null||b.line==null) return false; return b.line>=a.line; }
+  if(bt==='sp'){ if(a.line==null||b.line==null) return false; return (a.line+b.line)>=0; }
+  if(a.line!=null && b.line!=null && Math.abs(a.line-b.line)>0.001) return false;
+  return true;
+}
+// How far a leg's price sits above the next-best book on the same outcome (same line). 5%+ = likely stale.
+function oOutlierPct(node, leg, bt){
+  var second=0;
+  SGO_BOOKS.forEach(function(bk){
+    if(bk===leg.book) return;
+    var p=oPriceAt(node,bk); if(!p) return;
+    if(bt!=='ml' && leg.line!=null && p.line!=null && Math.abs(p.line-leg.line)>0.001) return;
+    if(p.dec>second) second=p.dec;
+  });
+  return second>0 ? (leg.dec/second-1)*100 : 0;
+}
+
+// Analyze one event. o = {min, usStake, roundTo, maxML, maxTot, maxProp, wantM, filt}. Pushes into arbs; returns true if it added any.
+function oAnalyzeEvent(ev, o, arbs, cov){
+  var odds = ev && ev.odds; if(!odds) return false;
+  var st = ev.status||{};
+  var live = (st.started===true||st.live===true);
+  var ended = (st.ended===true||st.completed===true);
+  if(ended) return false;
+  if(o.filt==='live' && !live) return false;
+  if(o.filt==='upcoming' && live) return false;
+  function tn(t){ if(!t)return ''; if(typeof t==='string')return t; return (t.names&&(t.names.short||t.names.long))||t.name||t.shortName||''; }
+  var homeName=tn(ev.teams&&ev.teams.home)||'Home', awayName=tn(ev.teams&&ev.teams.away)||'Away';
+  var start = st.startsAt||st.startTime||ev.scheduled||null;
+  var leagueName = ev.leagueID || (ev.league&&(ev.league.name||ev.league.shortName)) || ev.sportID || '';
+  var isSoccer = (ev.sportID==='SOCCER') || String(leagueName).toUpperCase().indexOf('SOCCER')>-1;
+  var noPlayerProps = !!O_NO_PLAYER_PROPS[String(leagueName).toUpperCase()];
+  var gl = awayName+' @ '+homeName;
+  var primarySides = {ml:'home', sp:'home', ou:'over', yn:'yes'};
+  var added = false;
+
+  Object.keys(odds).forEach(function(oddID){
+    var od = odds[oddID]; if(!od) return;
+    if(cov && od.byBookmaker){ Object.keys(od.byBookmaker).forEach(function(bk){ var bb=od.byBookmaker[bk]; if(bb&&bb.available!==false&&bb.odds!=null) cov[bk]=(cov[bk]||0)+1; }); }
+    var bt = od.betTypeID, side = od.sideID;
+    if(!primarySides[bt]) return;               // 2-way markets only
+    if(side!==primarySides[bt]) return;         // each pair once
+    if(isSoccer && (bt==='ml'||bt==='yn')) return;
+    var seg = String(oddID).split('-');
+    var stat = od.statID || seg[0] || '';
+    var ent = od.statEntityID || (seg.length>=5 ? seg[1] : '');
+    var period = od.periodID || 'game';
+    var isProp = !!od.playerID;
+    var isMain = !isProp && period==='game' && stat==='points' && ((bt==='ou'&&ent==='all') || ((bt==='ml'||bt==='sp')&&ent==='home'));
+    var isGameProp = !isProp && !isMain;
+    // market gating
+    if(isProp){ if(noPlayerProps || o.wantM.indexOf('props')<0) return; }
+    else if(isGameProp){ if(o.wantM.indexOf('gameprops')<0) return; }
+    else if(o.wantM.indexOf(bt)<0) return;
+
+    var oppID = od.opposingOddID; if(!oppID) return;
+    var opp = odds[oppID]; if(!opp) return;
+
+    var best = null;
+    for(var i=0;i<SGO_BOOKS.length;i++){
+      var bkA = SGO_BOOKS[i];
+      if(O_BM_MAIN_ONLY && !isMain && bkA===SGO_BOOKMAKER) continue;
+      var a = oPriceAt(od, bkA); if(!a) continue;
+      for(var j=0;j<SGO_BOOKS.length;j++){
+        if(i===j) continue;
+        var bkB = SGO_BOOKS[j];
+        if(O_BM_MAIN_ONLY && !isMain && bkB===SGO_BOOKMAKER) continue;
+        var b = oPriceAt(opp, bkB); if(!b) continue;
+        var inv = (1/a.dec)+(1/b.dec);
+        if(inv>=1) continue;
+        if(!oLinesOK(bt,a,b)) continue;
+        var edge = (1-inv)*100;
+        if(!best || edge>best.edge) best = {edge:edge, a:a, b:b};
+      }
+    }
+    if(!best || best.edge<o.min) return;
+
+    function sideName(which){
+      if(bt==='ou') return which==='primary'?'Over':'Under';
+      if(bt==='yn') return which==='primary'?'Yes':'No';
+      return which==='primary'?homeName:awayName;
+    }
+    function withLine(nm, leg){ if(leg&&leg.line!=null&&(bt==='ou'||bt==='sp')) return nm+' '+(leg.line>0&&bt==='sp'?'+':'')+leg.line; return nm; }
+
+    // ── stakes: one leg is a ROUND number, the other is sized to balance ──
+    var base = o.usStake;
+    if(o.roundTo>0) base = Math.round(o.usStake/o.roundTo)*o.roundTo;
+    if(base<=0) base = o.roundTo>0 ? o.roundTo : o.usStake;
+    var A = best.a, B = best.b;
+    var aIsBM = A.book===SGO_BOOKMAKER, bIsBM = B.book===SGO_BOOKMAKER, hasBM = aIsBM||bIsBM;
+    // fixed (round) leg: the domestic leg when BookMaker is involved, otherwise the favorite
+    var fixIsA = hasBM ? bIsBM : (A.dec<=B.dec);
+    var F = fixIsA?A:B, V = fixIsA?B:A;
+    var sF = base, sV = sF*F.dec/V.dec;
+    if(V.book!==SGO_BOOKMAKER){            // domestic books: whole dollars look human
+      var r = Math.round(sV);
+      if(Math.min(sF*F.dec, r*V.dec)-(sF+r) > 0) sV = r;
+    }
+    var total = sF+sV, profit = Math.min(sF*F.dec, sV*V.dec)-total;
+    var sA = fixIsA?sF:sV, sB = fixIsA?sV:sF;
+
+    // BookMaker max-bet check (only when BookMaker is a leg)
+    var cap=0, overMax=false, fit=null;
+    if(hasBM){
+      var bmLeg = aIsBM?A:B, otLeg = aIsBM?B:A, sBM = aIsBM?sA:sB;
+      cap = isProp ? o.maxProp : (bt==='ou' ? o.maxTot : o.maxML);
+      overMax = (cap>0 && sBM>cap);
+      if(overMax){ var fOt = cap*bmLeg.dec/otLeg.dec; fit = {bm:cap, other:fOt, otherBook:otLeg.book, profit:cap*bmLeg.dec-(cap+fOt)}; }
+    }
+
+    var pctA = oOutlierPct(od, A, bt), pctB = oOutlierPct(opp, B, bt);
+    var stale = [];
+    if(pctA>=5 && !aIsBM) stale.push({book:A.book, pct:pctA});
+    if(pctB>=5 && !bIsBM) stale.push({book:B.book, pct:pctB});
+
+    var mLabel = od.marketName || (stat.replace(/_/g,' ')+' '+bt.toUpperCase());
+    if(isSoccer){ mLabel += oSoccerScope(od.periodID); }
+    else if(period!=='game' && mLabel.toUpperCase().indexOf(period.toUpperCase())<0){ mLabel = period.toUpperCase()+' '+mLabel; }
+
+    arbs.push({
+      game:gl, league:leagueName, eventID:ev.eventID||ev.id, oddID:oddID, isProp:isProp, isGameProp:isGameProp, live:!!live, start:start,
+      edge:best.edge, profit:profit, roi:(profit/total)*100, totalStaked:total, label:mLabel,
+      hasBM:hasBM, cap:cap, overMax:overMax, fit:fit, stale:stale, domOutlier:stale.length>0,
+      legA:{book:A.book, am:A.am, stake:sA, line:A.line, link:A.link, name:withLine(sideName('primary'),A), fixed:fixIsA},
+      legB:{book:B.book, am:B.am, stake:sB, line:B.line, link:B.link, name:withLine(sideName('opp'),B), fixed:!fixIsA}
+    });
+    added = true;
+  });
+  return added;
+}
+
 async function scanOffshore(){
   var key = document.getElementById('opkey').value.trim();
-  var usStake = parseFloat(document.getElementById('obank').value)||300;
+  var o = {
+    usStake: parseFloat(document.getElementById('obank').value)||300,
+    min: parseFloat(document.getElementById('omine').value)||0.5,
+    maxML: parseFloat(document.getElementById('omaxML').value)||0,
+    maxTot: parseFloat(document.getElementById('omaxTot').value)||0,
+    maxProp: parseFloat(document.getElementById('omaxProp').value)||0,
+    wantM: oGetMarkets(),
+    filt: oGetFilter()
+  };
   var roundEl = document.querySelector('#oround [data-r].on');
-  var roundTo = roundEl ? parseInt(roundEl.dataset.r) : 100;
-  var min = parseFloat(document.getElementById('omine').value)||0.5;
-  var maxML = parseFloat(document.getElementById('omaxML').value)||0;
-  var maxTot = parseFloat(document.getElementById('omaxTot').value)||0;
-  var maxProp = parseFloat(document.getElementById('omaxProp').value)||0;
+  o.roundTo = roundEl ? parseInt(roundEl.dataset.r) : 100;
   var leagues = oGetLeagues();
-  var wantM = oGetMarkets();
-  var filt = oGetFilter();
   var maxGames = parseInt(document.getElementById('omax').value)||25;
+  var hoursEl = document.getElementById('ohours');
+  var hours = hoursEl ? parseFloat(hoursEl.value) : 24; if(isNaN(hours)) hours = 24;
   var out = document.getElementById('oout');
   if(!key){ out.innerHTML='<div class="err">Paste your SportsGameOdds API key first.</div>'; return; }
   if(!leagues.length){ out.innerHTML='<div class="err">Select at least one league.</div>'; return; }
-  if(!wantM.length){ out.innerHTML='<div class="err">Select at least one market.</div>'; return; }
+  if(!o.wantM.length){ out.innerHTML='<div class="err">Select at least one market.</div>'; return; }
 
   out.innerHTML=''; oSetProg('Fetching events from SportsGameOdds...');
 
-  var books = [SGO_BOOKMAKER].concat(SGO_DOMESTIC);
-  var wantAlt = wantM.indexOf('alt')>-1;
+  var wantAlt = o.wantM.indexOf('alt')>-1;
+  var wantProps = o.wantM.indexOf('props')>-1, wantGP = o.wantM.indexOf('gameprops')>-1;
   var base = 'https://api.sportsgameodds.com/v2/events';
-  var collected=[], cursor=null, pages=0, droppedBooks=[];
-  do{
-    var url = base+'?apiKey='+encodeURIComponent(key)+'&leagueID='+encodeURIComponent(leagues.join(','))
-            +'&oddsAvailable=true&bookmakerID='+encodeURIComponent(books.join(','))+'&limit='+Math.min(maxGames,50)
-            +(wantAlt?'&includeAltLines=true':'');
-    if(cursor) url += '&cursor='+encodeURIComponent(cursor);
-    var resp = await sgoFetch(url, key);
-    if(!resp || typeof resp!=='object'){ document.getElementById('oprog').style.display='none'; out.innerHTML='<div class="err">No response from SportsGameOdds. Check your key / Worker relay.</div>'; return; }
-    if(resp.success===false){
-      var em = (resp.error||'')+'';
-      // If a specific bookmaker is gated, drop it and retry automatically.
-      var m = em.match(/bookmakerID\s+(\S+)\s+is unavailable/i);
-      if(m && books.indexOf(m[1])>-1 && m[1]!==SGO_BOOKMAKER){
-        droppedBooks.push(m[1]);
-        books = books.filter(function(b){ return b!==m[1]; });
-        oSetProg('Dropped '+m[1]+' (not in your tier), retrying...');
-        continue; // retry same cursor with reduced book list
+  var before = hours>0 ? new Date(Date.now()+hours*3600*1000).toISOString().slice(0,19)+'Z' : null;
+  var arbs=[], bookCoverage={}, droppedBooks=[], errs=[], gamesSeen=0;
+  OEVENTS_CACHE={};
+
+  for(var li=0; li<leagues.length; li++){
+    var lg = leagues[li];
+    var lgProps = wantProps && !O_NO_PLAYER_PROPS[String(lg).toUpperCase()];
+    var mainOnly = !lgProps && !wantGP;          // only main lines wanted -> ask SGO for just those (small + fast)
+    var pageSize = lgProps ? 3 : (mainOnly ? 25 : 15);   // player-prop leagues are huge per game
+    var books = SGO_BOOKS.slice();
+    var cursor=null, pages=0, guard=0, seen=0;
+    do{
+      guard++;
+      var url = base+'?apiKey='+encodeURIComponent(key)+'&leagueID='+encodeURIComponent(lg)
+              +'&oddsAvailable=true&bookmakerID='+encodeURIComponent(books.join(','))+'&limit='+Math.min(pageSize, Math.max(1,maxGames-seen))
+              +(before?'&startsBefore='+before:'')
+              +(mainOnly?'&oddIDs='+O_MAIN_ODD_IDS+'&includeOpposingOddIDs=true':'')
+              +(wantAlt?'&includeAltLines=true':'');
+      if(cursor) url += '&cursor='+encodeURIComponent(cursor);
+      oSetProg(lg+': '+seen+' games so far · '+arbs.length+' arbs ('+(li+1)+'/'+leagues.length+' leagues)');
+      var resp = await sgoFetch(url, key);
+      if(!resp || typeof resp!=='object'){ errs.push(lg+': no response (check key / connection)'); break; }
+      if(resp.success===false){
+        var em = (resp.error||'')+'';
+        var m = em.match(/bookmakerID\s+(\S+)\s+is unavailable/i);
+        if(m && books.indexOf(m[1])>-1){
+          if(droppedBooks.indexOf(m[1])<0) droppedBooks.push(m[1]);
+          books = books.filter(function(b){ return b!==m[1]; });
+          continue; // retry same page with the reduced book list
+        }
+        if(!/no\s+(events|results|data)/i.test(em)) errs.push(lg+': '+em);
+        break;
       }
-      document.getElementById('oprog').style.display='none';
-      out.innerHTML='<div class="err"><strong>SGO said:</strong> '+em+'</div>';
-      return;
-    }
-    var batch = Array.isArray(resp.data)?resp.data:[];
-    collected = collected.concat(batch);
-    cursor = resp.nextCursor || null; pages++;
-    oSetProg('Fetched '+collected.length+' events...');
-  } while(cursor && collected.length<maxGames && pages<8);
-
-  var events = collected.slice(0, maxGames);
-  if(!events.length){ document.getElementById('oprog').style.display='none'; out.innerHTML='<div class="msg">No events with odds for the selected leagues.</div>'; return; }
-
-  oSetProg('Analyzing '+events.length+' events (BookMaker vs domestic)...');
-  var arbs=[]; var sawBookmaker=false;
-  OEVENTS_CACHE={}; events.forEach(function(ev){ if(ev&&(ev.eventID||ev.id)) OEVENTS_CACHE[ev.eventID||ev.id]=ev; });
-
-  // ── Per-book coverage diagnostic ──────────────────────────────
-  // Counts every bookmaker SGO actually returned a usable price for,
-  // across the whole feed. This is the only reliable way to know if
-  // Kalshi / Polymarket (or any book) are really coming back vs. being
-  // silently absent. Counts raw slugs so unexpected SGO IDs are exposed.
-  var bookCoverage={};
-  events.forEach(function(ev){
-    var odds=ev.odds||{};
-    Object.keys(odds).forEach(function(oid){
-      var node=odds[oid]; if(!node||!node.byBookmaker) return;
-      Object.keys(node.byBookmaker).forEach(function(bk){
-        var bb=node.byBookmaker[bk];
-        if(!bb||bb.available===false||bb.odds==null) return;
-        bookCoverage[bk]=(bookCoverage[bk]||0)+1;
+      var batch = Array.isArray(resp.data)?resp.data:[];
+      batch.forEach(function(ev){
+        seen++; gamesSeen++;
+        if(oAnalyzeEvent(ev, o, arbs, bookCoverage)){ OEVENTS_CACHE[ev.eventID||ev.id]=ev; }   // keep only events that produced an arb
       });
-    });
-  });
-
-  // Build a clean, search-ready bet string for the Copy-bet button.
-  function obBetStr(x, which){
-    var leg = which==='bm' ? x.bmLeg : x.domLeg;
-    var bookNm = which==='bm' ? 'BookMaker.eu' : sgoName(x.domLeg.book);
-    return x.game + ' — ' + x.label + ' — ' + leg.name + ' (' + amFmt(leg.am) + ') @ ' + bookNm;
+      cursor = resp.nextCursor || null; pages++;
+      resp=null; batch=null;
+    } while(cursor && seen<maxGames && pages<40 && guard<50);
   }
-  function obEsc(s){ return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-  function bestDomestic(node){
-    if(!node || !node.byBookmaker) return null;
-    var best=null, decs=[];
-    SGO_DOMESTIC.forEach(function(bk){
-      var bb=node.byBookmaker[bk]; if(!bb||bb.available===false||bb.odds==null) return;
-      var d=amDec(bb.odds); if(!d||d<=1) return;
-      decs.push(d);
-      if(!best||d>best.dec) best={book:bk,am:bb.odds,dec:d,line:(bb.overUnder!=null?bb.overUnder:bb.spread),link:bb.deeplink||bb.deepLink||bb.link||null};
-    });
-    if(best){
-      // Stale-line detector: how far the winning price sits above the next
-      // domestic book on the SAME outcome. A book that's 5%+ longer than its
-      // peers is usually a stale/error quote, not a real edge.
-      decs.sort(function(a,b){return b-a;});
-      best.nBooks=decs.length;
-      best.second=decs.length>1?decs[1]:null;
-      best.outlier=best.second?(best.dec>=best.second*1.05):false;
-      best.outlierPct=best.second?((best.dec/best.second-1)*100):0;
-    }
-    return best;
-  }
-  function bookmakerSide(node){
-    if(!node||!node.byBookmaker) return null;
-    var bb=node.byBookmaker[SGO_BOOKMAKER]; if(!bb||bb.available===false||bb.odds==null) return null;
-    var d=amDec(bb.odds); if(!d||d<=1) return null;
-    return {book:SGO_BOOKMAKER,am:bb.odds,dec:d,line:(bb.overUnder!=null?bb.overUnder:bb.spread),link:bb.deeplink||bb.deepLink||bb.link||null};
-  }
-
-  events.forEach(function(ev){
-    var odds=ev.odds||{}; if(!odds) return;
-    var live = ev.status&&(ev.status.started===true||ev.status.live===true);
-    var ended = ev.status&&(ev.status.ended===true||ev.status.completed===true);
-    if(ended) return;
-    if(filt==='live'&&!live) return;
-    if(filt==='upcoming'&&live) return;
-    var home=ev.teams&&ev.teams.home, away=ev.teams&&ev.teams.away;
-    function tn(t){ if(!t)return ''; if(typeof t==='string')return t; return (t.names&&(t.names.short||t.names.long))||t.name||t.shortName||''; }
-    var homeName=tn(home)||'Home', awayName=tn(away)||'Away';
-    var start=ev.status&&(ev.status.startsAt||ev.status.startTime)||ev.scheduled||null;
-    var leagueName = ev.leagueID || (ev.league&&(ev.league.name||ev.league.shortName)) || ev.sportID || '';
-    var oSportID = ev.sportID||'';
-    var oIsSoccer = (oSportID==='SOCCER')||leagueName==='INTERNATIONAL_SOCCER'||String(leagueName).toUpperCase().indexOf('SOCCER')>-1;
-    var gl=awayName+' @ '+homeName;
-
-    Object.keys(odds).forEach(function(oddID){
-      var od=odds[oddID]; if(!od) return;
-      var bt=od.betTypeID, side=od.sideID;
-      var primarySides={ml:'home',sp:'home',ou:'over',yn:'yes'};
-      var isProp = !!od.playerID;
-      var isGameProp = !isProp && od.periodID && od.periodID!=='game'; // halves/quarters/periods
-      // market gating
-      if(isProp){ if(wantM.indexOf('props')<0) return; }
-      else if(isGameProp){ if(wantM.indexOf('gameprops')<0) return; }
-      else {
-        if(bt==='ml'&&wantM.indexOf('ml')<0) return;
-        if(bt==='sp'&&wantM.indexOf('sp')<0) return;
-        if(bt==='ou'&&wantM.indexOf('ou')<0) return;
-      }
-      if(['ml','sp','ou','yn'].indexOf(bt)<0) return;
-      if(oIsSoccer&&(bt==='ml'||bt==='yn')) return; // soccer ML is 3-way (draw) — not a clean 2-leg hedge
-      if(side!==primarySides[bt]) return;
-
-      var oppID = od.opposingOddID; if(!oppID) return;
-      var opp = odds[oppID]; if(!opp) return;
-
-      var bmHere=bookmakerSide(od), domOpp=bestDomestic(opp);
-      var domHere=bestDomestic(od), bmOpp=bookmakerSide(opp);
-      if(bmHere||bmOpp) sawBookmaker=true;
-
-      function consider(legBM, legDOM, bmIsSideA, nameA, nameB){
-        if(!legBM||!legDOM) return;
-        var inv=(1/legBM.dec)+(1/legDOM.dec);
-        var edge=(1-inv)*100;
-        if(inv>=1||edge<min) return;
-        if((bt==='ou')&&legBM.line!=null&&legDOM.line!=null){
-          var overLine = bmIsSideA?legBM.line:legDOM.line;
-          var underLine= bmIsSideA?legDOM.line:legBM.line;
-          if(parseFloat(underLine)<parseFloat(overLine)) return;
-        }
-        if(bt==='sp'&&legBM.line!=null&&legDOM.line!=null){
-          if((parseFloat(legBM.line)+parseFloat(legDOM.line))<0) return;
-        }
-        // Fix the DOMESTIC stake at a round number; size BookMaker to balance.
-        var sDOM = usStake;
-        if(roundTo>0) sDOM = Math.round(usStake/roundTo)*roundTo;
-        if(sDOM<=0) sDOM = roundTo>0?roundTo:usStake;
-        // Equal-payout hedge: sBM * decBM = sDOM * decDOM
-        var sBM = sDOM*legDOM.dec/legBM.dec;
-        var payout = sDOM*legDOM.dec; // == sBM*legBM.dec
-        var totalStaked = sDOM + sBM;
-        var profit = payout - totalStaked;
-        var roi = (profit/totalStaked)*100;
-        // Which BookMaker max applies to this market?
-        var cap = isProp ? maxProp : (bt==='ou' ? maxTot : maxML);
-        var overMax = (cap>0 && sBM>cap);
-        // If over the cap, compute the largest arb that FITS: cap BookMaker, shrink domestic.
-        var fit=null;
-        if(overMax){
-          var fitBM = cap;
-          var fitDOM = fitBM*legBM.dec/legDOM.dec; // balance back to domestic
-          var fitPayout = fitBM*legBM.dec;
-          var fitTotal = fitDOM+fitBM;
-          fit={ bm:fitBM, dom:fitDOM, profit:fitPayout-fitTotal, total:fitTotal };
-        }
-        var mLabel = od.marketName || (od.statID? (od.statID.replace(/_/g,' ')) : bt.toUpperCase());
-        if(oIsSoccer){ mLabel += oSoccerScope(od.periodID); }
-        else if(isGameProp && od.periodID){ mLabel = (od.periodID).toUpperCase()+' '+mLabel; }
-        arbs.push({
-          game:gl, league:leagueName, eventID:ev.eventID||ev.id, oddID:oddID, isProp:isProp, isGameProp:isGameProp, live:!!live, start:start, edge:edge, profit:profit, roi:roi, totalStaked:totalStaked,
-          cap:cap, overMax:overMax, fit:fit, label:mLabel,
-          domOutlier:!!legDOM.outlier, domOutlierPct:legDOM.outlierPct||0, domNBooks:legDOM.nBooks||1,
-          bmLeg:{book:legBM.book,am:legBM.am,stake:sBM,line:legBM.line,link:legBM.link,name:nameA},
-          domLeg:{book:legDOM.book,am:legDOM.am,stake:sDOM,line:legDOM.line,link:legDOM.link,name:nameB}
-        });
-      }
-
-      function sideName(which){
-        if(bt==='ml') return which==='primary'?homeName:awayName;
-        if(bt==='sp') return which==='primary'?homeName:awayName;
-        if(bt==='ou') return which==='primary'?'Over':'Under';
-        if(bt==='yn') return which==='primary'?'Yes':'No';
-        return which;
-      }
-      var nmPrimary=sideName('primary'), nmOpp=sideName('opp');
-      function withLine(nm, leg){ if(leg&&leg.line!=null&&(bt==='ou'||bt==='sp')) return nm+' '+(parseFloat(leg.line)>0&&bt==='sp'?'+':'')+leg.line; return nm; }
-
-      consider(bmHere, domOpp, true, withLine(nmPrimary,bmHere), withLine(nmOpp,domOpp));
-      consider(bmOpp, domHere, false, withLine(nmOpp,bmOpp), withLine(nmPrimary,domHere));
-    });
-  });
 
   document.getElementById('oprog').style.display='none';
-  var seen={}; arbs=arbs.filter(function(a){var k=a.game+'|'+a.label+'|'+a.bmLeg.am+'|'+a.domLeg.book; if(seen[k])return false; seen[k]=1; return true;});
   arbs.sort(function(a,b){ return b.edge-a.edge; });
   OARB_CACHE=arbs;
 
+  function obBetStr(x, leg){ return x.game+' — '+x.label+' — '+leg.name+' ('+amFmt(leg.am)+') @ '+sgoName(leg.book); }
+  function obEsc(s){ return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function stakeTxt(leg){ return leg.book===SGO_BOOKMAKER ? leg.stake.toFixed(2) : (Math.abs(leg.stake-Math.round(leg.stake))<0.005 ? leg.stake.toFixed(0) : leg.stake.toFixed(2)); }
+  function legHtml(x, leg){
+    var isBM = leg.book===SGO_BOOKMAKER;
+    var s='<div class="side"><div class="book"'+(isBM?' style="color:#38bdf8"':'')+'>'+(isBM?'🌊 ':'')+sgoName(leg.book)+'</div><div class="team">'+leg.name+'</div><div class="odds">'+amFmt(leg.am)+'</div>'
+      +'<div class="stake"'+(leg.fixed?' style="color:#fbbf24;font-weight:700"':'')+'>Bet $'+stakeTxt(leg)+'</div>';
+    if(leg.link) s+='<a href="'+leg.link+'" target="_blank" class="open-link">Open bet slip →</a>';
+    else if(sgoHome(leg.book)) s+='<a href="'+sgoHome(leg.book)+'" target="_blank" class="open-link">Open '+sgoName(leg.book)+' →</a>';
+    s+='<button class="copy-bet" data-bet="'+obEsc(obBetStr(x,leg))+'" onclick="obCopyBet(this)">📋 Copy bet</button></div>';
+    return s;
+  }
+
   var now2=new Date().toLocaleTimeString();
-  var h='<div class="stats">Scanned '+events.length+' events · '+arbs.length+' BookMaker arbs · '+now2+'</div>';
+  var nBM=arbs.filter(function(x){return x.hasBM;}).length;
+  var h='<div class="stats">Scanned '+gamesSeen+' games · '+arbs.length+' arbs ('+(arbs.length-nBM)+' domestic vs domestic · '+nBM+' with BookMaker) · '+now2+'</div>';
+  if(errs.length) h+='<div class="err">'+errs.map(obEsc).join('<br>')+'</div>';
 
   // Coverage strip: green = book returned prices, red = requested but 0.
-  var reqBooks=[SGO_BOOKMAKER].concat(SGO_DOMESTIC);
-  var covParts=reqBooks.map(function(b){
+  var covParts=SGO_BOOKS.map(function(b){
     if(droppedBooks.indexOf(b)>-1) return '<span style="color:#f59e0b">'+sgoName(b)+' dropped</span>';
     var n=bookCoverage[b]||0;
     return '<span style="color:'+(n>0?'#00ff88':'#ff4757')+'">'+sgoName(b)+' '+n+'</span>';
   });
-  var extra=Object.keys(bookCoverage).filter(function(b){return reqBooks.indexOf(b)<0;});
-  h+='<div class="stats" style="font-size:11px;line-height:1.8;text-align:left">📡 Book coverage (usable prices this scan): '+covParts.join(' · ')
-    +(extra.length?'<br><span style="color:#888">Other slugs SGO returned: '+extra.map(function(b){return b+' ('+bookCoverage[b]+')';}).join(', ')+'</span>':'')
-    +'<br><span style="color:#666">Red = 0 prices returned. If Kalshi/Polymarket show 0 with no amber "dropped" tag, SGO has no overlapping markets in these leagues right now (or the slug differs — check "Other slugs" above).</span></div>';
+  h+='<div class="stats" style="font-size:11px;line-height:1.8;text-align:left">📡 Prices returned this scan: '+covParts.join(' · ')+'<br><span style="color:#666">Red = that book returned 0 prices.</span></div>';
+  if(droppedBooks.length) h+='<div class="alert-bar" style="background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.3);color:#f59e0b">⚠️ Skipped (not in your SGO tier): '+droppedBooks.join(', ')+'</div>';
 
-  if(droppedBooks.length) h+='<div class="alert-bar" style="background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.3);color:#f59e0b">⚠️ Skipped (not in your tier): '+droppedBooks.join(', ')+'</div>';
-  h+='<div class="alert-bar" style="background:rgba(56,189,248,.1);border-color:rgba(56,189,248,.3);color:#38bdf8">'+(sawBookmaker?'✓ BookMaker.eu present — locked as one leg of every arb below':'⚠️ No BookMaker.eu odds in feed (check plan/leagues)')+'</div>';
-
-  if(!arbs.length){ h+='<div class="msg">No BookMaker arbs above '+min+'% right now.<br><br>BookMaker is sharp, so edges are rare and small — try lowering Min % to 0.2, enabling props, or adding leagues.</div>'; }
+  if(!arbs.length){ h+='<div class="msg">No arbs above '+o.min+'% right now'+(gamesSeen?'':' — no games came back for these leagues in the next '+hours+' hours')+'.<br><br>Try lowering Min % to 0.2, or raising the hours window.</div>'; }
   else {
     arbs.forEach(function(x,idx){
-      h+='<div class="card'+(x.overMax?' live':x.edge>2?' hot':x.live?' live':'')+'"><div class="ctop"><div style="flex:1;min-width:0"><div class="gmeta">🔒 '+(x.league?x.league+' · ':'')+'BOOKMAKER'+(x.isProp?' · PROP':x.isGameProp?' · GAME PROP':'')+'</div><span class="mktag '+(x.isProp?'props':x.isGameProp?'gameprops':'h2h')+'">'+x.label+'</span>';
+      h+='<div class="card'+(x.overMax?' live':x.edge>2?' hot':x.live?' live':'')+'"><div class="ctop"><div style="flex:1;min-width:0"><div class="gmeta">'+(x.league?x.league+' · ':'')+(x.isProp?'PLAYER PROP':x.isGameProp?'GAME PROP':'MAIN LINE')+' · '+(x.hasBM?'🌊 BOOKMAKER':'DOMESTIC × DOMESTIC')+'</div><span class="mktag '+(x.isProp?'props':x.isGameProp?'gameprops':'h2h')+'">'+x.label+'</span>';
       if(x.overMax) h+='<span class="mktag live">🚫 OVER MAX</span>';
       if(x.live) h+='<span class="mktag live">🔴 LIVE</span>';
-      if(x.domOutlier) h+='<span class="mktag live">⚠️ STALE? '+sgoName(x.domLeg.book)+' +'+x.domOutlierPct.toFixed(0)+'% vs other books</span>';
+      x.stale.forEach(function(s){ h+='<span class="mktag live">⚠️ STALE? '+sgoName(s.book)+' +'+s.pct.toFixed(0)+'% vs other books</span>'; });
       h+='<div class="gtitle">'+x.game+'</div>';
       if(x.start) h+='<div class="gdate-tag">'+new Date(x.start).toLocaleString()+'</div>';
       h+='</div><div style="text-align:right;flex-shrink:0"><div class="roi">+'+x.edge.toFixed(2)+'%</div><div class="psub">$'+x.profit.toFixed(2)+' profit</div><div class="psub">on $'+x.totalStaked.toFixed(0)+' staked</div></div></div><div class="sides">';
-      // BookMaker leg (exact hedge), then domestic leg (round stake)
-      h+='<div class="side"><div class="book" style="color:#38bdf8">🌊 BookMaker.eu</div><div class="team">'+x.bmLeg.name+'</div><div class="odds">'+amFmt(x.bmLeg.am)+'</div><div class="stake">Bet $'+x.bmLeg.stake.toFixed(2)+'</div>';
-      if(x.bmLeg.link) h+='<a href="'+x.bmLeg.link+'" target="_blank" class="open-link">Open bet slip →</a>';
-      else h+='<a href="'+sgoHome('bookmakereu')+'" target="_blank" class="open-link">Open BookMaker.eu →</a>';
-      h+='<button class="copy-bet" data-bet="'+obEsc(obBetStr(x,'bm'))+'" onclick="obCopyBet(this)">📋 Copy bet</button>';
+      h+=legHtml(x,x.legA)+legHtml(x,x.legB);
       h+='</div>';
-      h+='<div class="side"><div class="book">'+sgoName(x.domLeg.book)+'</div><div class="team">'+x.domLeg.name+'</div><div class="odds">'+amFmt(x.domLeg.am)+'</div><div class="stake" style="color:#fbbf24;font-weight:700">Bet $'+x.domLeg.stake.toFixed(0)+'</div>';
-      if(x.domLeg.link) h+='<a href="'+x.domLeg.link+'" target="_blank" class="open-link">Open bet slip →</a>';
-      else if(sgoHome(x.domLeg.book)) h+='<a href="'+sgoHome(x.domLeg.book)+'" target="_blank" class="open-link">Open '+sgoName(x.domLeg.book)+' →</a>';
-      h+='<button class="copy-bet" data-bet="'+obEsc(obBetStr(x,'dom'))+'" onclick="obCopyBet(this)">📋 Copy bet</button>';
-      h+='</div>';
-      h+='</div>';
-      h+='<div class="place-first-note">⚠️ '+sgoName(x.domLeg.book)+' is your fixed $'+x.domLeg.stake.toFixed(0)+' leg. Place <strong>BookMaker.eu first</strong> ($'+x.bmLeg.stake.toFixed(2)+') — sharp side moves fastest — then lock '+sgoName(x.domLeg.book)+'.</div>';
+      if(x.hasBM){
+        var bm = x.legA.book===SGO_BOOKMAKER?x.legA:x.legB, ot = x.legA.book===SGO_BOOKMAKER?x.legB:x.legA;
+        h+='<div class="place-first-note">⚠️ Place <strong>BookMaker first</strong> ($'+bm.stake.toFixed(2)+') — sharp side moves fastest — then lock '+sgoName(ot.book)+' ($'+stakeTxt(ot)+').</div>';
+      } else {
+        h+=placeFirstNote(sgoName(x.legA.book), sgoName(x.legB.book));
+      }
       if(x.overMax){
-        h+='<div class="middle-note" style="background:rgba(255,71,87,.12);border-top:1px solid rgba(255,71,87,.4);color:#ff6b6b">🚫 BookMaker hedge $'+x.bmLeg.stake.toFixed(2)+' exceeds your max ($'+x.cap.toFixed(0)+').';
-        if(x.fit) h+=' To fit: bet <strong>$'+x.fit.bm.toFixed(2)+'</strong> on BookMaker + <strong>$'+x.fit.dom.toFixed(2)+'</strong> on '+sgoName(x.domLeg.book)+' → $'+x.fit.profit.toFixed(2)+' profit.';
+        h+='<div class="middle-note" style="background:rgba(255,71,87,.12);border-top:1px solid rgba(255,71,87,.4);color:#ff6b6b">🚫 BookMaker stake exceeds your max ($'+x.cap.toFixed(0)+').';
+        if(x.fit) h+=' To fit: bet <strong>$'+x.fit.bm.toFixed(2)+'</strong> on BookMaker + <strong>$'+x.fit.other.toFixed(2)+'</strong> on '+sgoName(x.fit.otherBook)+' → $'+x.fit.profit.toFixed(2)+' profit.';
         h+='</div>';
       }
-      if(x.domOutlier){
-        h+='<div class="middle-note" style="background:rgba(245,158,11,.12);border-top:1px solid rgba(245,158,11,.4);color:#fbbf24">⚠️ '+sgoName(x.domLeg.book)+'\u2019s price is '+x.domOutlierPct.toFixed(0)+'% longer than the next domestic book on this exact outcome — that\u2019s often a stale/error line, not a real edge. Tap \u201cShow all book lines\u201d below and confirm '+sgoName(x.domLeg.book)+' is actually offering it before betting.</div>';
+      if(x.stale.length){
+        h+='<div class="middle-note" style="background:rgba(245,158,11,.12);border-top:1px solid rgba(245,158,11,.4);color:#fbbf24">⚠️ '+x.stale.map(function(s){return sgoName(s.book)+'’s price is '+s.pct.toFixed(0)+'% longer than the next book';}).join(' and ')+' on this exact outcome — often a stale or error line, not a real edge. Tap “Show all book lines” and confirm the price is live before betting.</div>';
       }
       h+='<div style="padding:8px 12px;border-top:1px solid #2a2a3d"><button class="lookup-btn" onclick="showOffshoreLines('+idx+')">📋 Show all book lines for this market</button></div>';
       h+='<div id="olines-'+idx+'"></div>';
@@ -2909,8 +2898,8 @@ function toggleAuto(){
 //  Pinnacle is used for MATH ONLY. You never bet Pinnacle.
 // ══════════════════════════════════════════════════════════
 (function(){
-  var EV_HOME={bookmakereu:'https://www.bookmaker.eu',draftkings:'https://sportsbook.draftkings.com',fanduel:'https://sportsbook.fanduel.com',betmgm:'https://sports.betmgm.com',caesars:'https://sportsbook.caesars.com',fanatics:'https://sportsbook.fanatics.com',bet365:'https://www.bet365.com',hardrockbet:'https://app.hardrock.bet',ballybet:'https://play.ballybet.com'};
-  var EV_NAME={bookmakereu:'BookMaker',draftkings:'DraftKings',fanduel:'FanDuel',betmgm:'BetMGM',caesars:'Caesars',fanatics:'Fanatics',bet365:'Bet365',hardrockbet:'Hard Rock',ballybet:'Bally Bet'};
+  var EV_HOME={bookmakereu:'https://www.bookmaker.eu',draftkings:'https://sportsbook.draftkings.com',fanduel:'https://sportsbook.fanduel.com',betmgm:'https://sports.betmgm.com',caesars:'https://sportsbook.caesars.com',fanatics:'https://sportsbook.fanatics.com',bet365:'https://www.bet365.com',thescorebet:'https://www.thescore.bet',hardrockbet:'https://app.hardrock.bet',ballybet:'https://play.ballybet.com'};
+  var EV_NAME={bookmakereu:'BookMaker',draftkings:'DraftKings',fanduel:'FanDuel',betmgm:'BetMGM',caesars:'Caesars',fanatics:'Fanatics',bet365:'Bet365',thescorebet:'theScore',hardrockbet:'Hard Rock',ballybet:'Bally Bet'};
 
   function evKey(){return (document.getElementById('opkey')&&document.getElementById('opkey').value||'').trim();} // SGO key (shared w/ Offshore)
   function evAmDec(p){p=parseFloat(p);if(isNaN(p))return null;if(p>0)return p/100+1;if(p<0)return 100/Math.abs(p)+1;return null;}
@@ -3202,7 +3191,7 @@ function toggleAuto(){
 //  BETS TRACKER — 1-tap log, SGO auto-grade, by book/sport
 // ══════════════════════════════════════════════════════════
 (function(){
-  var BN={bookmakereu:'BookMaker',draftkings:'DraftKings',fanduel:'FanDuel',betmgm:'BetMGM',caesars:'Caesars',fanatics:'Fanatics',bet365:'Bet365',hardrockbet:'Hard Rock',ballybet:'Bally Bet',other:'Other'};
+  var BN={bookmakereu:'BookMaker',draftkings:'DraftKings',fanduel:'FanDuel',betmgm:'BetMGM',caesars:'Caesars',fanatics:'Fanatics',bet365:'Bet365',thescorebet:'theScore',hardrockbet:'Hard Rock',ballybet:'Bally Bet',other:'Other'};
   function btLoad(){try{return JSON.parse(localStorage.getItem('arb_bets')||'[]');}catch(e){return [];}}
   var btPutTimer=null;
   function btSave(a){try{localStorage.setItem('arb_bets',JSON.stringify(a));}catch(e){} if(btPutTimer)clearTimeout(btPutTimer); btPutTimer=setTimeout(btCloudPut,700);}
