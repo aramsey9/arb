@@ -216,7 +216,7 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
 <div id="view-offshore" class="view">
   <div class="slabel">SportsGameOdds API Key</div>
   <input type="password" id="opkey" placeholder="Paste SportsGameOdds API key (sportsgameodds.com)" style="font-size:12px" />
-  <div class="slabel" style="margin-top:-4px;color:#38bdf8">🔁 Every book vs every book — BookMaker vs domestic AND domestic vs domestic. College = no player props. BookMaker = main lines only.</div>
+  <div class="slabel" style="margin-top:-4px;color:#38bdf8">🔁 Every book vs every book — BookMaker vs domestic AND domestic vs domestic. Player props: NFL only, never Bet365. BookMaker = main lines only.</div>
   <div class="row">
     <input type="number" id="obank" value="300" placeholder="Round-leg stake $" />
     <input type="number" id="omine" value="0.5" placeholder="Min %" step="0.1" />
@@ -263,7 +263,7 @@ input:checked+.slider-lg:before{transform:translateX(24px);background:#000}
     <div style="flex:1"><div class="slabel" style="margin-top:0">Games starting within (hours)</div><input type="number" id="ohours" value="24" min="1" max="336" style="margin-bottom:4px" /></div>
   </div>
   <div class="slabel" style="color:#555;margin-top:0">Each game returned counts against your monthly SGO budget. Fewer hours or fewer games = cheaper scans.</div>
-  <div class="slabel" style="color:#555;margin-top:-4px">Books: BookMaker · DraftKings · FanDuel · BetMGM · Caesars · Fanatics · Bet365 · theScore. NFL/NBA player props load a few games at a time, so those scans take longer.</div>
+  <div class="slabel" style="color:#555;margin-top:-4px">Books: BookMaker · DraftKings · FanDuel · BetMGM · Caesars · Fanatics · Bet365 · theScore. NFL player props load a few games at a time, so that part of the scan takes longer.</div>
   <button class="scan" onclick="scanOffshore()" style="background:#38bdf8">🔁 Scan All-Book Arbs</button>
   <button onclick="checkSgoUsage()" style="background:#1a1a26;color:#38bdf8;border:1px solid #38bdf8;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;width:100%;margin-bottom:8px">📊 Check API Usage</button>
   <button onclick="checkSgoBooks()" style="background:#1a1a26;color:#a78bfa;border:1px solid #a78bfa;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;width:100%;margin-bottom:12px">📋 Check my books (which slugs my key can access)</button>
@@ -2485,7 +2485,8 @@ async function checkSgoBooks(){
 // Every book is compared against every other book: BookMaker vs domestic AND
 // domestic vs domestic. Best price on one side vs best price on the other.
 var SGO_BOOKS = [SGO_BOOKMAKER].concat(SGO_DOMESTIC);
-var O_NO_PLAYER_PROPS = {NCAAF:1, NCAAB:1};   // college: game props OK, player props never
+var O_NO_PLAYER_PROPS = {NCAAF:1, NCAAB:1, NBA:1};   // these leagues: game props OK, player props never
+var O_NO_PROP_BOOKS = {bet365:1};             // books never used on player props (often stale). Still used on main lines + game props.
 var O_BM_MAIN_ONLY = true;                    // BookMaker only on full-game ML / spread / total. Set false to use it on props too.
 var O_MAIN_ODD_IDS = 'points-home-game-ml-home,points-home-game-sp-home,points-all-game-ou-over';
 
@@ -2560,11 +2561,13 @@ function oAnalyzeEvent(ev, o, arbs, cov){
     for(var i=0;i<SGO_BOOKS.length;i++){
       var bkA = SGO_BOOKS[i];
       if(O_BM_MAIN_ONLY && !isMain && bkA===SGO_BOOKMAKER) continue;
+      if(isProp && O_NO_PROP_BOOKS[bkA]) continue;
       var a = oPriceAt(od, bkA); if(!a) continue;
       for(var j=0;j<SGO_BOOKS.length;j++){
         if(i===j) continue;
         var bkB = SGO_BOOKS[j];
         if(O_BM_MAIN_ONLY && !isMain && bkB===SGO_BOOKMAKER) continue;
+        if(isProp && O_NO_PROP_BOOKS[bkB]) continue;
         var b = oPriceAt(opp, bkB); if(!b) continue;
         var inv = (1/a.dec)+(1/b.dec);
         if(inv>=1) continue;
